@@ -1,0 +1,14 @@
+[Unit]
+Description=Restrict KAI CloudPay mobile API port 4154 to the AWS VPC
+Before=cloudpay-mobile-edge.socket
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/sbin/nft delete table inet kai_cloudpay_mobile_4154
+ExecStart=/usr/sbin/nft -f /etc/kai-cloudpay/cloudpay-mobile-edge.nft
+ExecStop=-/usr/sbin/nft delete table inet kai_cloudpay_mobile_4154
+
+[Install]
+WantedBy=multi-user.target
+

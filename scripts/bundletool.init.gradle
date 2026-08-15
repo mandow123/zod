@@ -1,0 +1,35 @@
+initscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:bundletool:1.18.3'
+    }
+}
+
+def cloudPayBundlePath = System.getenv('CLOUDPAY_BUNDLE_PATH')
+if (cloudPayBundlePath == null || cloudPayBundlePath.trim().isEmpty()) {
+    throw new GradleException('CLOUDPAY_BUNDLE_PATH is required.')
+}
+
+gradle.projectsLoaded {
+    rootProject {
+        tasks.register('cloudPayValidateBundle', JavaExec) {
+            group = 'verification'
+            description = 'Validates the CloudPay Android App Bundle with bundletool.'
+            classpath = initscript.configurations.classpath
+            mainClass = 'com.android.tools.build.bundletool.BundleToolMain'
+            args 'validate', "--bundle=${cloudPayBundlePath}"
+            standardOutput = new ByteArrayOutputStream()
+        }
+
+        tasks.register('cloudPayDumpBundleManifest', JavaExec) {
+            group = 'verification'
+            description = 'Prints the authoritative base manifest stored in the CloudPay App Bundle.'
+            classpath = initscript.configurations.classpath
+            mainClass = 'com.android.tools.build.bundletool.BundleToolMain'
+            args 'dump', 'manifest', "--bundle=${cloudPayBundlePath}", '--module=base'
+        }
+    }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "@kai-cloudpay/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "e2e:resource": "tsx scripts/resource-evidence-e2e-server.ts",
+    "clean": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "contract:verify": "node ../scripts/verify-mobile-backend-contract.mjs",
+    "test": "vitest run",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:backup": "tsx src/backups/backup.ts",
+    "db:backup:inspect": "tsx src/backups/inspect.ts",
+    "db:fingerprint": "tsx src/backups/fingerprint.ts",
+    "db:restore": "tsx src/backups/restore.ts",
+    "release:bundle": "node scripts/build-deployment-bundle.mjs",
+    "release:verify": "node scripts/verify-release.mjs --install",
+    "deployment:verify": "node scripts/verify-deployment-contract.mjs",
+    "production:routing:capture": "node deploy/aws-ubuntu/verify-routing.mjs capture",
+    "production:routing:verify": "node deploy/aws-ubuntu/verify-routing.mjs verify",
+    "production:host:preflight": "node deploy/aws-ubuntu/preflight-host.mjs",
+    "production:sidecar:verify": "node deploy/aws-ubuntu/verify-sidecar.mjs",
+    "production:env:verify": "node scripts/verify-production-env.mjs"
+  },
+  "dependencies": {
+    "@alicloud/dysmsapi20170525": "^4.6.0",
+    "@alicloud/openapi-client": "^0.4.15",
+    "@aws-sdk/client-s3": "^3.1107.0",
+    "@aws-sdk/s3-request-presigner": "^3.1107.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/helmet": "^13.1.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "alipay-sdk": "^4.14.0",
+    "fastify": "^5.11.3",
+    "fastify-raw-body": "^6.0.1",
+    "jose": "^6.2.8",
+    "pg": "^8.23.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.6",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

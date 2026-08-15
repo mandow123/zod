@@ -1,0 +1,8 @@
+table inet kai_cloudpay_mobile_4154 {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    tcp dport 4154 ip saddr 172.31.0.0/16 counter accept
+    tcp dport 4154 counter drop
+  }
+}
+

@@ -17,6 +17,11 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+credentials.json
+release-signing.properties
+*.keystore.properties
+/artifacts/
+/dist-check*/
 
 # Metro
 .metro-health-check*
@@ -32,6 +37,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.*
+!.env.example
+!**/.env.example
 
 # typescript
 *.tsbuildinfo

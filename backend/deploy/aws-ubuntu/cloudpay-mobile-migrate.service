@@ -1,0 +1,33 @@
+[Unit]
+Description=KAI CloudPay database migration gate
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=kai-cloudpay
+Group=kai-cloudpay
+WorkingDirectory=/opt/kai-cloudpay/current
+EnvironmentFile=/etc/kai-cloudpay/backend.env
+ExecStart=/usr/bin/node dist/migrate.js
+TimeoutStartSec=900
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native

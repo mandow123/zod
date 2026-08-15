@@ -1,0 +1,110 @@
+import { Ionicons } from '@expo/vector-icons';
+import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { MarketCreditListing } from './api';
+import { cnyPrice, creditAmount } from './format';
+import { colors } from './theme';
+
+const artwork = require('../assets/baige-spark-campaign-v1.jpg');
+
+function groupedCny(value: string) {
+  const [whole = '0', fraction = ''] = cnyPrice(value).split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/gu, ',')}.${fraction}`;
+}
+
+export function SparkProductDetailSheet({ listing, visible, onClose }: Readonly<{
+  listing: MarketCreditListing | null;
+  visible: boolean;
+  onClose: () => void;
+}>) {
+  if (!listing?.promotion) return null;
+  const promotion = listing.promotion;
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <View style={styles.backdrop}><View style={styles.sheet}>
+      <View style={styles.handle} />
+      <View style={styles.header}>
+        <View><Text style={styles.eyebrow}>02672 白鸽在线特供款</Text><Text style={styles.title}>NVIDIA Spark</Text></View>
+        <Pressable onPress={onClose} style={styles.close} accessibilityLabel="关闭白鸽在线特供款详情"><Ionicons name="close" size={23} color={colors.ink} /></Pressable>
+      </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ImageBackground source={artwork} resizeMode="cover" imageStyle={styles.heroImage} style={styles.hero}>
+          <View style={styles.heroScrim} />
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroLabel}>白鸽在线 · 上海特供</Text>
+            <Text style={styles.heroTitle}>200 台限量</Text>
+            <Text style={styles.heroCaption}>整机实物交付 · {listing.shippingEstimate ?? '预计3个月发货'}</Text>
+          </View>
+        </ImageBackground>
+
+        <View style={styles.priceCard}>
+          <View style={styles.discountBadge}><Text style={styles.discountText}>8 折 · 优惠 20%</Text></View>
+          <Text style={styles.priceLabel}>活动价 · 含税</Text>
+          <Text style={styles.price}>¥{groupedCny(promotion.discountedReferenceCny)} <Text style={styles.unit}>/ 台</Text></Text>
+          <Text style={styles.original}>含税原价 ¥{groupedCny(promotion.originalReferenceCny)} / 台</Text>
+          <View style={styles.creditLine}><Text style={styles.creditLabel}>参考卡时</Text><Text style={styles.credit}>{creditAmount(promotion.discountedUnitCredits)} KAI 卡时 / 台</Text></View>
+        </View>
+
+        <View style={styles.inventoryCard}>
+          <Inventory label="总量" value={`${listing.capacityTotal.replace(/\.0+$/u, '')} 台`} />
+          <View style={styles.inventoryDivider} />
+          <Inventory label="已售" value={`${listing.capacitySold.replace(/\.0+$/u, '')} 台`} />
+          <View style={styles.inventoryDivider} />
+          <Inventory label="剩余" value={`${listing.capacityAvailable.replace(/\.0+$/u, '')} 台`} strong />
+        </View>
+
+        <Fact icon="cube-outline" title="整机商品" body="这是 NVIDIA Spark 整机商品，采用实物交付，不作为 GPU 小时算力订单。" />
+        <Fact icon="time-outline" title="交付周期" body={`${listing.shippingEstimate ?? '预计3个月发货'}，实际交付节点以订单和平台消息为准。`} />
+        <Fact icon="shield-checkmark-outline" title="价格说明" body="含税原价 ¥32,600.00，活动价 ¥26,080.00；优惠 20%。" />
+        <View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.amber} /><Text style={styles.noticeText}>当前为商品信息展示，不会自动扣除 KAI 卡时，也不会生成订单。</Text></View>
+      </ScrollView>
+    </View></View>
+  </Modal>;
+}
+
+function Inventory({ label, value, strong = false }: Readonly<{ label: string; value: string; strong?: boolean }>) {
+  return <View style={styles.inventoryItem}><Text style={styles.inventoryLabel}>{label}</Text><Text style={[styles.inventoryValue, strong && styles.inventoryStrong]}>{value}</Text></View>;
+}
+
+function Fact({ icon, title, body }: Readonly<{ icon: 'cube-outline' | 'time-outline' | 'shield-checkmark-outline'; title: string; body: string }>) {
+  return <View style={styles.fact}><View style={styles.factIcon}><Ionicons name={icon} size={20} color={colors.primary} /></View><View style={styles.factCopy}><Text style={styles.factTitle}>{title}</Text><Text style={styles.factBody}>{body}</Text></View></View>;
+}
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(18,35,58,0.38)' },
+  sheet: { maxHeight: '93%', borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: colors.canvas },
+  handle: { width: 42, height: 5, alignSelf: 'center', borderRadius: 3, marginTop: 9, backgroundColor: '#D6DEE8' },
+  header: { minHeight: 78, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  eyebrow: { color: colors.primary, fontSize: 10, fontWeight: '900' },
+  title: { color: colors.ink, fontSize: 22, fontWeight: '900', marginTop: 4 },
+  close: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  content: { padding: 17, paddingBottom: 38 },
+  hero: { height: 205, borderRadius: 22, overflow: 'hidden', justifyContent: 'flex-end' },
+  heroImage: { borderRadius: 22 },
+  heroScrim: { position: 'absolute', inset: 0, backgroundColor: 'rgba(9,32,56,0.50)' },
+  heroCopy: { padding: 17 },
+  heroLabel: { color: '#DCEEFF', fontSize: 10, fontWeight: '900' },
+  heroTitle: { color: '#FFFFFF', fontSize: 27, fontWeight: '900', marginTop: 6 },
+  heroCaption: { color: '#FFFFFF', fontSize: 11, marginTop: 6 },
+  priceCard: { padding: 17, marginTop: 12, borderWidth: 1, borderColor: '#D5E5FA', borderRadius: 20, backgroundColor: colors.surface },
+  discountBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, backgroundColor: '#EAF2FF' },
+  discountText: { color: colors.primary, fontSize: 10, fontWeight: '900' },
+  priceLabel: { color: colors.primary, fontSize: 10, fontWeight: '900', marginTop: 12 },
+  price: { color: colors.primaryDark, fontSize: 30, fontWeight: '900', marginTop: 7 },
+  unit: { color: colors.muted, fontSize: 12 },
+  original: { color: colors.muted, fontSize: 11, textDecorationLine: 'line-through', marginTop: 6 },
+  creditLine: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, paddingTop: 13, borderTopWidth: 1, borderTopColor: colors.line },
+  creditLabel: { color: colors.muted, fontSize: 10 },
+  credit: { color: colors.ink, fontSize: 11, fontWeight: '900' },
+  inventoryCard: { flexDirection: 'row', alignItems: 'center', padding: 15, marginTop: 10, borderRadius: 18, backgroundColor: colors.surface },
+  inventoryItem: { flex: 1, alignItems: 'center' },
+  inventoryLabel: { color: colors.muted, fontSize: 9 },
+  inventoryValue: { color: colors.ink, fontSize: 14, fontWeight: '900', marginTop: 5 },
+  inventoryStrong: { color: colors.primary },
+  inventoryDivider: { width: 1, height: 33, backgroundColor: colors.line },
+  fact: { flexDirection: 'row', gap: 11, padding: 14, marginTop: 10, borderRadius: 18, backgroundColor: colors.surface },
+  factIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  factCopy: { flex: 1 },
+  factTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
+  factBody: { color: colors.muted, fontSize: 10, lineHeight: 17, marginTop: 4 },
+  notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, marginTop: 13, borderRadius: 18, backgroundColor: '#FFF8E7' },
+  noticeText: { flex: 1, color: colors.muted, fontSize: 10, lineHeight: 17 },
+});

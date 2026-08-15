@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "host": "cloudpay.kai.com",
+  "target": {
+    "protocol": "HTTP",
+    "port": 4154,
+    "healthCheckPath": "/mobile/v1/health",
+    "successCodes": "200"
+  },
+  "forwardOnly": [
+    "/mobile/v1",
+    "/mobile/v1/*",
+    "/privacy",
+    "/terms",
+    "/account/delete"
+  ],
+  "mustRemainOnExistingTarget": [
+    "/",
+    "/api/*"
+  ]
+}
+

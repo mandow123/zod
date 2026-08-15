@@ -1,0 +1,41 @@
+[Unit]
+Description=KAI CloudPay mobile backend
+Wants=network-online.target
+After=network-online.target cloudpay-mobile-migrate.service
+Requires=cloudpay-mobile-migrate.service
+
+[Service]
+Type=simple
+User=kai-cloudpay
+Group=kai-cloudpay
+WorkingDirectory=/opt/kai-cloudpay/current
+EnvironmentFile=/etc/kai-cloudpay/backend.env
+ExecStartPre=/usr/bin/node scripts/verify-production-env.mjs
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=45s
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

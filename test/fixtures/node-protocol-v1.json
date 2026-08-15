@@ -1,0 +1,69 @@
+{
+  "privateJwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "d": "nWGxne_9Wm_h0M4m68NYSFnGmf0f_HFyP9PpQ_FoAec",
+    "x": "FhxBd3_IKsla2lmBMXrEAyFFE3kgPcoQ2d4V3OIr8_s"
+  },
+  "publicKey": "ed25519:FhxBd3/IKsla2lmBMXrEAyFFE3kgPcoQ2d4V3OIr8/s=",
+  "rawInventory": [
+    {
+      "uuid": "GPU-BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB",
+      "model": "NVIDIA H100 80GB HBM3",
+      "memoryTotalMiB": 81559,
+      "driverVersion": "580.173.02",
+      "cudaVersion": "13.0",
+      "migMode": "Disabled",
+      "computeMode": "Default"
+    },
+    {
+      "uuid": "gpu-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "model": "NVIDIA H100 80GB HBM3",
+      "memoryTotalMiB": 81559,
+      "driverVersion": "580.173.02",
+      "cudaVersion": "13.0",
+      "migMode": "Disabled",
+      "computeMode": "Exclusive_Process"
+    }
+  ],
+  "inventory": {
+    "stable": [
+      { "uuid": "GPU-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA", "model": "NVIDIA H100 80GB HBM3", "memoryTotalMiB": 81559 },
+      { "uuid": "GPU-BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB", "model": "NVIDIA H100 80GB HBM3", "memoryTotalMiB": 81559 }
+    ],
+    "inventoryDigest": "sha256:89521dd5521cb6853fcfe2640fa8929d7424608d887ad57c493d24f0e03c7697",
+    "gpuSetDigest": "sha256:6d9bc2b7f025de6e62b49efc9f2228a327cc9fabfc6d108f9f20db50019e74a2",
+    "runtimeDigest": "sha256:ce70c7499acdd1a1b46f7cd9e11b3ed8fc8a5f34c5702dd03c1045ae8d151b54"
+  },
+  "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "claim": {
+    "fields": {
+      "claimId": "11111111-1111-4111-8111-111111111111",
+      "challenge": "challenge_0123456789ABCDEFGHijklmn",
+      "publicKey": "ed25519:FhxBd3/IKsla2lmBMXrEAyFFE3kgPcoQ2d4V3OIr8/s=",
+      "observedAt": "2026-08-14T09:30:00.000Z",
+      "inventoryDigest": "sha256:89521dd5521cb6853fcfe2640fa8929d7424608d887ad57c493d24f0e03c7697",
+      "runtimeDigest": "sha256:ce70c7499acdd1a1b46f7cd9e11b3ed8fc8a5f34c5702dd03c1045ae8d151b54",
+      "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "agentVersion": "1.0.0"
+    },
+    "canonical": "{\"domain\":\"kai-cloudpay/node-claim\",\"schemaVersion\":1,\"claimId\":\"11111111-1111-4111-8111-111111111111\",\"challenge\":\"challenge_0123456789ABCDEFGHijklmn\",\"publicKey\":\"ed25519:FhxBd3/IKsla2lmBMXrEAyFFE3kgPcoQ2d4V3OIr8/s=\",\"observedAt\":\"2026-08-14T09:30:00.000Z\",\"inventoryDigest\":\"sha256:89521dd5521cb6853fcfe2640fa8929d7424608d887ad57c493d24f0e03c7697\",\"runtimeDigest\":\"sha256:ce70c7499acdd1a1b46f7cd9e11b3ed8fc8a5f34c5702dd03c1045ae8d151b54\",\"policyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"agentVersion\":\"1.0.0\"}",
+    "payloadDigest": "sha256:b8841999a0185ec45aed008c20ffd9a6c821ec3cdd006193d2ca1e8ec267025c",
+    "signature": "ed25519:pAr3yEzoRb5cgrwnRreeREgvTmUQEgtBJD9l8msC9uIYiL8s1uj9VUDGmntC70av8geAsJA1LCjNC87613PrBQ=="
+  },
+  "heartbeat": {
+    "fields": {
+      "nodeId": "22222222-2222-4222-8222-222222222222",
+      "bootId": "33333333-3333-4333-8333-333333333333",
+      "sequence": "1",
+      "observedAt": "2026-08-14T09:30:30.000Z",
+      "inventoryDigest": "sha256:89521dd5521cb6853fcfe2640fa8929d7424608d887ad57c493d24f0e03c7697",
+      "runtimeDigest": "sha256:ce70c7499acdd1a1b46f7cd9e11b3ed8fc8a5f34c5702dd03c1045ae8d151b54",
+      "policyDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "agentVersion": "1.0.0"
+    },
+    "canonical": "{\"domain\":\"kai-cloudpay/node-heartbeat\",\"schemaVersion\":1,\"nodeId\":\"22222222-2222-4222-8222-222222222222\",\"bootId\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":\"1\",\"observedAt\":\"2026-08-14T09:30:30.000Z\",\"inventoryDigest\":\"sha256:89521dd5521cb6853fcfe2640fa8929d7424608d887ad57c493d24f0e03c7697\",\"runtimeDigest\":\"sha256:ce70c7499acdd1a1b46f7cd9e11b3ed8fc8a5f34c5702dd03c1045ae8d151b54\",\"policyDigest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"agentVersion\":\"1.0.0\"}",
+    "payloadDigest": "sha256:6590657daf6bfca54a3f9d4c5823cb17aa630258599418f05eab782f9b0a3644",
+    "signature": "ed25519:4g8TbRo9Z8Cz8HK8eTYy+zfHi0NaAcA6oLE4Y9GAMj9g6ARVdplKV08Ia5rNL/IIIe8se7oMLDavE2/NhtdMBw=="
+  }
+}

@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloudpay-postgres-backup
+  namespace: cloudpay
+spec:
+  schedule: "17 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 900
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3300
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: cloudpay-backend
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              image: registry.example.invalid/kai/cloudpay-backend@sha256:0000000000000000000000000000000000000000000000000000000000000000
+              imagePullPolicy: IfNotPresent
+              command: ["node", "dist/backups/backup.js"]
+              envFrom:
+                - configMapRef:
+                    name: cloudpay-backend-config
+                - secretRef:
+                    name: cloudpay-backend-secrets
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  cpu: "2"
+                  memory: 1Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: backup-work
+                  mountPath: /var/lib/cloudpay-backup
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: backup-work
+              emptyDir:
+                sizeLimit: 20Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi

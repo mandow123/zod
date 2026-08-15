@@ -3,10 +3,24 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.12",
+    "expo-clipboard": "~57.0.1",
+    "expo-constants": "~57.0.10",
+    "expo-crypto": "~57.0.1",
+    "expo-document-picker": "~57.0.1",
+    "expo-file-system": "~57.0.2",
+    "expo-font": "~57.0.1",
+    "expo-haptics": "~57.0.1",
+    "expo-linear-gradient": "~57.0.1",
+    "expo-notifications": "~57.0.10",
+    "expo-screen-capture": "~57.0.1",
+    "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.2",
     "react": "19.2.3",
-    "react-native": "0.86.2"
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -14,9 +28,23 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "android": "expo run:android --variant directCnDebug",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "contract:verify": "node scripts/verify-mobile-backend-contract.mjs",
+    "prebuild:android": "expo prebuild --platform android",
+    "build:preview": "cd android && ./gradlew assembleDirectCnDebug",
+    "build:apk": "node scripts/build-android-release.mjs apk",
+    "build:aab": "node scripts/build-android-release.mjs aab",
+    "build:apk:direct": "CLOUDPAY_DISTRIBUTION_CHANNEL=direct-cn node scripts/build-android-release.mjs apk",
+    "build:aab:play": "CLOUDPAY_DISTRIBUTION_CHANNEL=google-play node scripts/build-android-release.mjs aab",
+    "release:key": "node scripts/generate-upload-key.mjs",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "release:smoke:android": "node scripts/android-device-smoke.mjs",
+    "test:android:store-provider": "node scripts/android-device-smoke.mjs --store --install --provider artifacts/test/KAI-CloudPay-1.0.0-1-google-play-local-e2e.apk",
+    "preview:android:provider": "node scripts/android-device-smoke.mjs --local-e2e --install --provider --replace-incompatible"
   },
   "private": true
 }

@@ -1,0 +1,15 @@
+{
+  "replace-with-platform-compute-resource-uuid": {
+    "bindingId": "replace-with-platform-binding-uuid",
+    "bindingGeneration": 1,
+    "policyDigest": "sha256:replace-with-64-lowercase-hex-characters",
+    "nodeId": "replace-with-platform-node-uuid",
+    "capacityUnit": "GPU时",
+    "allocatedAcceleratorCount": 1,
+    "modelPattern": "^NVIDIA H100",
+    "minimumMemoryMiB": 90000,
+    "requiredMigMode": "Disabled",
+    "requiredComputeMode": "Default",
+    "allowedGpuUuids": ["GPU-replace-with-real-nvidia-smi-uuid"]
+  }
+}

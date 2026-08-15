@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+node_modules
+dist
+coverage
+test
+artifacts
+*.log
+*.kcpb
+docs

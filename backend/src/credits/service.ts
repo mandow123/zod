@@ -1,0 +1,39 @@
+import type { AccountPrincipal } from '../account/types.js';
+import type { SubjectAccess } from '../subjects/types.js';
+import type { CreditLedgerStore, PostCreditTransactionInput } from './store.js';
+import { formatCreditAmount } from './types.js';
+
+export class CreditLedgerService {
+  constructor(private readonly store: CreditLedgerStore, private readonly subjects: SubjectAccess) {}
+
+  async balance(principal: AccountPrincipal) {
+    const subject = await this.subjects.current(principal.userId, 'credits.read');
+    const accounts = await this.store.ensureSubjectAccounts(subject.subjectId);
+    const byKind = Object.fromEntries(accounts.map((account) => [account.kind, account])) as Record<string, typeof accounts[number]>;
+    const available = byKind.available?.amountMicros ?? 0n;
+    const reserved = byKind.reserved?.amountMicros ?? 0n;
+    const receivable = byKind.supplier_receivable?.amountMicros ?? 0n;
+    return {
+      subjectId: subject.subjectId,
+      unit: 'KAI_CREDIT',
+      precision: 6,
+      available: formatCreditAmount(available),
+      reserved: formatCreditAmount(reserved),
+      supplierReceivable: formatCreditAmount(receivable),
+      total: formatCreditAmount(available + reserved + receivable),
+      conversion: '1 KAI卡时 = ¥1.002',
+    };
+  }
+
+  async post(input: PostCreditTransactionInput) {
+    if (input.entries.length < 2) throw new Error('KAI_CREDIT_TRANSACTION_REQUIRES_TWO_ENTRIES');
+    if (input.entries.some((entry) => entry.amountMicros === 0n)) throw new Error('KAI_CREDIT_ZERO_ENTRY');
+    if (new Set(input.entries.map((entry) => entry.accountId)).size !== input.entries.length) {
+      throw new Error('KAI_CREDIT_DUPLICATE_ACCOUNT_ENTRY');
+    }
+    if (input.entries.reduce((sum, entry) => sum + entry.amountMicros, 0n) !== 0n) {
+      throw new Error('KAI_CREDIT_TRANSACTION_UNBALANCED');
+    }
+    return this.store.post(input);
+  }
+}

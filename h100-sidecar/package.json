@@ -1,0 +1,13 @@
+{
+  "name": "@kai-cloudpay/h100-sidecar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18.0" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "acceptance": "node scripts/acceptance.mjs",
+    "test": "node --test"
+  }
+}
