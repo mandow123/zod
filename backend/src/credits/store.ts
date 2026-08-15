@@ -12,7 +12,7 @@ export type PostCreditTransactionInput = Readonly<{
   scope: string;
   idempotencyKey: string;
   payloadDigest: string;
-  referenceType: 'topup' | 'order_reservation' | 'order_release' | 'order_capture' | 'refund' | 'settlement' | 'adjustment';
+  referenceType: 'topup' | 'order_reservation' | 'order_release' | 'order_capture' | 'refund' | 'settlement' | 'payout' | 'adjustment';
   referenceId?: string;
   description: string;
   entries: ReadonlyArray<Readonly<{ accountId: string; amountMicros: bigint; memo: string }>>;
@@ -27,6 +27,9 @@ export interface CreditLedgerStore {
   post(input: PostCreditTransactionInput): Promise<PostCreditTransactionResult>;
 }
 
+// Payout-frozen is provisioned only when the payout feature is used. Keeping
+// the three long-lived accounts here also makes the payout migration safe to
+// roll out after the existing ledger service.
 const accountKinds: SubjectCreditAccountKind[] = ['available', 'reserved', 'supplier_receivable'];
 
 export class PostgresCreditLedgerStore implements CreditLedgerStore {
@@ -98,4 +101,3 @@ export class PostgresCreditLedgerStore implements CreditLedgerStore {
     });
   }
 }
-

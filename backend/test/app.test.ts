@@ -7,6 +7,8 @@ import type { ListingAuditService } from '../src/listings/service.js';
 import type { CreditLedgerService } from '../src/credits/service.js';
 import type { CreditTopupService } from '../src/topups/service.js';
 import type { CreditOrderService } from '../src/credit-orders/service.js';
+import type { CreditPayoutService } from '../src/payouts/service.js';
+import type { DeviceCommerceService } from '../src/device-commerce/service.js';
 
 const routeTestAccounts = {
   authenticate: async () => ({ principal: { userId: 'route-user', sessionId: 'route-session', role: 'member' }, identity: {} }),
@@ -145,6 +147,23 @@ const routeTestOrders = {
     },
   }),
 } as unknown as CreditOrderService;
+
+const routeTestPayouts = {
+  create: async (_principal: unknown, input: Record<string, unknown>) => ({ replayed: false,
+    payout: { id: '50000000-0000-4000-8000-000000000001', status: 'submitted', ...input } }),
+  profile: async () => ({ status: 'active' }), list: async () => [],
+  get: async () => ({ id: '50000000-0000-4000-8000-000000000001', status: 'submitted' }),
+  cancel: async () => ({ replayed: false, payout: { status: 'cancelled' } }),
+} as unknown as CreditPayoutService;
+
+const routeTestDevices = {
+  products: async () => [{ id: '02672000-0000-4000-8000-000000000200', title: 'NVIDIA DGX Spark',
+    purchasable: true, inventory: { total: 200, available: 200 } }],
+  product: async () => ({ id: '02672000-0000-4000-8000-000000000200', title: 'NVIDIA DGX Spark' }),
+  create: async (_principal: unknown, input: Record<string, unknown>) => ({ replayed: false,
+    order: { id: '60000000-0000-4000-8000-000000000001', status: 'reserved', ...input } }),
+  orders: async () => [], assets: async () => [],
+} as unknown as DeviceCommerceService;
 
 describe('system routes', () => {
   it('serves liveness without exposing configuration', async () => {
@@ -607,6 +626,37 @@ describe('system routes', () => {
       payload: { outcome: 'approve_refund', reason: '实际运行记录显示资源规格与审核挂牌不一致。', creditAmount: '1.000000' },
     });
     expect(decisionWithAmount.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('exposes two-decimal supplier payout creation without accepting company payment proof from the supplier', async () => {
+    const app = await buildApp({ config: loadConfig({ NODE_ENV: 'test' }), database: null,
+      accountService: routeTestAccounts, creditPayoutService: routeTestPayouts, logger: false });
+    const response = await app.inject({ method: 'POST', url: '/mobile/v1/credits/payouts',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'supplier-payout-route-0001' },
+      payload: { creditAmount: '100.00' } });
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ payout: { status: 'submitted', creditAmount: '100.00' } });
+    const forged = await app.inject({ method: 'POST', url: '/mobile/v1/credits/payouts',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'supplier-payout-route-0002' },
+      payload: { creditAmount: '100.00', companyPaymentReference: 'forged' } });
+    expect(forged.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('exposes one authoritative Spark product and a card-time reservation order route', async () => {
+    const app = await buildApp({ config: loadConfig({ NODE_ENV: 'test' }), database: null,
+      accountService: routeTestAccounts, deviceCommerceService: routeTestDevices, logger: false });
+    const catalog = await app.inject({ method: 'GET', url: '/mobile/v1/device-products' });
+    expect(catalog.statusCode).toBe(200);
+    expect(catalog.json()).toMatchObject({ products: [{ id: '02672000-0000-4000-8000-000000000200',
+      title: 'NVIDIA DGX Spark', inventory: { total: 200 } }] });
+    const order = await app.inject({ method: 'POST', url: '/mobile/v1/device-orders',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'spark-device-order-route-001' },
+      payload: { productId: '02672000-0000-4000-8000-000000000200', quantity: 1,
+        shippingAddressReference: 'address-vault-token-001' } });
+    expect(order.statusCode).toBe(201);
+    expect(order.json()).toMatchObject({ order: { status: 'reserved', quantity: 1 } });
     await app.close();
   });
 

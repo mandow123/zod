@@ -42,6 +42,8 @@ async function fixture(capacity = '10') {
     '0033_kai_credit_post_acceptance_adjudication.sql',
     '0034_kai_credit_partial_aftercare_remedies.sql',
     '0039_compute_node_readiness.sql',
+    '0046_kai_credit_supplier_payouts.sql',
+    '0049_supplier_earnings_accounts.sql',
   ]) await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   const database = adapter(pglite);
   const buyerUserId = randomUUID(); const supplierUserId = randomUUID(); const otherUserId = randomUUID();
@@ -757,7 +759,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'settled', order: { status: 'closed' } });
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'replayed', order: { status: 'closed' } });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 77_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
       WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
@@ -789,7 +791,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.getForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({ status: 'closed' });
     expect(await f.store.getForSubject(f.supplierSubjectId, newerOrderId)).toMatchObject({ status: 'accepted' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 77_844_313n, supplier_receivable: 77_844_313n,
+      supplier_earnings_available: 77_844_313n, supplier_receivable: 77_844_313n,
     });
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({
       triggeredBy: 'system', settledAt: now,
@@ -817,7 +819,7 @@ describe('KAI credit order reservations', () => {
     expect([0, 1]).toContain(automated);
     expect(await f.store.getForSubject(f.supplierSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 77_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
       WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
@@ -1035,7 +1037,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleDueSupplierOrders(new Date('2026-08-08T00:00:00.000Z'), 50)).toBe(1);
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 57_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 57_844_313n, supplier_receivable: 0n,
     });
     const settlement = await f.store.supplierSettlementForSubject(f.supplierSubjectId, orderId);
     expect(settlement).toMatchObject({ creditMicros: 57_844_313n, status: 'succeeded' });
@@ -1130,7 +1132,8 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleDueSupplierOrders(new Date('2026-08-08T00:00:00.000Z'), 50)).toBe(1);
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 0n });
-    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: 77_844_313n, supplier_receivable: 0n });
+    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
+      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n });
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toMatchObject({
       status: 'rejected', escalatedBySide: 'buyer', outcome: 'reject_refund',
     });
@@ -1166,7 +1169,8 @@ describe('KAI credit order reservations', () => {
     } else {
       expect(request.status).toBe('invalid_state');
       expect(['settled', 'replayed']).toContain(settlement.status);
-      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: 77_844_313n, supplier_receivable: 0n });
+      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
+        supplier_earnings_available: 77_844_313n, supplier_receivable: 0n });
     }
     const recordCount = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM
       kai_credit_order_post_acceptance_refunds WHERE order_id = $1`, [orderId]);

@@ -45,7 +45,7 @@ test('provider, market, and order UI use the same single-card contract', async (
   assert.doesNotMatch(resource, /H100-SXM-80G/u);
   assert.doesNotMatch(wizard, /共享算力|切片实例|整机节点|预约时段/u);
   assert.match(wizard, /每个订单固定分配 1 张 GPU/u);
-  assert.match(market, /每单 1 张 GPU/u);
+  assert.match(market, /固定分配 1 张 GPU/u);
   assert.match(order, /实例健康并取得连接信息后才开始计费/u);
   assert.match(order, /订单结果正在确认/u);
   assert.match(order, /不会重复下单/u);

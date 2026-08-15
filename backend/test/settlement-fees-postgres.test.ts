@@ -46,6 +46,7 @@ async function fixture() {
     '0031_kai_credit_order_dispute_adjudication.sql', '0032_kai_credit_post_acceptance_refunds.sql',
     '0033_kai_credit_post_acceptance_adjudication.sql', '0034_kai_credit_partial_aftercare_remedies.sql',
     '0039_compute_node_readiness.sql', '0042_kai_credit_settlement_fees.sql',
+    '0046_kai_credit_supplier_payouts.sql', '0049_supplier_earnings_accounts.sql',
   ]) await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   const database = adapter(pglite);
   const buyerUserId = randomUUID(); const supplierUserId = randomUUID();
@@ -238,7 +239,8 @@ describe('KAI credit settlement fee store', () => {
       FROM kai_credit_fee_assessments a JOIN kai_credit_transactions t ON t.id=a.ledger_transaction_id
       JOIN kai_credit_entries e ON e.transaction_id=t.id WHERE a.id=$1 GROUP BY t.id`, [assessed.assessmentId]);
     expect(transaction.rows[0]).toEqual({ status: 'posted', entries: '3', total: '0' });
-    expect((await balances(f.database, f.supplierSubjectId)).available).toBe(assessed.plan.netCreditMicros);
+    expect((await balances(f.database, f.supplierSubjectId)).supplier_earnings_available)
+      .toBe(assessed.plan.netCreditMicros);
     const persisted = await f.database.query<{
       schedule_id: string; schedule_version: string; period_id: string; period_start: string;
       gross: string; fee: string; net: string; before: string; after: string; ledger_transaction_id: string;
@@ -277,6 +279,7 @@ describe('KAI credit settlement fee store', () => {
         sum(e.amount_micros)::text AS total FROM kai_credit_fee_assessments a
       JOIN kai_credit_entries e ON e.transaction_id=a.ledger_transaction_id WHERE a.id=$1`, [reversed.assessmentId]);
     expect(reversalTransaction.rows[0]).toEqual({ entries: '3', total: '0' });
+    expect((await balances(f.database, f.supplierSubjectId)).supplier_earnings_available).toBe(0n);
     const originalSegment = await f.database.query<{ id: string }>(`SELECT id FROM kai_credit_fee_assessment_segments
       WHERE assessment_id=$1 ORDER BY ordinal LIMIT 1`, [assessed.assessmentId]);
     await expect(f.database.query(`INSERT INTO kai_credit_fee_reversal_allocations(

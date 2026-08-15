@@ -1,3 +1,5 @@
+import { allowsInsecureLocalE2EHost } from './local-network-policy.ts';
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const CLAIM_TOKEN = /^[A-Za-z0-9_-]{43,120}$/u;
 const CHALLENGE = /^[A-Za-z0-9_-]{32,120}$/u;
@@ -48,6 +50,7 @@ export function buildNodeClaimEnvelope(
   backendBaseUrl: string,
   now = Date.now(),
   allowInsecureLocalE2e = false,
+  localHostPolicy = allowsInsecureLocalE2EHost,
 ): NodeClaimEnvelope {
   const claim = record(value);
   const deploymentId = String(claim.deploymentId ?? '').toLowerCase();
@@ -59,7 +62,7 @@ export function buildNodeClaimEnvelope(
   try { base = new URL(backendBaseUrl); }
   catch { throw new NodeClaimEnvelopeError('BACKEND_URL_INVALID', '节点服务地址无效。'); }
   const localE2eHttp = allowInsecureLocalE2e && base.protocol === 'http:'
-    && ['10.0.2.2', '127.0.0.1', 'localhost'].includes(base.hostname);
+    && localHostPolicy(base.hostname);
   if ((!localE2eHttp && base.protocol !== 'https:') || base.username || base.password || base.search || base.hash
     || !/^\/+$/u.test(base.pathname)) {
     throw new NodeClaimEnvelopeError('BACKEND_URL_INVALID', '节点接入只允许使用安全的 HTTPS 根地址。');

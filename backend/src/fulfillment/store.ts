@@ -606,15 +606,16 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
         let transactionId: string | null = null;
         if (credit > 0n) {
           await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
-            VALUES ($1, 'subject', $2, $3, 'available', false)
+            VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
             ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-          [randomUUID(), row.supplier_subject_id, `subject:${row.supplier_subject_id}:available`]);
+          [randomUUID(), row.supplier_subject_id, `subject:${row.supplier_subject_id}:supplier_earnings_available`]);
           const accounts = await client.query<{ id: string; account_kind: string }>(`SELECT id, account_kind
-            FROM kai_credit_accounts WHERE subject_id = $1 AND account_kind IN ('available','supplier_receivable')
+            FROM kai_credit_accounts WHERE subject_id = $1
+            AND account_kind IN ('supplier_earnings_available','supplier_receivable')
             ORDER BY id FOR UPDATE`, [row.supplier_subject_id]);
-          const available = accounts.rows.find((account) => account.account_kind === 'available')?.id;
+          const supplierEarnings = accounts.rows.find((account) => account.account_kind === 'supplier_earnings_available')?.id;
           const receivable = accounts.rows.find((account) => account.account_kind === 'supplier_receivable')?.id;
-          if (!available || !receivable) throw new Error('FULFILLMENT_SETTLEMENT_ACCOUNTS_MISSING');
+          if (!supplierEarnings || !receivable) throw new Error('FULFILLMENT_SETTLEMENT_ACCOUNTS_MISSING');
           transactionId = randomUUID();
           await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
             payload_digest, reference_type, reference_id, description, status)
@@ -623,7 +624,7 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
             `compute-settle:${row.fulfillment_id}:${credit}`, row.order_id]);
           await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
             ($1,$2,$3,$4,'算力结算到账'),($5,$2,$6,$7,'算力待结算转出')`,
-          [randomUUID(), transactionId, available, credit.toString(), randomUUID(), receivable, (-credit).toString()]);
+          [randomUUID(), transactionId, supplierEarnings, credit.toString(), randomUUID(), receivable, (-credit).toString()]);
           await client.query(`UPDATE kai_credit_transactions SET status='posted', posted_at=$2 WHERE id=$1`, [transactionId, now]);
         }
         await client.query(`INSERT INTO compute_fulfillment_supplier_settlements(id,fulfillment_id,acceptance_id,

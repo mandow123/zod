@@ -166,7 +166,7 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         referenceId: input.orderId, description: '算力成交结算与服务费', now: input.assessedAt,
         entries: [
           { accountId: accounts.receivable, amount: -plan.grossCreditMicros, memo: '成交毛额结转' },
-          { accountId: accounts.available, amount: plan.netCreditMicros, memo: '提供方净额到账' },
+          { accountId: accounts.supplierEarnings, amount: plan.netCreditMicros, memo: '提供方净收益到账' },
           { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue, amount: plan.serviceFeeCreditMicros, memo: '平台成交服务费' },
         ],
       });
@@ -241,7 +241,7 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         digest: input.payloadDigest, referenceType: 'service_fee_reversal', referenceId: input.orderId,
         description: '算力成交退款与服务费冲正', now: input.assessedAt,
         entries: [
-          { accountId: accounts.supplierAvailable, amount: -reversal.reversedNetCreditMicros, memo: '提供方结算净额冲回' },
+          { accountId: accounts.supplierEarnings, amount: -reversal.reversedNetCreditMicros, memo: '提供方结算净收益冲回' },
           { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue, amount: -reversal.reversedServiceFeeCreditMicros, memo: '平台服务费冲正' },
           { accountId: accounts.buyerAvailable, amount: reversal.reversedGrossCreditMicros, memo: '买方退款到账' },
         ],
@@ -338,31 +338,37 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
 
   private async lockSettlementAccounts(client: PoolClient, supplierSubjectId: string) {
     await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
-      VALUES ($1, 'subject', $2, $3, 'available', false)
+      VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
       ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-    [randomUUID(), supplierSubjectId, `subject:${supplierSubjectId}:available`]);
+    [randomUUID(), supplierSubjectId, `subject:${supplierSubjectId}:supplier_earnings_available`]);
     const result = await client.query<{ id: string; account_kind: string }>(`SELECT id, account_kind
-      FROM kai_credit_accounts WHERE subject_id = $1 AND account_kind IN ('available', 'supplier_receivable')
+      FROM kai_credit_accounts WHERE subject_id = $1
+      AND account_kind IN ('supplier_earnings_available', 'supplier_receivable')
       ORDER BY id FOR UPDATE`, [supplierSubjectId]);
-    const available = result.rows.find((row) => row.account_kind === 'available')?.id;
+    const supplierEarnings = result.rows.find((row) => row.account_kind === 'supplier_earnings_available')?.id;
     const receivable = result.rows.find((row) => row.account_kind === 'supplier_receivable')?.id;
-    if (!available || !receivable) throw new Error('FEE_SETTLEMENT_ACCOUNTS_MISSING');
-    return { available, receivable };
+    if (!supplierEarnings || !receivable) throw new Error('FEE_SETTLEMENT_ACCOUNTS_MISSING');
+    return { supplierEarnings, receivable };
   }
 
   private async lockRefundAccounts(client: PoolClient, supplierSubjectId: string, buyerSubjectId: string) {
-    for (const subjectId of [supplierSubjectId, buyerSubjectId]) await client.query(`INSERT INTO kai_credit_accounts(
-        id, owner_kind, subject_id, code, account_kind, allow_negative)
+    await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
+      VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
+      ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
+    [randomUUID(), supplierSubjectId, `subject:${supplierSubjectId}:supplier_earnings_available`]);
+    await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
       VALUES ($1, 'subject', $2, $3, 'available', false)
       ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-    [randomUUID(), subjectId, `subject:${subjectId}:available`]);
-    const result = await client.query<{ id: string; subject_id: string }>(`SELECT id, subject_id
-      FROM kai_credit_accounts WHERE subject_id IN ($1, $2) AND account_kind = 'available'
-      ORDER BY id FOR UPDATE`, [supplierSubjectId, buyerSubjectId]);
-    const supplierAvailable = result.rows.find((row) => row.subject_id === supplierSubjectId)?.id;
-    const buyerAvailable = result.rows.find((row) => row.subject_id === buyerSubjectId)?.id;
-    if (!supplierAvailable || !buyerAvailable) throw new Error('FEE_REFUND_ACCOUNTS_MISSING');
-    return { supplierAvailable, buyerAvailable };
+    [randomUUID(), buyerSubjectId, `subject:${buyerSubjectId}:available`]);
+    const result = await client.query<{ id: string; subject_id: string; account_kind: string }>(`SELECT id, subject_id,
+      account_kind FROM kai_credit_accounts WHERE (subject_id = $1 AND account_kind = 'supplier_earnings_available')
+      OR (subject_id = $2 AND account_kind = 'available') ORDER BY id FOR UPDATE`, [supplierSubjectId, buyerSubjectId]);
+    const supplierEarnings = result.rows.find((row) => row.subject_id === supplierSubjectId
+      && row.account_kind === 'supplier_earnings_available')?.id;
+    const buyerAvailable = result.rows.find((row) => row.subject_id === buyerSubjectId
+      && row.account_kind === 'available')?.id;
+    if (!supplierEarnings || !buyerAvailable) throw new Error('FEE_REFUND_ACCOUNTS_MISSING');
+    return { supplierEarnings, buyerAvailable };
   }
 
   private async createTransaction(client: PoolClient, input: Readonly<{

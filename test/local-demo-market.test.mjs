@@ -5,25 +5,24 @@ import test from 'node:test';
 const market = await readFile(new URL('../src/screens/MarketScreen.tsx', import.meta.url), 'utf8');
 const api = await readFile(new URL('../src/api.ts', import.meta.url), 'utf8');
 
-test('本地 Spark 明确按整机实物商品展示，不冒充算力订单', () => {
+test('本地 Spark 只作为展示入口，采购切到后端权威设备订单', async () => {
+  const [app, deviceOrder] = await Promise.all([
+    readFile(new URL('../App.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/DeviceOrderSheet.tsx', import.meta.url), 'utf8'),
+  ]);
   assert.match(api, /productKind\?: 'hardware_device' \| 'compute_capacity'/u);
   assert.match(api, /fulfillmentMode\?: 'physical_delivery' \| 'compute_sidecar_v1'/u);
-  assert.match(market, /整机商品 · 实物交付 · 含税/u);
-  assert.match(market, /采购通道待开放/u);
-  assert.doesNotMatch(market, /预约采购/u);
-  assert.match(market, /不扣 KAI 卡时/u);
-  assert.match(market, /含税原价 ¥\{groupedCny\(item\.promotion\.originalReferenceCny\)\}/u);
-  assert.match(market, /按当前库存满售预计成交额/u);
-  assert.match(market, /不是累计收益或历史收入/u);
-  assert.match(market, /模拟资源审计/u);
-  assert.match(market, /模拟价格审计/u);
-  assert.doesNotMatch(market, /item\.demo[^\n]{0,200}onBuy/u);
+  assert.match(market, /设备采购/u);
+  assert.match(app, /onOpenSparkDetail=\{openSparkDetail\}/u);
+  assert.match(market, /snapshot\.deviceProducts/u);
+  assert.match(deviceOrder, /createDeviceOrder/u);
+  assert.doesNotMatch(deviceOrder, /createCloudPayOrder/u);
 });
 
 test('资源较多时分批渲染，搜索筛选仍覆盖完整目录', () => {
   assert.match(market, /const LISTING_PAGE_SIZE = 20/u);
   assert.match(market, /const visibleListings = filtered\.slice\(0, visibleCount\)/u);
-  assert.match(market, /setVisibleCount\(\(current\) => Math\.min\(current \+ LISTING_PAGE_SIZE, filtered\.length\)\)/u);
+  assert.match(market, /setVisibleCount\(\(count\) => count \+ LISTING_PAGE_SIZE\)/u);
   assert.match(market, /继续显示/u);
 });
 

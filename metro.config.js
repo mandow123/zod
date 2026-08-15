@@ -30,6 +30,16 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
         : 'src/local-e2e-runtime.ts'),
     };
   }
+  if (moduleName.endsWith('/local-network-policy') || moduleName.endsWith('/local-network-policy.ts')
+    || moduleName === './local-network-policy' || moduleName === './local-network-policy.ts') {
+    const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
+    return {
+      type: 'sourceFile',
+      filePath: path.resolve(__dirname, localE2e
+        ? 'src/local-network-policy.local-e2e.ts'
+        : 'src/local-network-policy.ts'),
+    };
+  }
   if (moduleName.endsWith('/native-payments') || moduleName === './native-payments') {
     const channel = process.env.CLOUDPAY_DISTRIBUTION_CHANNEL?.trim() || 'direct-cn';
     if (channel !== 'direct-cn') {

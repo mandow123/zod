@@ -37,6 +37,11 @@ import { FulfillmentService } from '../src/fulfillment/service.js';
 import { PostgresFulfillmentStore } from '../src/fulfillment/store.js';
 import { NodeEnrollmentService } from '../src/node-enrollment/service.js';
 import { NodeEnrollmentStore } from '../src/node-enrollment/store.js';
+import { CreditPayoutService } from '../src/payouts/service.js';
+import { PostgresCreditPayoutStore } from '../src/payouts/store.js';
+import { DeviceCommerceService } from '../src/device-commerce/service.js';
+import { PostgresDeviceCommerceStore } from '../src/device-commerce/store.js';
+import { SPARK_PRODUCT_ID } from '../src/device-commerce/types.js';
 import { ComputeProviderError, type ComputeProviderAdapter, type ProvisionRequest,
   type StopResult } from '../src/fulfillment/provider.js';
 import { buildLocalE2EDemoCatalog, localE2EDemoCatalogDigest } from './local-e2e-demo-catalog.js';
@@ -235,6 +240,10 @@ const creditOrderService = new CreditOrderService(creditOrderStore, subjects, co
 const creditTopupService = new CreditTopupService(
   new PostgresCreditTopupStore(database), accounts, subjects, new Map(), config,
 );
+const creditPayoutStore = new PostgresCreditPayoutStore(database);
+const creditPayoutService = new CreditPayoutService(creditPayoutStore, subjects, config);
+const deviceCommerceStore = new PostgresDeviceCommerceStore(database);
+const deviceCommerceService = new DeviceCommerceService(deviceCommerceStore, subjects, config);
 const nodeEnrollmentService = new NodeEnrollmentService(new NodeEnrollmentStore(
   database, config.NODE_GPU_FINGERPRINT_PEPPER!, config.NODE_CLAIM_TOKEN_PEPPER!,
   config.NODE_CLAIM_TOKEN_ENCRYPTION_KEY!, 'gpu-dedicated-v1', config.nodeSupportedAgentVersions,
@@ -270,6 +279,17 @@ const operator = await accounts.createUser({
   phoneLookupHash: lookupHash('+8613900139000', config.OTP_PEPPER!), displayName: '验收运营',
 });
 await database.query(`UPDATE users SET role = 'operator' WHERE id = $1`, [operator.id]);
+await creditPayoutStore.activateProfile({
+  subjectId: personal.subjectId,
+  legalEntityDigest: `sha256:${'a'.repeat(64)}`,
+  recipientReference: 'e2e-company-payout-recipient',
+  operatorId: operator.id,
+  now: new Date(),
+});
+const activatedSpark = await deviceCommerceStore.activateProduct(
+  SPARK_PRODUCT_ID, personal.subjectId, operator.id, new Date(),
+);
+if (!activatedSpark) throw new Error('E2E_SPARK_ACTIVATION_FAILED');
 const priceOperator = await accounts.createUser({
   phoneCiphertext: encryptPii('+8613900139001', config.PII_ENCRYPTION_KEY!),
   phoneLookupHash: lookupHash('+8613900139001', config.OTP_PEPPER!), displayName: '验收价格审核员',
@@ -280,7 +300,7 @@ await marketStore.reviewSupplier({ supplierId: profile.id, reviewerId: operator.
 const app = await buildApp({
   config, database, accountService, subjectService: subjects, marketService,
   listingAuditService, notificationService, resourceEvidenceService: evidenceService, creditLedgerService, creditOrderService,
-  creditTopupService, fulfillmentService, nodeEnrollmentService,
+  creditTopupService, creditPayoutService, deviceCommerceService, fulfillmentService, nodeEnrollmentService,
   logger: process.env.E2E_LOG_ERRORS === '1',
 });
 let lastListingRequest: { body: unknown; receivedAt: string } | null = null;
@@ -1164,8 +1184,8 @@ const worker = new EvidenceScanWorker(
 );
 worker.start();
 
-process.stdout.write(`${JSON.stringify({ ready: true, apiPort, objectPort, phone: testPhone,
-  e2eSessionToken, objectAddress: (uploadServer.address() as AddressInfo).address })}\n`);
+process.stdout.write(`${JSON.stringify({ ready: true, apiPort, objectPort,
+  objectAddress: (uploadServer.address() as AddressInfo).address })}\n`);
 
 const shutdown = async () => {
   await worker.stop();

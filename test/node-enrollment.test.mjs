@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   buildNodeClaimEnvelope, NodeClaimEnvelopeError, NODE_ENROLL_COMMAND, serializeNodeClaimEnvelope,
 } from '../src/node-claim-envelope.ts';
+import { allowsInsecureLocalE2EHost } from '../src/local-network-policy.local-e2e.ts';
 import { validateNodeClaim } from '../h100-sidecar/src/node-client.mjs';
 
 const NOW = Date.parse('2026-08-15T02:30:00.000Z');
@@ -59,11 +60,11 @@ test('rejects unsafe service addresses, expired claims, and mismatched consume p
 test('only the explicit local Android acceptance mode may use the emulator loopback bridge', () => {
   assert.throws(() => buildNodeClaimEnvelope(CLAIM, 'http://10.0.2.2:4100', NOW), /HTTPS/u);
   assert.equal(
-    buildNodeClaimEnvelope(CLAIM, 'http://10.0.2.2:4100', NOW, true).backendBaseUrl,
+    buildNodeClaimEnvelope(CLAIM, 'http://10.0.2.2:4100', NOW, true, allowsInsecureLocalE2EHost).backendBaseUrl,
     'http://10.0.2.2:4100',
   );
   for (const base of ['http://cloudpay.kai.com', 'http://192.168.1.20:4100', 'http://10.0.2.2:4100/api']) {
-    assert.throws(() => buildNodeClaimEnvelope(CLAIM, base, NOW, true), /HTTPS/u);
+    assert.throws(() => buildNodeClaimEnvelope(CLAIM, base, NOW, true, allowsInsecureLocalE2EHost), /HTTPS/u);
   }
 });
 

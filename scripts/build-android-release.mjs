@@ -135,11 +135,10 @@ if (!localE2e) {
   }
 }
 const requiredFrontendMarkers = [
-  'KAI_CLOUD_DUAL_WORKSPACE_PROVIDER_PUBLISH_V1',
-  'WorkspaceHeader',
-  'ProviderResourcesScreen',
+  'KAI_CLOUD_UNIFIED_ASSETS_V2',
+  'UnifiedAssetsScreen',
+  'ProviderHomeScreen',
   'PublishScreen',
-  'KAI_CLOUD_UNIFIED_PROVIDER_PUBLISH_V2',
   '/mobile/v1/provider/bootstrap',
   '/mobile/v1/provider/resources',
   '/mobile/v1/provider/offer-drafts',
@@ -152,6 +151,12 @@ const requiredFrontendMarkers = [
   '/mobile/v1/auth/kai/start',
   '/mobile/v1/auth/kai/exchange',
   'kaicloudpay://auth/kai/callback',
+  '/mobile/v1/device-products',
+  '/mobile/v1/device-orders',
+  '/mobile/v1/device-assets',
+  '/mobile/v1/shipping-addresses',
+  '/mobile/v1/credits/payout-profile',
+  '/mobile/v1/credits/payouts',
 ];
 const missingFrontendMarkers = requiredFrontendMarkers.filter((marker) => !embeddedBundle.stdout.includes(Buffer.from(marker)));
 if (missingFrontendMarkers.length > 0) {

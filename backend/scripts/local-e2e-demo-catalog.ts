@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { creditMicrosFromCnyMicros, formatCnyMicros, formatCreditMicros } from '../src/listings/types.js';
 
 const SCALE = 1_000_000n;
-const SPARK_ORIGINAL_CNY_MICROS = 32_600_000_000n;
-const SPARK_DISCOUNTED_CNY_MICROS = 26_080_000_000n;
+const SPARK_ORIGINAL_CNY_MICROS = 40_750_000_000n;
+const SPARK_DISCOUNTED_CNY_MICROS = 32_600_000_000n;
 
 export type LocalE2EDemoListing = Readonly<{
   id: string;
@@ -33,7 +33,7 @@ export type LocalE2EDemoListing = Readonly<{
   }>;
   promotion: null | Readonly<{
     kind: 'percentage'; label: '限时8折'; discountPercent: 20;
-    originalReferenceCny: '32600.00'; discountedReferenceCny: '26080.00';
+    originalReferenceCny: '40750.00'; discountedReferenceCny: '32600.00';
     originalUnitCredits: string; discountedUnitCredits: string;
     taxIncluded: true; startsAt: string; endsAt: string;
     priceEvidence: Readonly<{
@@ -84,11 +84,11 @@ export function buildLocalE2EDemoCatalog(
       capacityTotal: capacityText, capacityReserved: '0.000000', capacitySold: '0.000000',
       capacityAvailable: capacityText, capacityUnit: spark ? '台' : 'GPU时', minimumQuantity: '1.000000',
       unitCredits: formatCreditMicros(unitCreditMicros),
-      referenceCny: spark ? '26080.000000' : formatCnyMicros((unitCreditMicros * 1_002_000n) / SCALE), status: 'active', startsAt, expiresAt,
+      referenceCny: spark ? '32600.000000' : formatCnyMicros((unitCreditMicros * 1_002_000n) / SCALE), status: 'active', startsAt, expiresAt,
       demo: { mode: 'local_e2e', label: '演示资源', payment: 'sandbox_only', purchasable: false, simulatedAudit: true },
       promotion: spark ? {
         kind: 'percentage', label: '限时8折', discountPercent: 20,
-        originalReferenceCny: '32600.00', discountedReferenceCny: '26080.00',
+        originalReferenceCny: '40750.00', discountedReferenceCny: '32600.00',
         originalUnitCredits: formatCreditMicros(sparkOriginalUnit), discountedUnitCredits: formatCreditMicros(sparkUnit),
         taxIncluded: true, startsAt, endsAt: expiresAt,
         priceEvidence: {

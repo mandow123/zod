@@ -21,14 +21,14 @@ describe('local E2E demo catalog', () => {
       title: '02672 白鸽在线特供款', productCode: 'NVIDIA Spark', capacityTotal: '200.000000', capacityAvailable: '200.000000',
       productKind: 'hardware_device', fulfillmentMode: 'physical_delivery',
       shippingEstimate: '预计3个月发货',
-      capacityUnit: '台', minimumQuantity: '1.000000', unitCredits: '26027.944112',
+      capacityUnit: '台', minimumQuantity: '1.000000', unitCredits: '32534.930140',
       promotion: {
         label: '限时8折', discountPercent: 20,
-        originalReferenceCny: '32600.00', discountedReferenceCny: '26080.00',
-        originalUnitCredits: '32534.930140', discountedUnitCredits: '26027.944112', taxIncluded: true,
+        originalReferenceCny: '40750.00', discountedReferenceCny: '32600.00',
+        originalUnitCredits: '40668.662675', discountedUnitCredits: '32534.930140', taxIncluded: true,
         priceEvidence: { sourceType: 'local_e2e_fixture', sourceLabel: '白鸽在线演示报价', productionAudit: false },
       },
-      selloutEstimate: { grossCredits: '5205588.822400', remainingCapacity: '200.000000' },
+      selloutEstimate: { grossCredits: '6506986.028000', remainingCapacity: '200.000000' },
     });
     expect(['1', '200'].every(validWholeUnitDemoQuantity)).toBe(true);
     expect(['0', '1.5', '201', '500', '-1'].some(validWholeUnitDemoQuantity)).toBe(false);

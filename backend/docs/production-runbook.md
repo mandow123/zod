@@ -14,7 +14,7 @@
 8. 在 `auth.kai.com` 登记独立 confidential client，固定回调为 `https://cloudpay.kai.com/mobile/v1/auth/kai/callback`，scope 仅为 `openid profile email`；不得复用 `cloud.kai.com` 主站 client。
 9. 密钥系统必须注入 `KAI_OIDC_CLIENT_ID`、`KAI_OIDC_CLIENT_SECRET`、独立的 `KAI_OIDC_FLOW_PEPPER`、`KAI_OIDC_SUBJECT_PEPPER`、32 字节 Base64 `KAI_OIDC_TRANSACTION_ENCRYPTION_KEY`，以及精确白名单 `KAI_OIDC_APP_REDIRECT_URIS=kaicloudpay://auth/kai/callback`。
 10. `KAI_OIDC_SUBJECT_PEPPER` 用于长期 issuer+sub 身份键，不得直接轮换。需要轮换时先在隔离库演练 subject 哈希迁移，再双读/回填并核对身份数量；禁止只换环境变量。flow pepper 和事务密钥轮换会使在途登录失效，需在低峰执行并确认 App 可重新发起。
-11. `02672 白鸽在线特供款`（200 台 NVIDIA Spark、含税原价 ¥32,600、8 折 ¥26,080、预计 3 个月发货）只存在于显式隔离的 local E2E 市场目录，且必须保持 `demo.payment=sandbox_only`、`demo.purchasable=false`。生产不得导入该目录或伪造库存/销量；需要上线时必须由真实供应商按正式资源核验、价格审核和挂牌流程发布。
+11. 实物商品唯一主数据为 `02672000-0000-4000-8000-000000000200`：`NVIDIA DGX Spark`、200 台、供应商展示名仅该 SKU 使用“白鸽在线”、含税原价 ¥40,750、售价 ¥32,600（8 折）、预计 90 天发货。生产可展示但必须保持 `pending_activation`；只有绑定真实供应商交易主体、完成法律资料摘要核验并激活公司收款档案后，才能切换为 `active` 并被用户购买。本地演示数据不得覆盖这一状态、价格、库存或主数据 ID。
 
 ## 自动备份
 
@@ -95,7 +95,7 @@ npm run db:restore -- --input /absolute/path/cloudpay-postgres-....kcpb
 4. 使用专用主站账户从 App 打开系统浏览器登录，确认回调只到 `kaicloudpay://auth/kai/callback`、首次登录写入当前用户协议与隐私版本，并能浏览挂牌、创建及取消未确认的卡时订单。
 5. 确认生产 `/mobile/v1/auth/otp/request` 和 `/mobile/v1/auth/otp/verify` 对 `login/register` 返回 410，且 APK 中不存在 OIDC client secret 或 auth.kai.com token。
 6. 在充值沙箱完成一次人民币充值，确认人民币只换入卡时；再完成一笔算力订单的接单、交付和验收。
-7. 将专用测试订单推进到结算到期时间，确认待结算卡时只转入提供方可用账户一次，且订单、凭证和双分录金额完全一致。
+7. 将专用测试订单推进到结算到期时间，确认待结算卡时扣除手续费后只转入提供方独立的“可兑付供应收益”账户一次，且订单、凭证和双分录金额完全一致。再用只含充值卡时的账户申请兑付，必须失败；充值、退款和平台赠送均不得计入可兑付供应收益。
 8. 完成一笔验收前的协商全额退款，确认卡时退回买方、容量恢复且提供方不能结算该订单。
 9. 完成一笔退款申请升级与平台裁定，分别验证全额退款会恢复卡时和容量、驳回退款会恢复待验收且不移动卡时。
 10. 验收一笔订单后，在 7 天保护期内提交售后全额退款：确认申请立即暂停结算，负责人同意后原订单卡时全部退回买方，提供方待结算余额归零，已经消耗的容量仍保持已售。

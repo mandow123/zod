@@ -12,6 +12,7 @@ const localE2eApk = join(root, `artifacts/release/KAI-CloudPay-${app.version}-${
 const apk = resolve(process.argv.find((value) => value.endsWith('.apk'))
   ?? (process.argv.includes('--local-e2e') ? localE2eApk : defaultApk));
 const install = process.argv.includes('--install');
+const cleanInstall = process.argv.includes('--clean-install');
 const replaceIncompatible = process.argv.includes('--replace-incompatible');
 const requireProviderMode = process.argv.includes('--provider');
 const requireStoreChannel = process.argv.includes('--store');
@@ -76,11 +77,14 @@ const embeddedConfig = JSON.parse(run('unzip', ['-p', apk, 'assets/app.config'])
 const embeddedBundle = runBinary('unzip', ['-p', apk, 'assets/index.android.bundle']);
 const embeddedExtra = embeddedConfig?.extra ?? {};
 const requiredFrontendMarkers = [
-  'KAI_CLOUD_DUAL_WORKSPACE_PROVIDER_PUBLISH_V1',
-  'KAI_CLOUD_UNIFIED_PROVIDER_PUBLISH_V2',
-  'WorkspaceHeader',
-  'ProviderResourcesScreen',
+  'KAI_CLOUD_UNIFIED_ASSETS_V2',
+  'UnifiedAssetsScreen',
+  'ProviderHomeScreen',
   'PublishScreen',
+];
+const commerceWorkflowMarkers = [
+  '/mobile/v1/device-products', '/mobile/v1/device-orders', '/mobile/v1/device-assets',
+  '/mobile/v1/shipping-addresses', '/mobile/v1/credits/payout-profile', '/mobile/v1/credits/payouts',
 ];
 const providerWorkflowMarkers = [
   '/mobile/v1/provider/bootstrap', '/mobile/v1/provider/resources', '/mobile/v1/provider/offer-drafts',
@@ -97,6 +101,9 @@ const missingProviderWorkflowMarkers = providerWorkflowMarkers.filter(
   (marker) => !embeddedBundle.includes(Buffer.from(marker)),
 );
 const missingUnifiedIdentityMarkers = unifiedIdentityMarkers.filter(
+  (marker) => !embeddedBundle.includes(Buffer.from(marker)),
+);
+const missingCommerceWorkflowMarkers = commerceWorkflowMarkers.filter(
   (marker) => !embeddedBundle.includes(Buffer.from(marker)),
 );
 const localE2e = /^http:\/\/10\.0\.2\.2:\d{2,5}$/u.test(embeddedExtra.cloudPayBaseUrl ?? '');
@@ -120,6 +127,8 @@ check(
 );
 check('unified_identity_protocol_embedded', missingUnifiedIdentityMarkers.length === 0,
   missingUnifiedIdentityMarkers.length ? `missing: ${missingUnifiedIdentityMarkers.join(', ')}` : 'broker start, exchange and exact App callback');
+check('unified_asset_commerce_embedded', missingCommerceWorkflowMarkers.length === 0,
+  missingCommerceWorkflowMarkers.length ? `missing: ${missingCommerceWorkflowMarkers.join(', ')}` : 'device purchase, assets and supplier payout APIs');
 if (requireStoreChannel) {
   check('store_commerce_disabled',
     embeddedExtra.nativeTopupsEnabled !== true && embeddedExtra.newOrdersEnabled !== true,
@@ -144,7 +153,13 @@ if (install) {
     const detail = rejectedCandidate.map((item) => `${item.id}: ${item.evidence}`).join('; ');
     throw new Error(`Refusing to install an unapproved Android candidate. ${detail}`);
   }
-  const firstInstall = spawnSync(adb, ['install', '-r', apk], { encoding: 'utf8', env: toolchainEnvironment });
+  if (cleanInstall) {
+    const isEmulator = adbRun('shell', 'getprop', 'ro.kernel.qemu').trim() === '1';
+    if (!isEmulator) throw new Error('Clean installation is restricted to the Android acceptance emulator.');
+    const installedBefore = adbRun('shell', 'pm', 'path', packageName).trim();
+    if (installedBefore.startsWith('package:')) adbRun('uninstall', packageName);
+  }
+  const firstInstall = spawnSync(adb, ['install', ...(cleanInstall ? [] : ['-r']), apk], { encoding: 'utf8', env: toolchainEnvironment });
   if (firstInstall.status !== 0 && /INSTALL_FAILED_UPDATE_INCOMPATIBLE/u.test(`${firstInstall.stdout}${firstInstall.stderr}`) && replaceIncompatible) {
     const isEmulator = adbRun('shell', 'getprop', 'ro.kernel.qemu').trim() === '1';
     if (!isEmulator) {
@@ -185,8 +200,13 @@ const width = Number(screenMatch[1]);
 const height = Number(screenMatch[2]);
 adbRun('shell', 'uiautomator', 'dump', '/sdcard/cloudpay-smoke-mode.xml');
 let initialHierarchy = adbRun('exec-out', 'cat', '/sdcard/cloudpay-smoke-mode.xml');
-let providerMode = initialHierarchy.includes('text="工作台"');
+let providerMode = initialHierarchy.includes('text="上架资源"')
+  || initialHierarchy.includes('text="登录后管理供给"');
 if (requireProviderMode && !providerMode) {
+  adbRun('shell', 'input', 'tap', String(Math.round(4.5 * width / 5)), String(height - 140));
+  await wait(1_000);
+  adbRun('shell', 'uiautomator', 'dump', '/sdcard/cloudpay-smoke-mode.xml');
+  initialHierarchy = adbRun('exec-out', 'cat', '/sdcard/cloudpay-smoke-mode.xml');
   const providerToggle = /(?:content-desc="[^"]*提供算力[^"]*"|text="提供算力")[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/u.exec(initialHierarchy);
   if (providerToggle) {
     const [, left, top, right, bottom] = providerToggle.map(Number);
@@ -194,22 +214,27 @@ if (requireProviderMode && !providerMode) {
     await wait(1_200);
     adbRun('shell', 'uiautomator', 'dump', '/sdcard/cloudpay-smoke-mode.xml');
     initialHierarchy = adbRun('exec-out', 'cat', '/sdcard/cloudpay-smoke-mode.xml');
-    providerMode = initialHierarchy.includes('text="工作台"');
+    adbRun('shell', 'input', 'tap', String(Math.round(0.5 * width / 5)), String(height - 140));
+    await wait(1_000);
+    adbRun('shell', 'uiautomator', 'dump', '/sdcard/cloudpay-smoke-mode.xml');
+    initialHierarchy = adbRun('exec-out', 'cat', '/sdcard/cloudpay-smoke-mode.xml');
+    providerMode = initialHierarchy.includes('text="上架资源"')
+      || initialHierarchy.includes('text="登录后管理供给"');
   }
 }
 check('requested_workspace', !requireProviderMode || providerMode, requireProviderMode ? '提供算力' : (providerMode ? '提供算力' : '使用算力'));
 const tabs = providerMode ? [
-  { id: 'home', markers: ['提供工作台', '登录后上架算力'], forbidden: ['上架数据没能载入'], settle: ['正在同步上架数据'] },
-  { id: 'market', markers: ['我的资产'] },
-  { id: 'publish', markers: ['上架进度', '资源方入驻', '添加算力资源'] },
-  { id: 'messages', markers: ['消息'] },
-  { id: 'profile', markers: ['当前账户'] },
-] : [
-  { id: 'home', markers: ['开始一次匹配'] },
+  { id: 'home', markers: ['上架资源', '登录后管理供给'], forbidden: ['上架数据没能载入'], settle: ['正在同步上架数据'] },
   { id: 'market', markers: ['算力市场'] },
-  { id: 'orders', markers: ['订单'] },
+  { id: 'assets', markers: ['我的资产'] },
   { id: 'messages', markers: ['消息'] },
-  { id: 'profile', markers: ['当前账户'] },
+  { id: 'profile', markers: ['当前视角'] },
+] : [
+  { id: 'home', markers: ['找到正在可用的算力'] },
+  { id: 'market', markers: ['算力市场'] },
+  { id: 'assets', markers: ['我的资产'] },
+  { id: 'messages', markers: ['消息'] },
+  { id: 'profile', markers: ['当前视角'] },
 ];
 
 for (const [index, tab] of tabs.entries()) {

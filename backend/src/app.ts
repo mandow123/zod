@@ -33,6 +33,12 @@ import type { FulfillmentService } from './fulfillment/service.js';
 import { registerNodeEnrollmentRoutes } from './node-enrollment/routes.js';
 import type { NodeEnrollmentService } from './node-enrollment/service.js';
 import type { KaiOidcBroker } from './account/kai-oidc.js';
+import { registerCreditPayoutRoutes } from './payouts/routes.js';
+import type { CreditPayoutService } from './payouts/service.js';
+import { registerDeviceCommerceRoutes } from './device-commerce/routes.js';
+import type { DeviceCommerceService } from './device-commerce/service.js';
+import { registerShippingAddressRoutes } from './shipping-addresses/routes.js';
+import type { ShippingAddressService } from './shipping-addresses/service.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -46,6 +52,9 @@ type BuildAppOptions = Readonly<{
   resourceEvidenceService?: ResourceEvidenceService;
   creditLedgerService?: CreditLedgerService;
   creditTopupService?: CreditTopupService;
+  creditPayoutService?: CreditPayoutService;
+  deviceCommerceService?: DeviceCommerceService;
+  shippingAddressService?: ShippingAddressService;
   creditOrderService?: CreditOrderService;
   fulfillmentService?: FulfillmentService;
   nodeEnrollmentService?: NodeEnrollmentService;
@@ -53,7 +62,7 @@ type BuildAppOptions = Readonly<{
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -172,6 +181,9 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && resourceEvidenceService) await registerResourceEvidenceRoutes(app, accountService, resourceEvidenceService);
   if (accountService && creditLedgerService) await registerCreditRoutes(app, accountService, creditLedgerService);
   if (accountService && creditTopupService) await registerCreditTopupRoutes(app, accountService, creditTopupService);
+  if (accountService && creditPayoutService) await registerCreditPayoutRoutes(app, accountService, creditPayoutService);
+  if (accountService && deviceCommerceService) await registerDeviceCommerceRoutes(app, accountService, deviceCommerceService);
+  if (accountService && shippingAddressService) await registerShippingAddressRoutes(app, accountService, shippingAddressService);
   if (accountService && creditOrderService) await registerCreditOrderRoutes(app, accountService, creditOrderService);
   if (accountService && fulfillmentService) await registerFulfillmentRoutes(app, accountService, fulfillmentService);
   if (accountService && nodeEnrollmentService) await registerNodeEnrollmentRoutes(app, accountService, nodeEnrollmentService);

@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadows } from './theme';
 
 export type WorkMode = 'consumer' | 'provider';
-export type TabKey = 'home' | 'market' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile';
+export type TabKey = 'home' | 'market' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function BrandHeader({
@@ -99,18 +99,10 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const consumerTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
+const mainTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
   { key: 'home', label: '首页', icon: 'home-outline', activeIcon: 'home' },
   { key: 'market', label: '市场', icon: 'storefront-outline', activeIcon: 'storefront' },
-  { key: 'orders', label: '订单', icon: 'receipt-outline', activeIcon: 'receipt' },
-  { key: 'messages', label: '消息', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' },
-  { key: 'profile', label: '我的', icon: 'person-outline', activeIcon: 'person' },
-];
-
-const providerTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
-  { key: 'workspace', label: '工作台', icon: 'grid-outline', activeIcon: 'grid' },
-  { key: 'resources', label: '资产', icon: 'cube-outline', activeIcon: 'cube' },
-  { key: 'publish', label: '上架', icon: 'add', activeIcon: 'add' },
+  { key: 'assets', label: '我的资产', icon: 'cube-outline', activeIcon: 'cube' },
   { key: 'messages', label: '消息', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' },
   { key: 'profile', label: '我的', icon: 'person-outline', activeIcon: 'person' },
 ];
@@ -127,13 +119,12 @@ export function BottomNav({
   unread: number;
 }) {
   const insets = useSafeAreaInsets();
-  const tabs = mode === 'provider' ? providerTabs : consumerTabs;
+  void mode;
 
   return (
     <View style={[styles.navShell, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {tabs.map((tab) => {
+      {mainTabs.map((tab) => {
         const selected = tab.key === active;
-        const center = mode === 'provider' && tab.key === 'publish';
         return (
           <Pressable
             key={tab.key}
@@ -143,11 +134,11 @@ export function BottomNav({
             onPress={() => onChange(tab.key)}
             style={styles.navItem}
           >
-            <View style={center ? styles.centerAction : styles.navIconWrap}>
+            <View style={styles.navIconWrap}>
               <Ionicons
                 name={selected ? tab.activeIcon : tab.icon}
-                size={center ? 31 : 23}
-                color={center ? colors.surface : selected ? colors.primary : colors.muted}
+                size={23}
+                color={selected ? colors.primary : colors.muted}
               />
               {tab.key === 'messages' && unread > 0 ? (
                 <View style={styles.navBadge}>
@@ -155,7 +146,7 @@ export function BottomNav({
                 </View>
               ) : null}
             </View>
-            <Text style={[styles.navLabel, selected && styles.navLabelActive, center && styles.centerLabel]}>
+            <Text style={[styles.navLabel, selected && styles.navLabelActive]}>
               {tab.label}
             </Text>
           </Pressable>
@@ -219,7 +210,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, fontWeight: '700' },
   onlineText: { color: colors.green },
   offlineText: { color: '#B91C1C' },
-  card: { backgroundColor: colors.surface, borderRadius: 22, borderWidth: 1, borderColor: colors.line, ...shadows.card },
+  card: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.line, ...shadows.card },
   navShell: {
     flexDirection: 'row',
     paddingTop: 8,
@@ -230,21 +221,8 @@ const styles = StyleSheet.create({
   },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', minHeight: 58 },
   navIconWrap: { width: 42, height: 30, alignItems: 'center', justifyContent: 'center' },
-  navLabel: { color: colors.muted, fontSize: 11, fontWeight: '600', marginTop: 1 },
+  navLabel: { color: colors.muted, fontSize: 10, fontWeight: '600', marginTop: 1 },
   navLabelActive: { color: colors.primary, fontWeight: '800' },
-  centerAction: {
-    width: 58,
-    height: 58,
-    marginTop: -27,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderWidth: 5,
-    borderColor: colors.surface,
-    ...shadows.card,
-  },
-  centerLabel: { marginTop: -1 },
   navBadge: { position: 'absolute', right: 1, top: -2, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 3, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
   navBadgeText: { color: colors.surface, fontSize: 9, fontWeight: '800' },
 });

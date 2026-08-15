@@ -7,6 +7,7 @@ import { colors, shadows } from './theme';
 
 export function WorkspaceHeader({
   mode,
+  showModeSwitch,
   onModeChange,
   subject,
   subjects,
@@ -19,6 +20,7 @@ export function WorkspaceHeader({
   onProfile,
 }: Readonly<{
   mode: WorkMode;
+  showModeSwitch: boolean;
   onModeChange: (mode: WorkMode) => void;
   subject: TradingSubject | null;
   subjects: TradingSubject[];
@@ -65,7 +67,7 @@ export function WorkspaceHeader({
             </Pressable>
           </View>
         </View>
-        <View style={styles.segment}>
+        {showModeSwitch ? <View style={styles.segment}>
           <Pressable onPress={() => switchMode('consumer')} style={[styles.segmentItem, mode === 'consumer' && styles.segmentItemActive]}>
             <Ionicons name="flash-outline" size={16} color={mode === 'consumer' ? colors.primary : colors.muted} />
             <Text style={[styles.segmentText, mode === 'consumer' && styles.segmentTextActive]}>使用算力</Text>
@@ -74,7 +76,7 @@ export function WorkspaceHeader({
             <Ionicons name="server-outline" size={16} color={mode === 'provider' ? colors.primary : colors.muted} />
             <Text style={[styles.segmentText, mode === 'provider' && styles.segmentTextActive]}>提供算力</Text>
           </Pressable>
-        </View>
+        </View> : null}
       </View>
 
       <Modal visible={subjectPickerVisible} transparent animationType="fade" onRequestClose={onCloseSubjectPicker}>
@@ -109,11 +111,11 @@ const roleLabel: Record<TradingSubject['role'], string> = {
 };
 
 const styles = StyleSheet.create({
-  shell: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, backgroundColor: colors.canvas, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  shell: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, backgroundColor: '#F2F7FC', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   topRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  logo: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
-  logoText: { color: colors.surface, fontSize: 22, fontWeight: '900' },
+  logo: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#CFE1F7', backgroundColor: '#EAF3FD' },
+  logoText: { color: colors.primaryDark, fontSize: 22, fontWeight: '900' },
   title: { color: colors.ink, fontSize: 17, fontWeight: '900', marginLeft: 10 },
   subjectButton: { maxWidth: 190, marginLeft: 10, marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 3 },
   subjectText: { maxWidth: 165, color: colors.muted, fontSize: 11, fontWeight: '700' },

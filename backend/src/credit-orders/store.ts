@@ -1561,15 +1561,15 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
       WHERE id = $1 AND status IN ('active', 'suspended') FOR UPDATE`, [order.supplierSubjectId]);
     if (!subjects.rows[0]) throw new Error('ACTIVE_TRADING_SUBJECT_REQUIRED');
     await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
-      VALUES ($1, 'subject', $2, $3, 'available', false)
+      VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
       ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-    [randomUUID(), order.supplierSubjectId, `subject:${order.supplierSubjectId}:available`]);
-    const accounts = await client.query<{ id: string; account_kind: 'available' | 'supplier_receivable' }>(`SELECT id,
+    [randomUUID(), order.supplierSubjectId, `subject:${order.supplierSubjectId}:supplier_earnings_available`]);
+    const accounts = await client.query<{ id: string; account_kind: 'supplier_earnings_available' | 'supplier_receivable' }>(`SELECT id,
         account_kind FROM kai_credit_accounts WHERE subject_id = $1
-        AND account_kind IN ('available', 'supplier_receivable') ORDER BY id FOR UPDATE`, [order.supplierSubjectId]);
-    const available = accounts.rows.find((row) => row.account_kind === 'available')?.id;
+        AND account_kind IN ('supplier_earnings_available', 'supplier_receivable') ORDER BY id FOR UPDATE`, [order.supplierSubjectId]);
+    const supplierEarnings = accounts.rows.find((row) => row.account_kind === 'supplier_earnings_available')?.id;
     const receivable = accounts.rows.find((row) => row.account_kind === 'supplier_receivable')?.id;
-    if (!available || !receivable) throw new Error('KAI_CREDIT_SETTLEMENT_ACCOUNTS_MISSING');
+    if (!supplierEarnings || !receivable) throw new Error('KAI_CREDIT_SETTLEMENT_ACCOUNTS_MISSING');
     const settlementTransactionId = randomUUID();
     await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
         payload_digest, reference_type, reference_id, description, status)
@@ -1578,7 +1578,7 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
       `order-settlement:${order.id}:${settlementCreditMicros}`, order.id, `订单 ${order.orderNumber} 提供方结算`]);
     await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo) VALUES
       ($1, $2, $3, $4, '提供方结算到账'), ($5, $2, $6, $7, '提供方结算转出')`,
-    [randomUUID(), settlementTransactionId, available, settlementCreditMicros.toString(), randomUUID(), receivable,
+    [randomUUID(), settlementTransactionId, supplierEarnings, settlementCreditMicros.toString(), randomUUID(), receivable,
       (-settlementCreditMicros).toString()]);
     await client.query(`UPDATE kai_credit_transactions SET status = 'posted', posted_at = $2 WHERE id = $1`,
     [settlementTransactionId, now]);

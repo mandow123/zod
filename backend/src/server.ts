@@ -44,6 +44,13 @@ import { NodeEnrollmentStore } from './node-enrollment/store.js';
 import { NodeEnrollmentService } from './node-enrollment/service.js';
 import { PostgresKaiIdentityStore } from './account/kai-identity-store.js';
 import { KaiOidcBroker } from './account/kai-oidc.js';
+import { PostgresCreditPayoutStore } from './payouts/store.js';
+import { CreditPayoutService } from './payouts/service.js';
+import { PostgresDeviceCommerceStore } from './device-commerce/store.js';
+import { DeviceCommerceService } from './device-commerce/service.js';
+import { DeviceOrderExpiryWorker } from './device-commerce/expiry-worker.js';
+import { PostgresShippingAddressStore } from './shipping-addresses/store.js';
+import { ShippingAddressService } from './shipping-addresses/service.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -89,6 +96,17 @@ const creditTopupStore = database ? new PostgresCreditTopupStore(database) : und
 const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
   ? new CreditTopupService(creditTopupStore, accountStore, subjectService, paymentProviders, config)
   : undefined;
+const creditPayoutService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+  ? new CreditPayoutService(new PostgresCreditPayoutStore(database), subjectService, config)
+  : undefined;
+const deviceCommerceStore = database ? new PostgresDeviceCommerceStore(database) : undefined;
+const deviceCommerceService = deviceCommerceStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+  ? new DeviceCommerceService(deviceCommerceStore, subjectService, config)
+  : undefined;
+const shippingAddressService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+  && config.PII_ENCRYPTION_KEY && config.AUDIT_PEPPER
+  ? new ShippingAddressService(new PostgresShippingAddressStore(database), subjectService, config)
+  : undefined;
 const creditOrderStore = database ? new PostgresCreditOrderStore(database) : undefined;
 const fulfillmentStore = database ? new PostgresFulfillmentStore(database) : undefined;
 const computeProvider = createComputeProvider(config);
@@ -122,6 +140,9 @@ const app = await buildApp({
   ...(resourceEvidenceService ? { resourceEvidenceService } : {}),
   ...(creditLedgerService ? { creditLedgerService } : {}),
   ...(creditTopupService ? { creditTopupService } : {}),
+  ...(creditPayoutService ? { creditPayoutService } : {}),
+  ...(deviceCommerceService ? { deviceCommerceService } : {}),
+  ...(shippingAddressService ? { shippingAddressService } : {}),
   ...(creditOrderService ? { creditOrderService } : {}),
   ...(fulfillmentService ? { fulfillmentService } : {}),
   ...(nodeEnrollmentService ? { nodeEnrollmentService } : {}),
@@ -138,6 +159,9 @@ const creditSupplierSettlementWorker = creditOrderStore
   : undefined;
 const fulfillmentExpiryWorker = fulfillmentService && computeProvider.available
   ? new FulfillmentExpiryWorker(fulfillmentService, app.log as WorkerLogger)
+  : undefined;
+const deviceOrderExpiryWorker = deviceCommerceStore
+  ? new DeviceOrderExpiryWorker(deviceCommerceStore, app.log as WorkerLogger)
   : undefined;
 const resourceEvidenceWorker = database && privateObjects && malwareScanner
   ? new EvidenceScanWorker(new ResourceEvidenceScanStore(database), privateObjects, malwareScanner, app.log as WorkerLogger)
@@ -158,6 +182,7 @@ topupRecoveryWorker?.start();
 creditOrderExpiryWorker?.start();
 creditSupplierSettlementWorker?.start();
 fulfillmentExpiryWorker?.start();
+deviceOrderExpiryWorker?.start();
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'graceful shutdown');
@@ -168,6 +193,7 @@ const shutdown = async (signal: string) => {
   await creditOrderExpiryWorker?.stop();
   await creditSupplierSettlementWorker?.stop();
   await fulfillmentExpiryWorker?.stop();
+  await deviceOrderExpiryWorker?.stop();
   await app.close();
   await database?.close();
   process.exit(0);

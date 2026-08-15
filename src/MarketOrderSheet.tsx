@@ -63,13 +63,14 @@ export function MarketOrderSheet({ listing, balance, authenticated, onClose, onL
   }, [balance, listing, quantity]);
 
   if (!listing) return null;
+  const physicalProduct = listing.productKind === 'hardware_device';
   const invalidQuantity = !amounts.selected || !amounts.minimum || !amounts.available
     || amounts.selected < amounts.minimum || amounts.selected > amounts.available;
   const insufficient = Boolean(authenticated && amounts.total && amounts.wallet !== null && amounts.total > amounts.wallet);
 
   const submit = async () => {
     if (!distributionPolicy.newOrders) { setError('此版本不提供新增购买。'); return; }
-    if (!isDedicatedGpuHour(listing)) { setError('这项资源还没有接入自动交付，暂时不能购买。'); return; }
+    if (!physicalProduct && !isDedicatedGpuHour(listing)) { setError('这项资源还没有接入自动交付，暂时不能购买。'); return; }
     if (!authenticated) { onLogin(); return; }
     if (invalidQuantity || !amounts.selected || !amounts.total) {
       setError(`购买数量需在 ${decimal(amounts.minimum ?? 0n)} 至 ${decimal(amounts.available ?? 0n)} ${listing.capacityUnit} 之间。`);
@@ -103,7 +104,9 @@ export function MarketOrderSheet({ listing, balance, authenticated, onClose, onL
     if (!authenticated) { onLogin(); return; }
     if (invalidQuantity || insufficient || !amounts.total) { void submit(); return; }
     const duration = decimal(amounts.selected ?? 0n);
-    Alert.alert('确认购买', `${gpuHourMeaning(duration)}。本次预留 ${creditAmount(decimal(amounts.total))} KAI 卡时；实例健康并取得连接信息后才开始计费。`, [
+    Alert.alert(physicalProduct ? '确认采购' : '确认购买', physicalProduct
+      ? `采购 ${duration} ${listing.capacityUnit}，预计使用 ${creditAmount(decimal(amounts.total))} KAI 卡时。库存、价格与交付以服务端最终确认为准。`
+      : `${gpuHourMeaning(duration)}。本次预留 ${creditAmount(decimal(amounts.total))} KAI 卡时；实例健康并取得连接信息后才开始计费。`, [
       { text: '再看看', style: 'cancel' },
       { text: '确认预留', onPress: () => void submit() },
     ]);
@@ -134,7 +137,7 @@ export function MarketOrderSheet({ listing, balance, authenticated, onClose, onL
             <Text style={styles.quantityUnit}>{listing.capacityUnit}</Text>
           </View>
           <Text style={styles.fieldHint}>最低 {decimal(amounts.minimum ?? 0n)} · 当前可售 {decimal(amounts.available ?? 0n)} {listing.capacityUnit}</Text>
-          <View style={styles.deliveryCard}><Ionicons name="hardware-chip-outline" size={20} color={colors.primary} /><View style={styles.deliveryCopy}><Text style={styles.deliveryTitle}>固定分配 1 张 GPU</Text><Text style={styles.deliveryText}>{gpuHourMeaning(quantity || 'X')}。付款后由平台自动开通，拿到连接信息并通过健康检查后才计费。</Text></View></View>
+          <View style={styles.deliveryCard}><Ionicons name={physicalProduct ? 'cube-outline' : 'hardware-chip-outline'} size={20} color={colors.primary} /><View style={styles.deliveryCopy}><Text style={styles.deliveryTitle}>{physicalProduct ? '整机实物交付' : '固定分配 1 张 GPU'}</Text><Text style={styles.deliveryText}>{physicalProduct ? `${listing.shippingEstimate ?? '交付时间待确认'}；数量与订单结果以服务端为准。` : `${gpuHourMeaning(quantity || 'X')}。付款后由平台自动开通，拿到连接信息并通过健康检查后才计费。`}</Text></View></View>
 
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>本次预计</Text>
@@ -148,7 +151,7 @@ export function MarketOrderSheet({ listing, balance, authenticated, onClose, onL
           <Pressable disabled={busy} onPress={confirm} style={[styles.primary, busy && styles.disabled]}>
             {busy ? <ActivityIndicator color={colors.surface} /> : <><Text style={styles.primaryText}>{authenticated ? insufficient ? '查看卡时账户' : '确认购买' : '登录后购买'}</Text><Ionicons name="arrow-forward" size={18} color={colors.surface} /></>}
           </Pressable>
-          <Text style={styles.footnote}>确认购买后卡时先冻结，平台立即开通算力；开通失败或超时会自动全额退回。</Text>
+          <Text style={styles.footnote}>{physicalProduct ? '提交后由服务端核对活动库存与采购资格；未确认成功前不展示订单成功。' : '确认购买后卡时先冻结，平台立即开通算力；开通失败或超时会自动全额退回。'}</Text>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

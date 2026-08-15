@@ -13,6 +13,8 @@ export class CreditLedgerService {
     const available = byKind.available?.amountMicros ?? 0n;
     const reserved = byKind.reserved?.amountMicros ?? 0n;
     const receivable = byKind.supplier_receivable?.amountMicros ?? 0n;
+    const payoutFrozen = byKind.payout_frozen?.amountMicros ?? 0n;
+    const supplierEarnings = byKind.supplier_earnings_available?.amountMicros ?? 0n;
     return {
       subjectId: subject.subjectId,
       unit: 'KAI_CREDIT',
@@ -20,7 +22,9 @@ export class CreditLedgerService {
       available: formatCreditAmount(available),
       reserved: formatCreditAmount(reserved),
       supplierReceivable: formatCreditAmount(receivable),
-      total: formatCreditAmount(available + reserved + receivable),
+      payoutFrozen: formatCreditAmount(payoutFrozen),
+      redeemableSupplierEarnings: formatCreditAmount(supplierEarnings),
+      total: formatCreditAmount(available + reserved + receivable + supplierEarnings + payoutFrozen),
       conversion: '1 KAI卡时 = ¥1.002',
     };
   }

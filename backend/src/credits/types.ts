@@ -5,7 +5,8 @@ export const KAI_CREDIT_PLATFORM_ACCOUNTS = Object.freeze({
   revenue: '00000000-0000-4000-8000-000000000103',
 });
 
-export type SubjectCreditAccountKind = 'available' | 'reserved' | 'supplier_receivable';
+export type SubjectCreditAccountKind = 'available' | 'reserved' | 'supplier_receivable'
+  | 'supplier_earnings_available' | 'payout_frozen';
 
 export type CreditAccountBalance = Readonly<{
   accountId: string;
@@ -20,4 +21,3 @@ export function formatCreditAmount(value: bigint) {
   const fraction = (absolute % KAI_CREDIT_MICROS).toString().padStart(6, '0');
   return `${sign}${whole}.${fraction}`;
 }
-

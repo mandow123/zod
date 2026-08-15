@@ -378,7 +378,8 @@ describe('compute fulfillment postgres lifecycle', () => {
       );
       expect(listing.rows[0]).toEqual({ capacity_reserved: '0.000000', capacity_sold: '0.600000' });
       expect(await f.store.settleDue(new Date(Date.now() + 8 * 86_400_000), 20)).toBe(1);
-      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: 18_682_635n, supplier_receivable: 0n });
+      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
+        supplier_earnings_available: 18_682_635n, supplier_receivable: 0n });
       const order = await f.database.query<{ status: string }>(`SELECT status FROM kai_credit_orders WHERE id=$1`, [f.orderId]);
       expect(order.rows[0]?.status).toBe('closed');
       await f.database.close();
@@ -499,7 +500,7 @@ describe('compute fulfillment postgres lifecycle', () => {
         }
         if (expected.provider > 0n) {
           expect(await f.store.settleDue(new Date(Date.now() + 8 * 86_400_000), 20)).toBe(1);
-          expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: expected.provider,
+          expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_earnings_available: expected.provider,
             supplier_receivable: 0n });
         }
         await f.database.close();

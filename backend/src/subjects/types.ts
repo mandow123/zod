@@ -3,6 +3,7 @@ export type SubjectRole = 'owner' | 'admin' | 'provider_manager' | 'provider_ope
 export type SubjectPermission =
   | 'subject.manage'
   | 'credits.read'
+  | 'credits.redeem'
   | 'orders.read'
   | 'orders.buy'
   | 'orders.dispute.manage'
@@ -28,8 +29,8 @@ export type SubjectContext = SubjectMembership & Readonly<{
 }>;
 
 const rolePermissions: Record<SubjectRole, SubjectPermission[]> = {
-  owner: ['subject.manage', 'credits.read', 'orders.read', 'orders.buy', 'orders.dispute.manage', 'provider.read', 'provider.profile.manage', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage', 'provider.refund.approve'],
-  admin: ['subject.manage', 'credits.read', 'orders.read', 'orders.buy', 'orders.dispute.manage', 'provider.read', 'provider.profile.manage', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage', 'provider.refund.approve'],
+  owner: ['subject.manage', 'credits.read', 'credits.redeem', 'orders.read', 'orders.buy', 'orders.dispute.manage', 'provider.read', 'provider.profile.manage', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage', 'provider.refund.approve'],
+  admin: ['subject.manage', 'credits.read', 'credits.redeem', 'orders.read', 'orders.buy', 'orders.dispute.manage', 'provider.read', 'provider.profile.manage', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage', 'provider.refund.approve'],
   provider_manager: ['orders.read', 'orders.dispute.manage', 'provider.read', 'provider.profile.manage', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage', 'provider.refund.approve'],
   provider_operator: ['orders.read', 'orders.dispute.manage', 'provider.read', 'provider.resource.manage', 'provider.offer.manage', 'provider.listing.manage', 'provider.order.manage'],
   viewer: ['orders.read', 'provider.read'],

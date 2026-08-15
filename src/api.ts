@@ -80,8 +80,114 @@ export type CreditBalance = Readonly<{
   available: string;
   reserved: string;
   supplierReceivable: string;
+  redeemableSupplierEarnings: string;
+  payoutFrozen: string;
   total: string;
   conversion: '1 KAI卡时 = ¥1.002';
+}>;
+
+export type DeviceProduct = Readonly<{
+  id: string;
+  sku: string;
+  title: string;
+  productType: 'physical_delivery';
+  supplier: Readonly<{ displayName: string }>;
+  activationStatus: 'pending_activation' | 'active' | 'suspended';
+  purchasable: boolean;
+  inventory: Readonly<{ total: number; reserved: number; sold: number; available: number }>;
+  pricing: Readonly<{
+    listPriceCny: string;
+    salePriceCny: string;
+    unitCredit: string;
+    discountPercent: number;
+    conversion: '1 KAI卡时 = ¥1.002';
+  }>;
+  expectedDelivery: Readonly<{ days: number; label: string }>;
+  specifications: Record<string, unknown>;
+}>;
+
+export type DeviceOrderStatus = 'reserved' | 'confirmed' | 'shipping' | 'received' | 'cancelled' | 'expired';
+export type DeviceOrder = Readonly<{
+  id: string;
+  orderNumber: string;
+  productId: string;
+  status: DeviceOrderStatus;
+  quantity: number;
+  unitCredit: string;
+  totalCredit: string;
+  serviceFeeCredit: string | null;
+  supplierNetCredit: string | null;
+  reservationTransactionId: string;
+  resolutionTransactionId: string | null;
+  reservationExpiresAt: string;
+  confirmedAt: string | null;
+  shippedAt: string | null;
+  receivedAt: string | null;
+  createdAt: string;
+}>;
+
+export type DeviceAsset = Readonly<{
+  id: string;
+  orderId: string;
+  ownerSubjectId: string;
+  productId: string;
+  title: string;
+  quantity: number;
+  status: 'owned';
+  acquiredAt: string;
+}>;
+
+export type ShippingAddress = Readonly<{
+  id: string;
+  reference: string;
+  recipientName: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  detail: string;
+  isDefault: boolean;
+  createdAt: string;
+}>;
+
+export type ShippingAddressInput = Readonly<{
+  recipientName: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  detail: string;
+  isDefault?: boolean;
+}>;
+
+export type CreditPayoutProfile = Readonly<{
+  status: 'pending_activation' | 'active' | 'suspended';
+  activatedAt: string | null;
+}>;
+
+export type CreditPayoutStatus = 'submitted' | 'reviewing' | 'paying' | 'succeeded' | 'failed' | 'rejected' | 'cancelled';
+export type CreditPayout = Readonly<{
+  id: string;
+  payoutNumber: string;
+  status: CreditPayoutStatus;
+  creditAmount: string;
+  amountCny: string;
+  conversion: '1 KAI卡时 = ¥1.002';
+  freezeTransactionId: string;
+  resolutionTransactionId: string | null;
+  companyPaymentReference: string | null;
+  failureCode: string | null;
+  resolutionReason: string | null;
+  balances: Readonly<{
+    availableBefore: string | null; availableAfter: string | null;
+    frozenBefore: string | null; frozenAfter: string | null;
+    resolutionAvailableBefore: string | null; resolutionAvailableAfter: string | null;
+    resolutionFrozenBefore: string | null; resolutionFrozenAfter: string | null;
+  }>;
+  reviewedAt: string | null;
+  payingAt: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
 }>;
 
 export type CreditTopup = Readonly<{
@@ -417,6 +523,12 @@ export type CloudPaySnapshot = {
   subjects: TradingSubject[];
   currentSubjectId: string | null;
   creditBalance: CreditBalance | null;
+  deviceProducts: DeviceProduct[];
+  deviceOrders: DeviceOrder[];
+  deviceAssets: DeviceAsset[];
+  payoutProfile: CreditPayoutProfile | null;
+  payouts: CreditPayout[];
+  commerceError: string | null;
   providerWorkspace: ProviderWorkspace | null;
   providerWorkspaceError: string | null;
   providerWorkspaceCachedAt: string | null;
@@ -472,6 +584,11 @@ type SubjectsResponse = { ok: true; currentSubjectId: string | null; subjects: T
 type ProviderBootstrapResponse = { ok: true; workspace: ProviderWorkspace };
 type OrdersResponse = { ok: true; orders: CloudPayOrder[]; nextCursor: string | null };
 type CreditBalanceResponse = { ok: true; balance: CreditBalance };
+type DeviceProductsResponse = { ok: true; products: DeviceProduct[] };
+type DeviceOrdersResponse = { ok: true; orders: DeviceOrder[] };
+type DeviceAssetsResponse = { ok: true; assets: DeviceAsset[] };
+type CreditPayoutProfileResponse = { ok: true; profile: CreditPayoutProfile };
+type CreditPayoutsResponse = { ok: true; payouts: CreditPayout[] };
 
 function reasonOf(result: PromiseSettledResult<unknown>) {
   if (result.status === 'fulfilled') return null;
@@ -496,6 +613,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     apiRequest<HealthResponse>('/mobile/v1/health', { retry: false }),
     apiRequest<ResourcesResponse>('/mobile/v1/market/resources?limit=50', { retry: false }),
     apiRequest<ListingsResponse>('/mobile/v1/market/listings?limit=50', { auth: 'optional', retry: false }),
+    apiRequest<DeviceProductsResponse>('/mobile/v1/device-products', { auth: 'optional', retry: false }),
     apiRequest<ReadinessResponse>('/mobile/v1/readiness', { retry: false }),
     LOCAL_E2E_DEMO_ENABLED ? localE2EDemoListings() : Promise.resolve({ ok: true, listings: [] } as ListingsResponse),
   ]);
@@ -508,6 +626,12 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
   let subjects: TradingSubject[] = [];
   let currentSubjectId: string | null = null;
   let creditBalance: CreditBalance | null = null;
+  let deviceProducts: DeviceProduct[] = [];
+  let deviceOrders: DeviceOrder[] = [];
+  let deviceAssets: DeviceAsset[] = [];
+  let payoutProfile: CreditPayoutProfile | null = null;
+  let payouts: CreditPayout[] = [];
+  let commerceError: string | null = null;
   let providerWorkspace: ProviderWorkspace | null = null;
   let providerWorkspaceError: string | null = null;
   let providerWorkspaceCachedAt: string | null = null;
@@ -517,7 +641,8 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
   let aftercareReviews: AftercareReview[] = [];
 
   if (storedSession) {
-    let [me, activity, subjectResult, balanceResult, providerResult, buyerOrderResult, providerOrderResult] = await Promise.allSettled([
+    let [me, activity, subjectResult, balanceResult, providerResult, buyerOrderResult, providerOrderResult,
+      deviceProductsResult, deviceOrdersResult, deviceAssetsResult, payoutProfileResult, payoutsResult] = await Promise.allSettled([
       apiRequest<MeResponse>('/mobile/v1/me', { auth: 'required', retry: false }),
       apiRequest<NotificationsResponse>('/mobile/v1/notifications?limit=50', { auth: 'required', retry: false }),
       apiRequest<SubjectsResponse>('/mobile/v1/subjects', { auth: 'required', retry: false }),
@@ -525,11 +650,17 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
       apiRequest<ProviderBootstrapResponse>('/mobile/v1/provider/bootstrap', { auth: 'required', retry: false }),
       apiRequest<OrdersResponse>('/mobile/v1/orders?limit=20&side=buyer', { auth: 'required', retry: false }),
       apiRequest<OrdersResponse>('/mobile/v1/orders?limit=20&side=provider', { auth: 'required', retry: false }),
+      apiRequest<DeviceProductsResponse>('/mobile/v1/device-products', { auth: 'required', retry: false }),
+      apiRequest<DeviceOrdersResponse>('/mobile/v1/device-orders', { auth: 'required', retry: false }),
+      apiRequest<DeviceAssetsResponse>('/mobile/v1/device-assets', { auth: 'required', retry: false }),
+      apiRequest<CreditPayoutProfileResponse>('/mobile/v1/credits/payout-profile', { auth: 'required', retry: false }),
+      apiRequest<CreditPayoutsResponse>('/mobile/v1/credits/payouts?limit=30', { auth: 'required', retry: false }),
     ]);
     // Keep the fast parallel snapshot, then recover only failed read models one
     // by one. This prevents one busy replica or an embedded acceptance database
     // from leaving a signed-in provider behind a permanent partial-data screen.
-    [me, activity, subjectResult, balanceResult, providerResult, buyerOrderResult, providerOrderResult] = [
+    [me, activity, subjectResult, balanceResult, providerResult, buyerOrderResult, providerOrderResult,
+      deviceProductsResult, deviceOrdersResult, deviceAssetsResult, payoutProfileResult, payoutsResult] = [
       await recoverProtectedRead(me, () => apiRequest<MeResponse>('/mobile/v1/me', { auth: 'required', retry: false })),
       await recoverProtectedRead(activity, () => apiRequest<NotificationsResponse>('/mobile/v1/notifications?limit=50', { auth: 'required', retry: false })),
       await recoverProtectedRead(subjectResult, () => apiRequest<SubjectsResponse>('/mobile/v1/subjects', { auth: 'required', retry: false })),
@@ -537,6 +668,11 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
       await recoverProtectedRead(providerResult, () => apiRequest<ProviderBootstrapResponse>('/mobile/v1/provider/bootstrap', { auth: 'required', retry: false })),
       await recoverProtectedRead(buyerOrderResult, () => apiRequest<OrdersResponse>('/mobile/v1/orders?limit=20&side=buyer', { auth: 'required', retry: false })),
       await recoverProtectedRead(providerOrderResult, () => apiRequest<OrdersResponse>('/mobile/v1/orders?limit=20&side=provider', { auth: 'required', retry: false })),
+      await recoverProtectedRead(deviceProductsResult, () => apiRequest<DeviceProductsResponse>('/mobile/v1/device-products', { auth: 'required', retry: false })),
+      await recoverProtectedRead(deviceOrdersResult, () => apiRequest<DeviceOrdersResponse>('/mobile/v1/device-orders', { auth: 'required', retry: false })),
+      await recoverProtectedRead(deviceAssetsResult, () => apiRequest<DeviceAssetsResponse>('/mobile/v1/device-assets', { auth: 'required', retry: false })),
+      await recoverProtectedRead(payoutProfileResult, () => apiRequest<CreditPayoutProfileResponse>('/mobile/v1/credits/payout-profile', { auth: 'required', retry: false })),
+      await recoverProtectedRead(payoutsResult, () => apiRequest<CreditPayoutsResponse>('/mobile/v1/credits/payouts?limit=30', { auth: 'required', retry: false })),
     ];
     if (me.status === 'fulfilled') {
       user = me.value.user;
@@ -595,6 +731,13 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     if (buyerOrderResult.status === 'rejected' && providerOrderResult.status === 'rejected' && !accountError) {
       accountError = reasonOf(buyerOrderResult) ?? reasonOf(providerOrderResult);
     }
+    deviceProducts = deviceProductsResult.status === 'fulfilled' ? deviceProductsResult.value.products : [];
+    deviceOrders = deviceOrdersResult.status === 'fulfilled' ? deviceOrdersResult.value.orders : [];
+    deviceAssets = deviceAssetsResult.status === 'fulfilled' ? deviceAssetsResult.value.assets : [];
+    payoutProfile = payoutProfileResult.status === 'fulfilled' ? payoutProfileResult.value.profile : null;
+    payouts = payoutsResult.status === 'fulfilled' ? payoutsResult.value.payouts : [];
+    commerceError = [deviceProductsResult, deviceOrdersResult, deviceAssetsResult, payoutProfileResult, payoutsResult]
+      .map(reasonOf).find((value): value is string => Boolean(value)) ?? null;
     if (user?.role === 'operator' || user?.role === 'admin') {
       try {
         const reviewResult = await apiRequest<{ ok: true; refunds: AftercareReview[] }>(
@@ -626,11 +769,17 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
       orderCursors = { buyer: null, provider: null };
       orderErrors = { buyer: null, provider: null };
       aftercareReviews = [];
+      deviceProducts = [];
+      deviceOrders = [];
+      deviceAssets = [];
+      payoutProfile = null;
+      payouts = [];
+      commerceError = null;
       accountError = '登录已失效，请重新登录。';
     }
   }
 
-  const [health, resourceCatalog, listingCatalog, readiness, demoCatalog] = await publicReads;
+  const [health, resourceCatalog, listingCatalog, publicDeviceProducts, readiness, demoCatalog] = await publicReads;
 
   const serviceOnline = health.status === 'fulfilled' && health.value.ok;
   const resourceData = resourceCatalog.status === 'fulfilled' && Array.isArray(resourceCatalog.value.resources)
@@ -643,6 +792,9 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     ? demoCatalog.value.listings
     : [];
   const listingData = mergeLocalDemoListings(realListingData, demoListingData);
+  if (deviceProducts.length === 0 && publicDeviceProducts.status === 'fulfilled') {
+    deviceProducts = publicDeviceProducts.value.products;
+  }
   const ready = readiness.status === 'fulfilled' ? readiness.value : null;
   const errors = [reasonOf(health), reasonOf(resourceCatalog), reasonOf(listingCatalog), accountError]
     .filter((value): value is string => Boolean(value));
@@ -671,6 +823,12 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     subjects,
     currentSubjectId,
     creditBalance,
+    deviceProducts,
+    deviceOrders,
+    deviceAssets,
+    payoutProfile,
+    payouts,
+    commerceError,
     providerWorkspace,
     providerWorkspaceError,
     providerWorkspaceCachedAt,
@@ -764,6 +922,112 @@ export async function createCloudPayOrder(
     headers: { 'idempotency-key': idempotencyKey },
   });
   return response.order;
+}
+
+export async function loadDeviceProducts() {
+  const response = await apiRequest<DeviceProductsResponse>('/mobile/v1/device-products', {
+    auth: 'optional', retry: false,
+  });
+  return response.products;
+}
+
+export async function loadDeviceProduct(productId: string) {
+  const response = await apiRequest<{ ok: true; product: DeviceProduct }>(
+    `/mobile/v1/device-products/${encodeURIComponent(productId)}`, { auth: 'optional', retry: false },
+  );
+  return response.product;
+}
+
+export async function createDeviceOrder(input: Readonly<{
+  productId: string; quantity: number; shippingAddressReference: string; idempotencyKey: string;
+}>) {
+  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>('/mobile/v1/device-orders', {
+    method: 'POST', auth: 'required', retry: false,
+    body: { productId: input.productId, quantity: input.quantity, shippingAddressReference: input.shippingAddressReference },
+    headers: { 'idempotency-key': input.idempotencyKey },
+  });
+  return response.order;
+}
+
+export async function loadDeviceOrders() {
+  const response = await apiRequest<DeviceOrdersResponse>('/mobile/v1/device-orders', { auth: 'required', retry: false });
+  return response.orders;
+}
+
+export async function loadDeviceAssets() {
+  const response = await apiRequest<DeviceAssetsResponse>('/mobile/v1/device-assets', { auth: 'required', retry: false });
+  return response.assets;
+}
+
+export async function loadShippingAddresses() {
+  const response = await apiRequest<{ ok: true; addresses: ShippingAddress[] }>('/mobile/v1/shipping-addresses', {
+    auth: 'required', retry: false,
+  });
+  return response.addresses;
+}
+
+export async function createShippingAddress(input: ShippingAddressInput, idempotencyKey: string) {
+  const response = await apiRequest<{ ok: true; address: ShippingAddress }>('/mobile/v1/shipping-addresses', {
+    method: 'POST', auth: 'required', retry: false, body: input,
+    headers: { 'idempotency-key': idempotencyKey },
+  });
+  return response.address;
+}
+
+export async function deleteShippingAddress(addressId: string, idempotencyKey = orderActionKey('shipping-address-delete')) {
+  return apiRequest<{ ok: true; deleted: true }>(`/mobile/v1/shipping-addresses/${encodeURIComponent(addressId)}`, {
+    method: 'DELETE', auth: 'required', retry: false,
+    headers: { 'idempotency-key': idempotencyKey },
+  });
+}
+
+export async function cancelDeviceOrder(orderId: string, idempotencyKey = orderActionKey('device-order-cancel')) {
+  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>(
+    `/mobile/v1/device-orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST', auth: 'required', retry: false, body: {}, headers: { 'idempotency-key': idempotencyKey },
+    },
+  );
+  return response.order;
+}
+
+export async function receiveDeviceOrder(orderId: string, idempotencyKey = orderActionKey('device-order-receive')) {
+  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>(
+    `/mobile/v1/device-orders/${encodeURIComponent(orderId)}/receive`, {
+      method: 'POST', auth: 'required', retry: false, body: {}, headers: { 'idempotency-key': idempotencyKey },
+    },
+  );
+  return response.order;
+}
+
+export async function loadCreditPayoutProfile() {
+  const response = await apiRequest<CreditPayoutProfileResponse>('/mobile/v1/credits/payout-profile', {
+    auth: 'required', retry: false,
+  });
+  return response.profile;
+}
+
+export async function loadCreditPayouts() {
+  const response = await apiRequest<CreditPayoutsResponse>('/mobile/v1/credits/payouts?limit=30', {
+    auth: 'required', retry: false,
+  });
+  return response.payouts;
+}
+
+export async function createCreditPayout(creditAmount: string, idempotencyKey: string) {
+  const response = await apiRequest<{ ok: true; replayed: boolean; payout: CreditPayout }>('/mobile/v1/credits/payouts', {
+    method: 'POST', auth: 'required', retry: false, body: { creditAmount },
+    headers: { 'idempotency-key': idempotencyKey },
+  });
+  return response.payout;
+}
+
+export async function cancelCreditPayout(payoutId: string, idempotencyKey = orderActionKey('credit-payout-cancel')) {
+  const response = await apiRequest<{ ok: true; replayed: boolean; payout: CreditPayout }>(
+    `/mobile/v1/credits/payouts/${encodeURIComponent(payoutId)}/cancel`, {
+      method: 'POST', auth: 'required', retry: false, body: {}, headers: { 'idempotency-key': idempotencyKey },
+    },
+  );
+  return response.payout;
 }
 
 export async function listCreditTopups() {
