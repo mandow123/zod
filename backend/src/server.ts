@@ -59,6 +59,10 @@ import { createVastAiProvider } from './vast-market/provider.js';
 import { PostgresVastMarketStore } from './vast-market/store.js';
 import { VastMarketService } from './vast-market/service.js';
 import { VastReconciliationWorker } from './vast-market/recovery-worker.js';
+import { FirstPartyAttributionProvider } from './creator-commissions/provider.js';
+import { PostgresCreatorCommissionStore } from './creator-commissions/store.js';
+import { CreatorCommissionService } from './creator-commissions/service.js';
+import { CreatorCommissionWorker } from './creator-commissions/worker.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -135,6 +139,12 @@ const vastProvider = createVastAiProvider(config);
 const vastMarketService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
   ? new VastMarketService(new PostgresVastMarketStore(database),subjectService,vastProvider,config.vastPricingPolicy)
   : undefined;
+const creatorCommissionStore=database?new PostgresCreatorCommissionStore(database):undefined;
+const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+  &&config.readiness.capabilities.creatorCommissions.available&&config.CREATOR_REFERRAL_SIGNING_SECRET
+  ?new CreatorCommissionService(creatorCommissionStore,subjectService,
+    new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,config.PUBLIC_ORIGIN)
+  :undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
@@ -169,10 +179,15 @@ const app = await buildApp({
   ...(kaiOidc ? { kaiOidc } : {}),
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
   ...(vastMarketService ? { vastMarketService } : {}),
+  ...(creatorCommissionService ? { creatorCommissionService } : {}),
 });
 const vastReconciliationWorker = vastMarketService && vastProvider.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
   : undefined;
+const creatorCommissionWorker=creatorCommissionStore&&config.creatorCommissionPolicy
+  &&config.readiness.capabilities.creatorCommissions.available
+  ?new CreatorCommissionWorker(creatorCommissionStore,config.creatorCommissionPolicy.refundObservationDays,app.log as WorkerLogger)
+  :undefined;
 const topupRecoveryWorker = database && creditTopupStore && paymentProviders.size > 0
   ? new TopupRecoveryWorker(new PostgresTopupRecoveryStore(database), creditTopupStore, paymentProviders, app.log as WorkerLogger)
   : undefined;
@@ -205,6 +220,7 @@ const accountDeletionWorker = database && config.readiness.capabilities.tokenSec
   : undefined;
 pushWorker?.start();
 vastReconciliationWorker?.start();
+creatorCommissionWorker?.start();
 accountDeletionWorker?.start();
 resourceEvidenceWorker?.start();
 topupRecoveryWorker?.start();
@@ -226,6 +242,7 @@ const shutdown = async (signal: string) => {
   await deviceOrderExpiryWorker?.stop();
   await deviceSettlementWorker?.stop();
   vastReconciliationWorker?.stop();
+  creatorCommissionWorker?.stop();
   await app.close();
   await database?.close();
   process.exit(0);

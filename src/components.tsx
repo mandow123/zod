@@ -9,8 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { brand, colors, shadows } from './theme';
 
-export type WorkMode = 'consumer' | 'provider';
-export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile';
+export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile' | 'creator';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function BrandHeader({
@@ -102,24 +101,21 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
 const mainTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
   { key: 'home', label: '首页', icon: 'home-outline', activeIcon: 'home' },
   { key: 'market', label: '市场', icon: 'storefront-outline', activeIcon: 'storefront' },
-  { key: 'assets', label: '我的资产', icon: 'cube-outline', activeIcon: 'cube' },
+  { key: 'publish', label: '上架', icon: 'add-circle-outline', activeIcon: 'add-circle' },
   { key: 'messages', label: '消息', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' },
   { key: 'profile', label: '我的', icon: 'person-outline', activeIcon: 'person' },
 ];
 
 export function BottomNav({
   active,
-  mode,
   onChange,
   unread,
 }: {
   active: TabKey;
-  mode: WorkMode;
   onChange: (tab: TabKey) => void;
   unread: number;
 }) {
   const insets = useSafeAreaInsets();
-  void mode;
 
   return (
     <View style={[styles.navShell, { paddingBottom: Math.max(insets.bottom, 8) }]}>

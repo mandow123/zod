@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Linking, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AuthSheet } from './src/AuthSheet';
 import {
@@ -22,7 +22,7 @@ import {
   type DeviceOrder,
 } from './src/api';
 import { AftercareReviewSheet } from './src/AftercareReviewSheet';
-import { BottomNav, type TabKey, type WorkMode } from './src/components';
+import { BottomNav, type TabKey } from './src/components';
 import { OfferWizardSheet } from './src/OfferWizardSheet';
 import { OrderDetailSheet } from './src/OrderDetailSheet';
 import { MarketOrderSheet } from './src/MarketOrderSheet';
@@ -36,11 +36,9 @@ import { OrdersScreen } from './src/screens/OrdersScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { ProviderResourcesScreen } from './src/screens/ProviderResourcesScreen';
 import { ProviderWorkspaceScreen } from './src/screens/ProviderWorkspaceScreen';
-import { ProviderHomeScreen } from './src/screens/ProviderHomeScreen';
 import { UnifiedAssetsScreen } from './src/screens/UnifiedAssetsScreen';
 import { PublishScreen } from './src/screens/PublishScreen';
-import { brand, colors } from './src/theme';
-import { loadWorkMode, saveWorkMode } from './src/work-mode';
+import { colors } from './src/theme';
 import { getSupplierOffer } from './src/publishing';
 import { distributionPolicy } from './src/distribution';
 import { refreshAfterPendingAuthentication } from './src/auth-refresh';
@@ -55,13 +53,18 @@ import { CreditPayoutSheet } from './src/CreditPayoutSheet';
 import { beginSubjectTransition, initialSnapshot, mergeSnapshot } from './src/snapshot-state';
 import { CreditScreen } from './src/screens/CreditScreen';
 import { deviceProductAvailability, marketAvailability } from './src/market-availability';
+import { CreatorCollaborationScreen } from './src/screens/CreatorCollaborationScreen';
+import { CreatorRewardSheet } from './src/CreatorRewardSheet';
+import {
+  attributeCreatorReferral, consumeCreatorRewardEvent, loadCreatorRewardEvents,
+  parseCreatorReferralToken, type CreatorRewardEvent,
+} from './src/creator-commissions';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 
 function CloudPayApp() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [workMode, setWorkMode] = useState<WorkMode>('consumer');
-  const [workModeReady, setWorkModeReady] = useState(false);
+  const [orderSide, setOrderSide] = useState<'buyer' | 'provider'>('buyer');
   const [snapshot, setSnapshot] = useState<CloudPaySnapshot>(initialSnapshot);
   const [refreshing, setRefreshing] = useState(false);
   const [authVisible, setAuthVisible] = useState(false);
@@ -86,6 +89,8 @@ function CloudPayApp() {
   const [payoutVisible, setPayoutVisible] = useState(false);
   const [selectedReview, setSelectedReview] = useState<AftercareReview | null>(null);
   const [creditWalletVisible, setCreditWalletVisible] = useState(false);
+  const [creatorReward, setCreatorReward] = useState<CreatorRewardEvent | null>(null);
+  const [pendingReferralToken, setPendingReferralToken] = useState<string | null>(null);
   const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const refreshGeneration = useRef(0);
@@ -119,7 +124,14 @@ function CloudPayApp() {
     let active = true;
     const handled = new Set<string>();
     const handleUrl = async (url: string | null) => {
-      if (!url || !isKaiAuthCallback(url) || handled.has(url)) return;
+      if (!url || handled.has(url)) return;
+      const referralToken = parseCreatorReferralToken(url);
+      if (referralToken) {
+        handled.add(url);
+        setPendingReferralToken(referralToken);
+        return;
+      }
+      if (!isKaiAuthCallback(url)) return;
       handled.add(url);
       setAuthVisible(true);
       setKaiAuthBusy(true);
@@ -141,6 +153,19 @@ function CloudPayApp() {
   }, [refreshAfterAuthentication]);
 
   useEffect(() => {
+    if (!pendingReferralToken) return;
+    if (!snapshot.authenticated) { setAuthVisible(true); return; }
+    const token = pendingReferralToken;
+    setPendingReferralToken(null);
+    void attributeCreatorReferral(token).then(() => {
+      setAuthVisible(false);
+      Alert.alert('推广关系已确认', '完成订单后，返佣将按规则进入达人合作记录。');
+    }).catch((reason) => {
+      Alert.alert('推广链接暂不可用', reason instanceof Error ? reason.message : '请重新打开推广链接。');
+    });
+  }, [pendingReferralToken, snapshot.authenticated]);
+
+  useEffect(() => {
     void refresh();
   }, [refresh]);
 
@@ -152,27 +177,24 @@ function CloudPayApp() {
   }, [refresh]);
 
   useEffect(() => {
-    if (!workModeReady || workMode !== 'provider' || activeTab !== 'home') return;
-    void refresh();
-  }, [activeTab, refresh, workMode, workModeReady]);
-
-  useEffect(() => {
     if (activeTab !== 'messages' || !snapshot.authenticated) return;
     void refresh();
   }, [activeTab, refresh, snapshot.authenticated]);
+
+  useEffect(() => {
+    let active = true;
+    if (!snapshot.authenticated) { setCreatorReward(null); return () => { active = false; }; }
+    void loadCreatorRewardEvents(1).then((events) => {
+      if (active) setCreatorReward((current) => current ?? events[0] ?? null);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [snapshot.authenticated, snapshot.currentSubjectId]);
 
   useEffect(() => {
     if (snapshot.authenticated && snapshot.providerWorkspace?.canManage === true) return;
     setOfferWizard(null);
     setListingOfferId(null);
   }, [snapshot.authenticated, snapshot.currentSubjectId, snapshot.providerWorkspace?.canManage]);
-
-  useEffect(() => {
-    if (workMode !== 'provider' || activeTab !== 'home'
-      || !snapshot.authenticated || (snapshot.providerWorkspace?.offers.underReview ?? 0) === 0) return;
-    const timer = setInterval(() => { void refresh(); }, 10_000);
-    return () => clearInterval(timer);
-  }, [activeTab, refresh, snapshot.authenticated, snapshot.providerWorkspace?.offers.underReview, workMode]);
 
   useEffect(() => {
     let active = true;
@@ -190,13 +212,6 @@ function CloudPayApp() {
       } : current);
     });
     return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    void loadWorkMode().then((mode) => {
-      setWorkMode(mode);
-      setActiveTab('home');
-    }).finally(() => setWorkModeReady(true));
   }, []);
 
   const navigate = useCallback((tab: TabKey) => {
@@ -230,12 +245,6 @@ function CloudPayApp() {
     if (destination.manageListingId) setPublishListingToManage(destination.manageListingId);
   }, [navigate, snapshot.providerWorkspace?.resume]);
 
-  const changeWorkMode = useCallback((mode: WorkMode) => {
-    setWorkMode(mode);
-    setActiveTab('profile');
-    void saveWorkMode(mode);
-  }, []);
-
   const chooseSubject = useCallback(async (subjectId: string) => {
     try {
       const selected = await selectTradingSubject(subjectId);
@@ -249,6 +258,7 @@ function CloudPayApp() {
       setSelectedDeviceOrder(null);
       setPayoutVisible(false);
       setCreditWalletVisible(false);
+      setCreatorReward(null);
       setOfferWizard(null);
       setListingOfferId(null);
       setPublishOfferToReveal(null);
@@ -376,7 +386,7 @@ function CloudPayApp() {
             setActiveTab('publish');
           }} />;
       case 'assets':
-        return <UnifiedAssetsScreen snapshot={snapshot} mode={workMode} refreshing={refreshing} onRefresh={refresh}
+        return <UnifiedAssetsScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
           onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then(setSelectedOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenDeviceOrder={(orderId) => void loadDeviceOrder(orderId).then(setSelectedDeviceOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenMarket={() => navigate('market')} onOpenProviderAssets={(resourceId) => { setResourceToOpenId(resourceId ?? null); navigate('resources'); }} onOpenPublish={() => navigate('publish')}
@@ -386,8 +396,8 @@ function CloudPayApp() {
           onLogin={() => setAuthVisible(true)} onOpenWallet={() => setCreditWalletVisible(true)}
           onOpenPayout={() => setPayoutVisible(true)} />;
       case 'orders':
-        return <OrdersScreen snapshot={snapshot} side={workMode === 'provider' ? 'provider' : 'buyer'} refreshing={refreshing} onRefresh={refresh}
-          onMarket={() => navigate(workMode === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)} onOpenOrder={setSelectedOrder}
+        return <OrdersScreen snapshot={snapshot} side={orderSide} refreshing={refreshing} onRefresh={refresh}
+          onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)} onOpenOrder={setSelectedOrder}
           onOpenReview={setSelectedReview} />;
       case 'workspace':
         return <ProviderWorkspaceScreen
@@ -398,7 +408,7 @@ function CloudPayApp() {
           onLogin={() => setAuthVisible(true)}
           onOpenOrder={setSelectedOrder}
           onOpenDeviceOrder={setSelectedDeviceOrder}
-          onAllOrders={() => navigate('orders')}
+          onAllOrders={() => { setOrderSide('provider'); navigate('orders'); }}
         />;
       case 'resources':
         return <ProviderResourcesScreen
@@ -429,17 +439,20 @@ function CloudPayApp() {
       case 'messages':
         return <MessagesScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onMarkRead={markRead}
           onMarkAllRead={markAllRead} onOpenMessage={(message) => void openMessage(message)} onOpenProfile={() => navigate('profile')} />;
+      case 'creator':
+        return <CreatorCollaborationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)}
+          onTransferred={(event) => { setCreatorReward(event); void refresh(); }} />;
       case 'profile':
-        return <ProfileScreen snapshot={snapshot} mode={workMode} onModeChange={changeWorkMode}
+        return <ProfileScreen snapshot={snapshot}
           onSelectSubject={(subjectId) => void chooseSubject(subjectId)} onSessionChanged={refresh} onLogin={() => setAuthVisible(true)}
-          onOpenPublish={() => navigate('publish')} onOpenCredits={() => navigate('credits')}
-          onOpenOrders={() => navigate('orders')} onOpenAssets={() => navigate('assets')} onOpenMessages={() => navigate('messages')} />;
+          onOpenQualification={() => { setPublishIntentToOpen('supplier'); navigate('publish'); }} onOpenCredits={() => navigate('credits')}
+          onOpenOrders={() => { setOrderSide('buyer'); navigate('orders'); }} onOpenAssets={() => navigate('assets')}
+          onOpenCreatorCollaboration={() => navigate('creator')}
+          onOpenPayout={() => setPayoutVisible(true)}
+          onOpenMessages={() => navigate('messages')} />;
       case 'home':
       default:
-        return workMode === 'provider' ? <ProviderHomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
-          onLogin={() => setAuthVisible(true)} onNext={openProviderNextAction} onOpenPublish={() => navigate('publish')}
-          onOpenAssets={() => navigate('assets')} />
-          : <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}
+        return <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}
             onOpenDemand={() => setDemandComposerVisible(true)} onOpenSparkDetail={openSparkDetail}
             onOpenCredits={() => navigate('credits')} />;
     }
@@ -452,19 +465,11 @@ function CloudPayApp() {
     ? deviceProductAvailability(marketAvailability(snapshot, distributionPolicy.newOrders), selectedDeviceProduct)
     : { allowed: false, reason: null };
 
-  if (!workModeReady) return (
-    <View style={styles.launch}>
-      <View style={styles.launchMark}><Text style={styles.launchMarkText}>Z</Text></View>
-      <Text style={styles.launchTitle}>{brand.name}</Text>
-      <ActivityIndicator color={colors.green} style={styles.launchSpinner} />
-    </View>
-  );
-
   return (
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       <View style={styles.page}>{page}</View>
-      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' ? 'assets' : activeTab === 'workspace' || activeTab === 'publish' ? 'home' : activeTab} mode={workMode} onChange={navigate} unread={snapshot.unreadCount} />
+      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}
@@ -533,6 +538,15 @@ function CloudPayApp() {
         onClose={() => setSelectedDeviceOrder(null)} onChanged={refresh} />
       <CreditPayoutSheet visible={payoutVisible} balance={snapshot.creditBalance} profile={snapshot.payoutProfile}
         onClose={() => setPayoutVisible(false)} onCreated={() => refresh()} />
+      <CreatorRewardSheet event={creatorReward}
+        onClose={() => {
+          const event = creatorReward; setCreatorReward(null);
+          if (event) void consumeCreatorRewardEvent(event.eventId).catch(() => undefined);
+        }}
+        onOpenMarket={() => {
+          const event = creatorReward; setCreatorReward(null); navigate('market');
+          if (event) void consumeCreatorRewardEvent(event.eventId).catch(() => undefined);
+        }} />
     </SafeAreaView>
   );
 }
@@ -548,9 +562,4 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   page: { flex: 1 },
-  launch: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
-  launchMark: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.green },
-  launchMarkText: { color: colors.surface, fontSize: 34, fontWeight: '900' },
-  launchTitle: { color: colors.ink, fontSize: 23, fontWeight: '900', marginTop: 16 },
-  launchSpinner: { marginTop: 18 },
 });

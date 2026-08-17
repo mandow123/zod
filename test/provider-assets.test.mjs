@@ -97,10 +97,11 @@ test('asset action contract includes every backend offer and draft transition', 
 });
 
 test('asset UI consumes the dedicated API contract and exposes lifecycle views', async () => {
-  const [screen, contract, navigation] = await Promise.all([
+  const [screen, contract, navigation, profile] = await Promise.all([
     readFile(new URL('../src/screens/ProviderResourcesScreen.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/provider-assets.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/components.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/screens/ProfileScreen.tsx', import.meta.url), 'utf8'),
   ]);
   assert.match(contract, /\/mobile\/v1\/provider\/assets/u);
   assert.match(screen, /loadProviderAssets\(\)/u);
@@ -108,7 +109,9 @@ test('asset UI consumes the dedicated API contract and exposes lifecycle views',
   assert.match(screen, /assetRequestGeneration/u);
   assert.match(screen, /providerAssetActionAllowed/u);
   assert.match(screen, /!snapshot\.authenticated \|\| canManage/u);
-  assert.match(navigation, /key: 'assets', label: '我的资产'/u);
+  assert.doesNotMatch(navigation, /key: 'assets', label: '我的资产'/u);
+  assert.match(navigation, /key: 'publish', label: '上架'/u);
+  assert.match(profile, /label="我的资产"/u);
   for (const lifecycleCopy of ['托管设备', '部署中', '设备关闭', '已续产', '已回购']) {
     assert.match(screen, new RegExp(lifecycleCopy, 'u'));
   }

@@ -4,18 +4,21 @@ import test from 'node:test';
 
 async function source(path) { return readFile(new URL(path, import.meta.url), 'utf8'); }
 
-test('V2 keeps one five-item navigation and moves the view switch into My', async () => {
-  const [app, components, profile] = await Promise.all([
+test('V2 keeps one five-item navigation and removes the repeated global view switch', async () => {
+  const [app, components, profile, assets] = await Promise.all([
     source('../App.tsx'), source('../src/components.tsx'), source('../src/screens/ProfileScreen.tsx'),
+    source('../src/screens/UnifiedAssetsScreen.tsx'),
   ]);
   for (const entry of [
     "{ key: 'home', label: '首页'", "{ key: 'market', label: '市场'",
-    "{ key: 'assets', label: '我的资产'", "{ key: 'messages', label: '消息'",
+    "{ key: 'publish', label: '上架'", "{ key: 'messages', label: '消息'",
     "{ key: 'profile', label: '我的'",
   ]) assert.match(components, new RegExp(entry.replace(/[{}]/gu, '\\$&'), 'u'));
   assert.doesNotMatch(app, /<WorkspaceHeader/u);
-  assert.match(profile, /使用算力/u);
-  assert.match(profile, /提供算力/u);
+  assert.doesNotMatch(profile, /当前视角|使用算力|提供算力/u);
+  assert.match(profile, /label="我的资产"/u);
+  assert.match(assets, /我购买的/u);
+  assert.match(assets, /我提供的/u);
   assert.match(app, /KAI_CLOUD_UNIFIED_ASSETS_V2/u);
 });
 
@@ -76,6 +79,15 @@ test('unified assets shows backend evidence for device states and payout balance
   assert.match(payout, /本次没有冻结卡时/u);
   assert.match(api, /\/mobile\/v1\/credits\/payout-profile/u);
   assert.match(api, /\/mobile\/v1\/credits\/payouts/u);
+});
+
+test('供应状态默认折叠并可筛选全部真实生命周期视图', async () => {
+  const assets = await source('../src/screens/UnifiedAssetsScreen.tsx');
+  for (const label of ['托管设备', '部署中', '待处理', '已回购', '已续产', '设备关闭', '运营中']) {
+    assert.match(assets, new RegExp(label, 'u'));
+  }
+  assert.match(assets, /filtersExpanded/u);
+  assert.match(assets, /matchesProvidedFilter/u);
 });
 
 test('device checkout uses a normal address book and keeps references internal', async () => {

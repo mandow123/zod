@@ -115,24 +115,23 @@ export function CreditWalletSheet({ visible, balance, alipayReady, wechatReady, 
 
         {distributionPolicy.nativeTopups ? <>
           <Text style={styles.sectionTitle}>充值卡时</Text>
-          <Text style={styles.sectionHelp}>人民币只用于购买 KAI 卡时；购买算力时仅使用卡时。</Text>
-          <View style={styles.amountGrid}>{amounts.map((amount) => <Pressable key={amount} onPress={() => { setSelectedAmount(amount); setError(null); request.current = null; }} style={[styles.amount, selectedAmount === amount && styles.amountActive]}><Text style={[styles.amountText, selectedAmount === amount && styles.amountTextActive]}>¥{amount}</Text><Text style={[styles.amountCredit, selectedAmount === amount && styles.amountCreditActive]}>约 {creditForYuan(amount)} 卡时</Text></Pressable>)}</View>
+          <Text style={styles.sectionHelp}>选择本次预计到账的卡时，支付渠道确认后才会入账。</Text>
+          <View style={styles.amountGrid}>{amounts.map((amount) => <Pressable key={amount} onPress={() => { setSelectedAmount(amount); setError(null); request.current = null; }} style={[styles.amount, selectedAmount === amount && styles.amountActive]}><Text style={[styles.amountText, selectedAmount === amount && styles.amountTextActive]}>{creditForYuan(amount)}</Text><Text style={[styles.amountCredit, selectedAmount === amount && styles.amountCreditActive]}>KAI 卡时</Text></Pressable>)}</View>
 
           <View style={styles.providers}>
             <ProviderChoice label="支付宝" icon="logo-alipay" active={provider === 'alipay'} enabled={alipayReady} onPress={() => { setProvider('alipay'); request.current = null; }} />
             <ProviderChoice label="微信支付" icon="logo-wechat" active={provider === 'wechat'} enabled={wechatReady} onPress={() => { setProvider('wechat'); request.current = null; }} />
           </View>
 
-          <View style={styles.conversion}><Text style={styles.conversionLabel}>本次预计到账</Text><Text style={styles.conversionValue}>{expectedCredits} KAI 卡时</Text><Text style={styles.conversionRule}>固定换算：1 KAI 卡时 = ¥1.002</Text></View>
           {error ? <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={colors.amber} /><Text style={styles.noticeText}>{error}</Text></View> : null}
-          <Pressable disabled={busy || !providerReady} onPress={() => void start()} style={[styles.primary, (busy || !providerReady) && styles.disabled]}>{busy ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{providerReady ? `支付 ¥${selectedAmount} 购买卡时` : '充值通道尚未接通'}</Text>}</Pressable>
+          <Pressable disabled={busy || !providerReady} onPress={() => void start()} style={[styles.primary, (busy || !providerReady) && styles.disabled]}>{busy ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{providerReady ? `确认充值 ${expectedCredits} 卡时` : '充值通道尚未接通'}</Text>}</Pressable>
           <Text style={styles.safety}>支付完成不等于立即入账。后端确认支付渠道结果后，卡时才会增加。</Text>
 
           <View style={styles.historyHeader}><Text style={styles.sectionTitle}>充值记录</Text><Pressable onPress={() => void refresh()}><Ionicons name="refresh" size={19} color={colors.primary} /></Pressable></View>
           {loading && topups.length === 0 ? <ActivityIndicator style={styles.loader} color={colors.primary} /> : null}
           {topups.length === 0 && !loading ? <View style={styles.empty}><Text style={styles.emptyText}>还没有充值记录</Text></View> : topups.map((topup) => <View key={topup.id} style={styles.record}>
             <View style={styles.recordIcon}><Ionicons name={topup.provider === 'alipay' ? 'logo-alipay' : 'logo-wechat'} size={22} color={colors.primary} /></View>
-            <View style={styles.recordCopy}><Text style={styles.recordTitle}>¥{topup.amountCny} · {creditAmount(topup.creditAmount)} 卡时</Text><Text style={styles.recordMeta}>{dateTime(topup.createdAt)} · {statusLabel[topup.status]}</Text></View>
+            <View style={styles.recordCopy}><Text style={styles.recordTitle}>{creditAmount(topup.creditAmount)} 卡时</Text><Text style={styles.recordMeta}>{dateTime(topup.createdAt)} · {statusLabel[topup.status]}</Text></View>
             {topup.status === 'pending' && new Date(topup.expiresAt).getTime() > Date.now() ? <Pressable disabled={busy} onPress={() => void resume(topup)} style={styles.resume}><Text style={styles.resumeText}>继续</Text></Pressable> : null}
           </View>)}
         </> : <View style={styles.managedAccount}>

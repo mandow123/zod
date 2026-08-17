@@ -3,7 +3,7 @@ export const colors = {
   muted: '#667085',
   subtle: '#98A2B3',
   line: '#E7EBF0',
-  canvas: '#F5F6F8',
+  canvas: '#F2F5F8',
   surface: '#FFFFFF',
   primary: '#1677FF',
   primaryDark: '#0958D9',
@@ -15,6 +15,8 @@ export const colors = {
   blueSoft: '#EEF5FF',
   amber: '#E87909',
   amberSoft: '#FFF4E5',
+  orange: '#FF6A00',
+  orangeSoft: '#FFF0E5',
   red: '#D92D20',
 };
 

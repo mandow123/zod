@@ -36,7 +36,6 @@ export function SparkProductDetailSheet({ product, visible, purchaseAllowed, blo
           <View style={styles.discountBadge}><Text style={styles.discountText}>{product.pricing.discountPercent === 20 ? '8 折' : `优惠 ${product.pricing.discountPercent}%`}</Text></View>
           <Text style={styles.priceLabel}>活动价</Text>
           <Text style={styles.price}>{creditAmount(product.pricing.unitCredit)} <Text style={styles.unit}>KAI 卡时 / 台</Text></Text>
-          {product.pricing.listUnitCredit ? <Text style={styles.original}>{creditAmount(product.pricing.listUnitCredit)} KAI 卡时 / 台</Text> : null}
         </View>
 
         <View style={styles.inventoryCard}>
@@ -49,7 +48,7 @@ export function SparkProductDetailSheet({ product, visible, purchaseAllowed, blo
 
         <Fact icon="cube-outline" title="整机商品" body={`${product.title} 采用实物交付，不作为 GPU 小时算力订单。`} />
         <Fact icon="time-outline" title="交付周期" body={`${product.expectedDelivery.label}，实际交付节点以订单和平台消息为准。`} />
-        <Fact icon="shield-checkmark-outline" title="价格说明" body={`原价 ${creditAmount(product.pricing.listUnitCredit ?? product.pricing.unitCredit)} KAI 卡时，活动价 ${creditAmount(product.pricing.unitCredit)} KAI 卡时；优惠 ${product.pricing.discountPercent}%。价格由服务端锁定。`} />
+        <Fact icon="shield-checkmark-outline" title="价格说明" body={`当前价格 ${creditAmount(product.pricing.unitCredit)} KAI 卡时 / 台，已按 8 折活动直接展示，价格由服务端锁定。`} />
         {!purchaseAllowed ? <View style={styles.blocked}><Ionicons name="alert-circle-outline" size={19} color={colors.amber} /><Text style={styles.noticeText}>{blockedReason ?? '该商品当前暂不可购买。'}</Text></View> : null}
         <View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.amber} /><Text style={styles.noticeText}>点击购买只会进入确认页；数量、价格与订单结果以服务端确认为准。</Text></View>
       </ScrollView>
@@ -88,7 +87,6 @@ const styles = StyleSheet.create({
   priceLabel: { color: colors.primary, fontSize: 10, fontWeight: '900', marginTop: 12 },
   price: { color: colors.primaryDark, fontSize: 30, fontWeight: '900', marginTop: 7 },
   unit: { color: colors.muted, fontSize: 12 },
-  original: { color: colors.muted, fontSize: 11, textDecorationLine: 'line-through', marginTop: 6 },
   creditLine: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, paddingTop: 13, borderTopWidth: 1, borderTopColor: colors.line },
   creditLabel: { color: colors.muted, fontSize: 10 },
   credit: { color: colors.ink, fontSize: 11, fontWeight: '900' },

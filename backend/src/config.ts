@@ -88,6 +88,8 @@ const environmentSchema = z.object({
   VAST_API_URL: z.string().url().default('https://console.vast.ai'),
   VAST_API_KEY: optionalText,
   VAST_PRICING_POLICY_JSON: optionalText,
+  CREATOR_REFERRAL_SIGNING_SECRET: optionalText,
+  CREATOR_COMMISSION_POLICY_JSON: optionalText,
 });
 
 const vastPricingPolicySchema = z.object({
@@ -99,6 +101,13 @@ const vastPricingPolicySchema = z.object({
   defaultImage: z.string().trim().min(1).max(1_024),
   defaultDiskGb: z.number().int().min(8).max(2_048),
   defaultRuntype: z.enum(['ssh','ssh_direct','jupyter','jupyter_direct']),
+}).strict();
+
+const creatorCommissionPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  commissionBasisPoints: z.number().int().min(1).max(5_000),
+  attributionTtlDays: z.number().int().min(1).max(90),
+  refundObservationDays: z.number().int().min(1).max(30),
 }).strict();
 
 type Capability = Readonly<{ available: boolean; missing: string[] }>;
@@ -267,6 +276,22 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...vastInvalid,
     ...(parsed.NODE_ENV === 'production' && vastProtocol !== 'https:' ? ['VAST_API_URL(HTTPS)'] : []),
   ]);
+  let creatorCommissionPolicy: z.infer<typeof creatorCommissionPolicySchema> | null = null;
+  const creatorCommissionInvalid: string[] = [];
+  if (parsed.CREATOR_COMMISSION_POLICY_JSON) {
+    try {
+      const result = creatorCommissionPolicySchema.safeParse(JSON.parse(parsed.CREATOR_COMMISSION_POLICY_JSON));
+      if (result.success) creatorCommissionPolicy = result.data;
+      else creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid creator commission policy)');
+    } catch { creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid JSON)'); }
+  }
+  const creatorCommissions = mergeCapability(capability(environment,[
+    'CREATOR_REFERRAL_SIGNING_SECRET','CREATOR_COMMISSION_POLICY_JSON',
+  ]), [
+    ...creatorCommissionInvalid,
+    ...(parsed.CREATOR_REFERRAL_SIGNING_SECRET && parsed.CREATOR_REFERRAL_SIGNING_SECRET.length < 32
+      ? ['CREATOR_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
+  ]);
   const creditCommerce = kaiCreditCommerceCapability({
     verifiedTopupProviderAvailable: alipayTopup.available || wechat.available,
     computeProviderAvailable: computeFulfillment.available,
@@ -339,6 +364,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     nodeSupportedAgentVersions: supportedAgentVersions,
     kaiOidcAppRedirects: kaiOidcRedirects,
     vastPricingPolicy,
+    creatorCommissionPolicy,
     readiness: {
       coreReady: coreBlockers.length === 0,
       serviceReady: serviceBlockers.length === 0,
@@ -348,7 +374,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
         database, tokenSecurity, kaiOidc, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
-        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi,
+        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
       },
     },
   } as const;

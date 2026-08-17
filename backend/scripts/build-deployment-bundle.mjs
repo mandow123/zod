@@ -43,13 +43,14 @@ try {
 
   const migrations = (await readdir(join(backendRoot, 'migrations')))
     .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-  if (migrations.length !== 56 || migrations.at(-1) !== '0056_vast_external_compute.sql') {
-    throw new Error(`Expected migrations 0001..0056; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+  if (migrations.length !== 57 || migrations.at(-1) !== '0057_creator_commissions.sql') {
+    throw new Error(`Expected migrations 0001..0057; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [
     '.dockerignore', '.env.example', 'Dockerfile', 'README.md', 'package.json', 'package-lock.json',
     'tsconfig.json', 'tsconfig.build.json', 'src', 'dist', 'migrations', 'deploy', 'docs/production-runbook.md',
+    'docs/creator-commissions.md',
     'scripts/build-deployment-bundle.mjs', 'scripts/verify-production-env.mjs',
     'scripts/verify-container-env.mjs', 'scripts/start-production-container.mjs',
     'scripts/verify-release.mjs', 'scripts/verify-deployment-contract.mjs',

@@ -126,7 +126,7 @@ export type CreditTopup = Readonly<{
   status: 'created' | 'pending' | 'succeeded' | 'failed' | 'expired' | 'cancelled' | 'manual_review';
   amountCny: string;
   creditAmount: string;
-  conversion: '1 KAI卡时 = ¥1.002';
+  conversion: string;
   createdAt: string;
   expiresAt: string;
   succeededAt: string | null;

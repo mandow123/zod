@@ -46,7 +46,7 @@ test('Spark 专属详情使用后端权威商品、200台和真实设备订单',
   assert.match(detail, /product\.title/u);
   assert.match(detail, /product\.inventory\.total/u);
   assert.match(detail, /product\.pricing\.discountPercent === 20 \? '8 折'/u);
-  assert.match(detail, /product\.pricing\.listUnitCredit/u);
+  assert.doesNotMatch(detail, /product\.pricing\.listUnitCredit|原价/u);
   assert.doesNotMatch(detail, /¥|salePriceCny|listPriceCny/u);
   assert.match(detail, /product\.expectedDelivery\.label/u);
   assert.match(detail, /purchaseAllowed \? '立即购买' : '暂不可购买'/u);
@@ -54,4 +54,9 @@ test('Spark 专属详情使用后端权威商品、200台和真实设备订单',
   assert.match(api, /\/mobile\/v1\/device-orders/u);
   assert.match(order, /DEVICE_PRODUCT_PENDING_ACTIVATION/u);
   assert.match(order, /本次没有生成订单/u);
+});
+
+test('离线 Spark 活动入口不把活动总量写成实时可售库存', async () => {
+  const market = await source('../src/screens/MarketScreen.tsx');
+  assert.match(market, /product\.purchasable \? '实时可售' : '活动总量'/u);
 });

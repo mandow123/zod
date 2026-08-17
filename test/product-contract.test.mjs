@@ -14,7 +14,7 @@ async function pngInfo(path) {
 }
 
 test('user-visible application identity is consistently Zod', async () => {
-  const [configText, strings, app, components, profile, auth, security, workspace] = await Promise.all([
+  const [configText, strings, app, components, profile, auth, security] = await Promise.all([
     source('../app.json'),
     source('../android/app/src/main/res/values/strings.xml'),
     source('../App.tsx'),
@@ -22,16 +22,14 @@ test('user-visible application identity is consistently Zod', async () => {
     source('../src/screens/ProfileScreen.tsx'),
     source('../src/AuthSheet.local-e2e.tsx'),
     source('../src/AccountSecuritySheet.tsx'),
-    source('../src/WorkspaceHeader.tsx'),
   ]);
   assert.equal(JSON.parse(configText).expo.name, 'Zod');
   assert.equal(JSON.parse(configText).expo.icon, './assets/icon.png');
   assert.equal(JSON.parse(configText).expo.android.adaptiveIcon.foregroundImage, './assets/android-icon-foreground.png');
   assert.match(strings, /<string name="app_name">Zod<\/string>/u);
-  for (const visibleSource of [app, components, profile, auth, security, workspace]) {
+  for (const visibleSource of [app, components, profile, auth, security]) {
     assert.doesNotMatch(visibleSource, /登录 CloudPay|进入 CloudPay|注销 CloudPay|>K<|>KAI Cloud</u);
   }
-  assert.match(app, />Z<\/Text>/u);
   assert.match(components, />Z<\/Text>/u);
   assert.deepEqual(await pngInfo('../assets/icon.png'), { width: 1024, height: 1024, colorType: 2 });
   assert.deepEqual(await pngInfo('../assets/android-icon-foreground.png'), { width: 512, height: 512, colorType: 6 });
@@ -54,7 +52,7 @@ test('commerce surfaces show card-hours only and consume server-authored Spark p
   for (const commerceSource of sources) assert.doesNotMatch(commerceSource, /人民币|¥|cnyPrice|salePriceCny|listPriceCny/u);
   const detail = sources[1];
   assert.match(detail, /product\.pricing\.unitCredit/u);
-  assert.match(detail, /product\.pricing\.listUnitCredit/u);
+  assert.doesNotMatch(detail, /product\.pricing\.listUnitCredit|原价/u);
   assert.doesNotMatch(detail, /(?:0\.8|80\s*\/\s*100|discountPercent\s*\/)/u);
   assert.equal(creditAmount('40668.66'), '40668.66');
   assert.equal(creditAmount('32534.93'), '32534.93');
