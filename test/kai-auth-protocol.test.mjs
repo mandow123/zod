@@ -50,5 +50,5 @@ test('all account entry copy agrees that KAI login leaves the App', async () => 
   assert.match(authSheet, /使用 KAI 账号登录/u);
   assert.match(authSheet, /KAI_CLOUD_UNIFIED_IDENTITY_V1/u);
   assert.doesNotMatch(profile, /在 App 内登录/u);
-  assert.match(profile, /登录 CloudPay/u);
+  assert.match(profile, /登录 Zod/u);
 });

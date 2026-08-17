@@ -10,7 +10,7 @@ import {
   type CreditBalance, type DeviceOrder, type DeviceProduct, type ShippingAddress,
 } from './api';
 import { ApiError } from './api-client';
-import { creditAmount, cnyPrice } from './format';
+import { creditAmount } from './format';
 import { isAmbiguousMutationFailure } from './mutation-recovery';
 import { colors } from './theme';
 
@@ -19,10 +19,12 @@ function micros(value: string) {
   return match ? BigInt(match[1]!) * 1_000_000n + BigInt((match[2] ?? '').padEnd(6, '0')) : null;
 }
 
-export function DeviceOrderSheet({ product, balance, authenticated, onClose, onLogin, onNeedCredits, onCreated }: Readonly<{
+export function DeviceOrderSheet({ product, balance, authenticated, purchaseAllowed, blockedReason, onClose, onLogin, onNeedCredits, onCreated }: Readonly<{
   product: DeviceProduct | null;
   balance: CreditBalance | null;
   authenticated: boolean;
+  purchaseAllowed: boolean;
+  blockedReason: string | null;
   onClose: () => void;
   onLogin: () => void;
   onNeedCredits: () => void;
@@ -75,15 +77,13 @@ export function DeviceOrderSheet({ product, balance, authenticated, onClose, onL
   const invalidQuantity = !product || !Number.isInteger(units) || units < 1 || units > Math.min(20, product.inventory.available);
   const insufficient = Boolean(totalMicros !== null && walletMicros !== null && totalMicros > walletMicros);
   const selectedAddress = useMemo(() => addresses.find((item) => item.id === selectedAddressId) ?? null, [addresses, selectedAddressId]);
-  const unavailableReason = product?.activationStatus === 'pending_activation'
-    ? '供应主体和收款账户尚未完成核验，平台暂不接受这款设备的订单。'
-    : product?.activationStatus === 'suspended' ? '该商品当前已暂停销售。'
-      : product && product.inventory.available <= 0 ? '当前库存已售罄。' : null;
+  const unavailableReason = product && !purchaseAllowed ? blockedReason ?? '该商品暂不能购买。'
+    : product && product.inventory.available <= 0 ? '当前库存已售罄。' : null;
 
   const submit = async () => {
     if (!product) return;
     if (!authenticated) { onLogin(); return; }
-    if (!product.purchasable || unavailableReason) { setError(unavailableReason ?? '该商品暂不能购买。'); return; }
+    if (!purchaseAllowed || unavailableReason) { setError(unavailableReason ?? '该商品暂不能购买。'); return; }
     if (invalidQuantity) { setError(`购买数量需为 1 至 ${Math.min(20, product.inventory.available)} 台。`); return; }
     if (!selectedAddress) { setError('请选择或新增一个收货地址。'); return; }
     if (!balance || walletMicros === null) { setError('卡时余额暂未读取成功，请刷新后重试。'); return; }
@@ -165,7 +165,7 @@ export function DeviceOrderSheet({ product, balance, authenticated, onClose, onL
       <View style={styles.sheet}><View style={styles.handle} />
         <View style={styles.header}><View><Text style={styles.eyebrow}>设备采购</Text><Text style={styles.title}>{product.title}</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.summary}><View><Text style={styles.supplier}>{product.supplier.displayName}</Text><Text style={styles.price}>¥{cnyPrice(product.pricing.salePriceCny)} / 台</Text><Text style={styles.credit}>{creditAmount(product.pricing.unitCredit)} KAI 卡时 / 台</Text></View><View style={styles.stock}><Text style={styles.stockValue}>{product.inventory.available}</Text><Text style={styles.stockLabel}>实时可售</Text></View></View>
+          <View style={styles.summary}><View><Text style={styles.supplier}>{product.supplier.displayName} · {product.pricing.discountPercent === 20 ? '8 折' : `优惠 ${product.pricing.discountPercent}%`}</Text><Text style={styles.listPrice}>{creditAmount(product.pricing.listUnitCredit)} 卡时</Text><Text style={styles.price}>{creditAmount(product.pricing.unitCredit)}</Text><Text style={styles.credit}>KAI 卡时 / 台</Text></View><View style={styles.stock}><Text style={styles.stockValue}>{product.inventory.available}</Text><Text style={styles.stockLabel}>实时可售</Text></View></View>
           {unavailableReason ? <View style={styles.warning}><Ionicons name="alert-circle-outline" size={18} color={colors.amber} /><Text style={styles.warningText}>{unavailableReason}</Text></View> : null}
           {error ? <View style={styles.error}><Ionicons name="close-circle-outline" size={18} color={colors.red} /><Text style={styles.errorText}>{error}</Text></View> : null}
           <Text style={styles.label}>采购数量</Text>
@@ -194,7 +194,7 @@ export function DeviceOrderSheet({ product, balance, authenticated, onClose, onL
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.32)' }, sheet: { maxHeight: '92%', borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: colors.canvas }, handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 9, backgroundColor: '#D0D5DD' },
   header: { minHeight: 72, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, eyebrow: { color: colors.primary, fontSize: 9, fontWeight: '900' }, title: { color: colors.ink, fontSize: 21, fontWeight: '900', marginTop: 4 }, close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }, content: { padding: 16, paddingBottom: 32 },
-  summary: { padding: 15, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, supplier: { color: colors.muted, fontSize: 10, fontWeight: '800' }, price: { color: colors.ink, fontSize: 23, fontWeight: '900', marginTop: 7 }, credit: { color: colors.primary, fontSize: 11, fontWeight: '800', marginTop: 5 }, stock: { alignItems: 'center', justifyContent: 'center', minWidth: 62 }, stockValue: { color: colors.ink, fontSize: 22, fontWeight: '900' }, stockLabel: { color: colors.muted, fontSize: 9, marginTop: 4 },
+  summary: { padding: 15, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, supplier: { color: colors.muted, fontSize: 10, fontWeight: '800' }, listPrice: { color: colors.muted, fontSize: 9, textDecorationLine: 'line-through', marginTop: 7 }, price: { color: colors.ink, fontSize: 23, fontWeight: '900', marginTop: 3 }, credit: { color: colors.primary, fontSize: 11, fontWeight: '800', marginTop: 5 }, stock: { alignItems: 'center', justifyContent: 'center', minWidth: 62 }, stockValue: { color: colors.ink, fontSize: 22, fontWeight: '900' }, stockLabel: { color: colors.muted, fontSize: 9, marginTop: 4 },
   warning: { padding: 12, marginTop: 10, borderRadius: 12, flexDirection: 'row', gap: 8, backgroundColor: '#FFF8E7' }, warningText: { flex: 1, color: colors.muted, fontSize: 10, lineHeight: 16 }, error: { padding: 12, marginTop: 10, borderRadius: 12, flexDirection: 'row', gap: 8, backgroundColor: '#FDECEC' }, errorText: { flex: 1, color: colors.red, fontSize: 10, lineHeight: 16 },
   label: { color: colors.ink, fontSize: 12, fontWeight: '900', marginTop: 18, marginBottom: 8 }, inputRow: { minHeight: 50, paddingHorizontal: 13, borderRadius: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, quantity: { flex: 1, color: colors.ink, fontSize: 18, fontWeight: '900' }, unit: { color: colors.muted, fontSize: 11 }, hint: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 6 },
   addressHeading: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }, addressAction: { color: colors.primary, fontSize: 10, fontWeight: '900', marginBottom: 8 }, addressLoading: { minHeight: 68, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }, addressList: { gap: 8 }, addressCard: { padding: 12, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, addressSelected: { borderColor: '#9ABCF0', backgroundColor: '#F5F9FF' }, addressTop: { flexDirection: 'row', alignItems: 'flex-start' }, radio: { width: 18, height: 18, marginTop: 1, marginRight: 9, borderRadius: 9, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }, addressCopy: { flex: 1, marginRight: 8 }, recipientRow: { flexDirection: 'row', alignItems: 'center', gap: 7 }, recipient: { color: colors.ink, fontSize: 12, fontWeight: '900' }, phone: { color: colors.muted, fontSize: 10 }, defaultBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, color: colors.primary, fontSize: 8, fontWeight: '800', backgroundColor: '#EAF2FF' }, addressText: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },

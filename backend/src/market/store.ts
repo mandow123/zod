@@ -27,7 +27,8 @@ export interface MarketStore {
   submitSupplier(input: Readonly<{ subjectId: string; userId: string; legalName: string; creditCode: string; contactName: string }>): Promise<SupplierProfile>;
   reviewSupplier(input: Readonly<{ supplierId: string; reviewerId: string; approved: boolean; reason?: string }>): Promise<SupplierProfile | null>;
   listSupplierResources(subjectId: string): Promise<SupplierResource[]>;
-  listProviderAssets(subjectId: string): Promise<ProviderAsset[]>;
+  listProviderAssets(subjectId: string, limit?: number): Promise<ProviderAsset[]>;
+  countProviderAssets(subjectId: string): Promise<number>;
   getProviderAsset(subjectId: string, assetId: string): Promise<ProviderAsset | null>;
   listSupplierListings(subjectId: string): Promise<SupplierListing[]>;
   getResourceContract(resourceId: string): Promise<Readonly<{
@@ -473,8 +474,14 @@ export class PostgresMarketStore implements MarketStore {
     return result.rows.map((row) => this.mapSupplierResource(row));
   }
 
-  async listProviderAssets(subjectId: string) {
-    return (await this.providerAssetRows(subjectId)).map(mapProviderAsset);
+  async listProviderAssets(subjectId: string, limit = 100) {
+    return (await this.providerAssetRows(subjectId, undefined, limit)).map(mapProviderAsset);
+  }
+
+  async countProviderAssets(subjectId: string) {
+    const result = await this.database.query<{ total: string }>(`SELECT count(*)::text total FROM compute_assets a
+      JOIN supplier_profiles s ON s.id=a.supplier_id WHERE s.subject_id=$1`, [subjectId]);
+    return Number(result.rows[0]?.total ?? '0');
   }
 
   async getProviderAsset(subjectId: string, assetId: string) {
@@ -939,10 +946,12 @@ export class PostgresMarketStore implements MarketStore {
     });
   }
 
-  private async providerAssetRows(subjectId: string, assetId?: string) {
+  private async providerAssetRows(subjectId: string, assetId?: string, limit = 100) {
     const values: unknown[] = [subjectId];
     const assetFilter = assetId ? 'AND a.id = $2' : '';
     if (assetId) values.push(assetId);
+    const limitClause = assetId ? '' : 'LIMIT $2';
+    if (!assetId) values.push(limit);
     const result = await this.database.query<ProviderAssetRow>(
       `SELECT a.id AS asset_id, r.id AS resource_id, r.product_code, r.region, r.specifications,
         a.management_mode, a.lifecycle_status, a.renewed_at, a.repurchased_at, a.closed_at,
@@ -1042,7 +1051,7 @@ export class PostgresMarketStore implements MarketStore {
          ) candidate ORDER BY candidate.priority,candidate.updated_at DESC LIMIT 1
        ) offer_action ON true
        WHERE s.subject_id = $1 ${assetFilter}
-       ORDER BY updated_at DESC, a.id DESC`,
+       ORDER BY updated_at DESC, a.id DESC ${limitClause}`,
       values,
     );
     return result.rows;

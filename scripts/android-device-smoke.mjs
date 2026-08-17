@@ -189,7 +189,8 @@ const launch = adbRun('shell', 'am', 'start', '-W', '-n', `${packageName}/.MainA
 await wait(6_000);
 const launchTime = Number(/TotalTime:\s*(\d+)/u.exec(launch)?.[1]);
 check('cold_launch', /Status:\s*ok/u.test(launch) && /LaunchState:\s*COLD/u.test(launch), Number.isFinite(launchTime) ? `${launchTime} ms` : launch.trim());
-check('process_alive', Boolean(adbRun('shell', 'pidof', packageName).trim()), 'process running');
+const appPid = adbRun('shell', 'pidof', packageName).trim().split(/\s+/u)[0] ?? '';
+check('process_alive', Boolean(appPid), appPid ? `process ${appPid}` : 'process missing');
 const windowState = adbRun('shell', 'dumpsys', 'window');
 check('app_in_foreground', windowState.includes(`${packageName}/${packageName}.MainActivity`), packageName);
 
@@ -262,7 +263,10 @@ for (const [index, tab] of tabs.entries()) {
     forbiddenMarker ? `unexpected: ${forbiddenMarker}` : markers.join(' / '));
 }
 
-const logcat = adbRun('logcat', '-d', '-v', 'brief');
+// UIAutomator is a separate Android shell process and can crash independently
+// while the application stays healthy. Scope fatal detection to the app PID so
+// test-infrastructure failures cannot be misreported as Zod runtime crashes.
+const logcat = adbRun('logcat', ...(appPid ? [`--pid=${appPid}`] : []), '-d', '-v', 'brief');
 await writeFile(join(outputDirectory, 'android-production-smoke-logcat.txt'), logcat);
 const fatalPatterns = [
   /FATAL EXCEPTION/u,

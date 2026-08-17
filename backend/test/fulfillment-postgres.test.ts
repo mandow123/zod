@@ -8,6 +8,8 @@ import { PostgresCreditLedgerStore } from '../src/credits/store.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../src/credits/types.js';
 import { PostgresCreditOrderStore } from '../src/credit-orders/store.js';
 import { PostgresFulfillmentStore } from '../src/fulfillment/store.js';
+import { encryptPii, secretHash } from '../src/account/crypto.js';
+import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -37,6 +39,16 @@ async function fixture(autoConfirmCompute = false) {
     ($1,'buyer','买方','member'),($2,'supplier','提供方','supplier'),
     ($3,'reviewer1','资源审核','operator'),($4,'reviewer2','价格审核','operator')`,
   [buyerUserId, supplierUserId, reviewerOne, reviewerTwo]);
+  const feeScheduleId = randomUUID(); const feeSchedules = new PostgresSettlementFeeStore(database);
+  await feeSchedules.createDraftSchedule({ id: feeScheduleId, version: 'fulfillment-trade-v1', operatorId: reviewerOne,
+    now: new Date(), requestId: 'fulfillment-fee-draft-01', payloadDigest: `sha256:${'6'.repeat(64)}`, tiers: [
+      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 100_000_000_000n, rateBps: 100 },
+      { ordinal: 1, lowerBoundMicros: 100_000_000_000n, upperBoundMicros: 1_000_000_000_000n, rateBps: 80 },
+      { ordinal: 2, lowerBoundMicros: 1_000_000_000_000n, upperBoundMicros: 10_000_000_000_000n, rateBps: 50 },
+      { ordinal: 3, lowerBoundMicros: 10_000_000_000_000n, upperBoundMicros: null, rateBps: 20 },
+    ] });
+  await feeSchedules.activateSchedule({ scheduleId: feeScheduleId, operatorId: reviewerTwo, now: new Date(),
+    requestId: 'fulfillment-fee-approve-01', payloadDigest: `sha256:${'7'.repeat(64)}` });
   await database.query(`INSERT INTO trading_subjects(id,kind,display_name,owner_user_id) VALUES
     ($1,'personal','买方',$2),($3,'personal','提供方',$4)`, [buyerSubjectId, buyerUserId, supplierSubjectId, supplierUserId]);
   await database.query(`INSERT INTO subject_memberships(subject_id,user_id,role) VALUES ($1,$2,'owner'),($3,$4,'owner')`,
@@ -162,6 +174,10 @@ async function balances(database: Database, subjectId: string) {
   return Object.fromEntries(result.rows.map((row) => [row.account_kind, BigInt(row.amount)]));
 }
 
+function netAfterTradeFee(gross: bigint) {
+  return gross - ((gross + 99n) / 100n);
+}
+
 function attestation(fulfillmentId: string, orderId: string, resourceId: string, observedAt: Date,
   hardExpiresAt: Date, heartbeatId: string) {
   return { nonce: fulfillmentId, orderId, resourceId,
@@ -197,6 +213,37 @@ async function stopAndOpenIssue(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('compute fulfillment postgres lifecycle', () => {
+  it('settles a standard delivery through the locked fee schedule with one balanced three-leg ledger',
+    { timeout: 30_000 }, async () => {
+      const f = await fixture();
+      const providerAction = (action: 'start_delivery' | 'delivery_ready' | 'settle', now = new Date()) => ({
+        subjectId: f.supplierSubjectId, userId: f.supplierUserId, orderId: f.orderId,
+        clientRequestId: `${action}-${randomUUID()}`, payloadDigest: `sha256:${action}:${f.orderId}`,
+        requestId: randomUUID(), ipHash: `sha256:${'a'.repeat(64)}`, now,
+      });
+      await f.orders.startDelivery(providerAction('start_delivery'));
+      const delivery = JSON.stringify({ endpoint: 'h100.internal', token: randomUUID() });
+      await f.orders.markDeliveryReady({ ...providerAction('delivery_ready'),
+        deliveryPayloadCiphertext: encryptPii(delivery, Buffer.alloc(32, 7).toString('base64')),
+        deliveryPayloadDigest: secretHash(delivery, 'd'.repeat(32)) });
+      const acceptedAt = new Date();
+      await f.orders.accept({ subjectId: f.buyerSubjectId, userId: f.buyerUserId, orderId: f.orderId,
+        clientRequestId: `accept-${randomUUID()}`, payloadDigest: `sha256:accept:${f.orderId}`,
+        requestId: randomUUID(), ipHash: `sha256:${'b'.repeat(64)}`, now: acceptedAt, evidenceDigest: null });
+      const dueAt = new Date(acceptedAt.getTime() + 7 * 86_400_000);
+      expect(await f.orders.settleSupplier(providerAction('settle', dueAt))).toMatchObject({ status: 'settled' });
+      const assessment = await f.database.query<{ gross: string; fee: string; net: string; entries: string; total: string }>(
+        `SELECT a.gross_credit_micros::text AS gross,a.service_fee_credit_micros::text AS fee,
+          a.net_credit_micros::text AS net,count(e.id)::text AS entries,sum(e.amount_micros)::text AS total
+         FROM kai_credit_fee_assessments a JOIN kai_credit_entries e ON e.transaction_id=a.ledger_transaction_id
+         WHERE a.order_id=$1 GROUP BY a.id`, [f.orderId]);
+      expect(assessment.rows[0]).toEqual({ gross: '31137725', fee: '311378', net: '30826347', entries: '3', total: '0' });
+      const receipt = await f.database.query<{ fee: string; net: string }>(`SELECT service_fee_credit_micros::text AS fee,
+        net_credit_micros::text AS net FROM kai_credit_supplier_settlements WHERE order_id=$1`, [f.orderId]);
+      expect(receipt.rows[0]).toEqual({ fee: '311378', net: '30826347' });
+      await f.database.close();
+    });
+
   it('recovers a confirmed secured order that was committed before fulfillment creation',
     { timeout: 30_000 }, async () => {
       const f = await fixture(true);
@@ -379,7 +426,7 @@ describe('compute fulfillment postgres lifecycle', () => {
       expect(listing.rows[0]).toEqual({ capacity_reserved: '0.000000', capacity_sold: '0.600000' });
       expect(await f.store.settleDue(new Date(Date.now() + 8 * 86_400_000), 20)).toBe(1);
       expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-        supplier_earnings_available: 18_682_635n, supplier_receivable: 0n });
+        supplier_earnings_available: netAfterTradeFee(18_682_635n), supplier_receivable: 0n });
       const order = await f.database.query<{ status: string }>(`SELECT status FROM kai_credit_orders WHERE id=$1`, [f.orderId]);
       expect(order.rows[0]?.status).toBe('closed');
       await f.database.close();
@@ -500,7 +547,7 @@ describe('compute fulfillment postgres lifecycle', () => {
         }
         if (expected.provider > 0n) {
           expect(await f.store.settleDue(new Date(Date.now() + 8 * 86_400_000), 20)).toBe(1);
-          expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_earnings_available: expected.provider,
+          expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_earnings_available: netAfterTradeFee(expected.provider),
             supplier_receivable: 0n });
         }
         await f.database.close();

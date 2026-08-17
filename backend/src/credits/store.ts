@@ -24,6 +24,10 @@ export type PostCreditTransactionResult =
 
 export interface CreditLedgerStore {
   ensureSubjectAccounts(subjectId: string): Promise<CreditAccountBalance[]>;
+  listEntries(subjectId: string, limit: number): Promise<ReadonlyArray<Readonly<{
+    id: string; transactionId: string; accountKind: SubjectCreditAccountKind; amountMicros: bigint;
+    memo: string; scope: string; referenceType: string; referenceId: string | null; description: string; postedAt: Date;
+  }>>>;
   post(input: PostCreditTransactionInput): Promise<PostCreditTransactionResult>;
 }
 
@@ -59,6 +63,21 @@ export class PostgresCreditLedgerStore implements CreditLedgerStore {
       );
       return result.rows.map((row) => ({ accountId: row.id, kind: row.account_kind, amountMicros: BigInt(row.amount_micros) }));
     });
+  }
+
+  async listEntries(subjectId: string, limit: number) {
+    const result = await this.database.query<QueryResultRow & { id: string; transaction_id: string;
+      account_kind: SubjectCreditAccountKind; amount_micros: string; memo: string; scope: string;
+      reference_type: string; reference_id: string | null; description: string; posted_at: Date }>(
+      `SELECT e.id,e.transaction_id,a.account_kind,e.amount_micros::text,e.memo,t.scope,t.reference_type,
+        t.reference_id,t.description,t.posted_at
+       FROM kai_credit_entries e JOIN kai_credit_accounts a ON a.id=e.account_id
+       JOIN kai_credit_transactions t ON t.id=e.transaction_id AND t.status='posted'
+       WHERE a.subject_id=$1 ORDER BY t.posted_at DESC,e.id DESC LIMIT $2`, [subjectId, limit]);
+    return result.rows.map((row) => ({ id: row.id, transactionId: row.transaction_id,
+      accountKind: row.account_kind, amountMicros: BigInt(row.amount_micros), memo: row.memo,
+      scope: row.scope, referenceType: row.reference_type, referenceId: row.reference_id,
+      description: row.description, postedAt: new Date(row.posted_at) }));
   }
 
   async post(input: PostCreditTransactionInput): Promise<PostCreditTransactionResult> {

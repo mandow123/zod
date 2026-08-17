@@ -162,6 +162,9 @@ const routeTestDevices = {
   product: async () => ({ id: '02672000-0000-4000-8000-000000000200', title: 'NVIDIA DGX Spark' }),
   create: async (_principal: unknown, input: Record<string, unknown>) => ({ replayed: false,
     order: { id: '60000000-0000-4000-8000-000000000001', status: 'reserved', ...input } }),
+  ship: async (_principal: unknown, orderId: string, _key: string, _context: unknown, input: Record<string, unknown>) => ({
+    replayed: false, order: { id: orderId, status: 'shipping', ...input },
+  }),
   orders: async () => [], assets: async () => [],
 } as unknown as DeviceCommerceService;
 
@@ -657,6 +660,21 @@ describe('system routes', () => {
         shippingAddressReference: 'address-vault-token-001' } });
     expect(order.statusCode).toBe(201);
     expect(order.json()).toMatchObject({ order: { status: 'reserved', quantity: 1 } });
+    const digestOnly = await app.inject({ method: 'POST',
+      url: '/mobile/v1/provider/device-orders/60000000-0000-4000-8000-000000000001/ship',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'spark-device-ship-route-001' },
+      payload: { logisticsProvider: '顺丰', trackingDigest: 'client-controlled-digest' } });
+    expect(digestOnly.statusCode).toBe(400);
+    const shipped = await app.inject({ method: 'POST',
+      url: '/mobile/v1/provider/device-orders/60000000-0000-4000-8000-000000000001/ship',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'spark-device-ship-route-002' },
+      payload: { logisticsProvider: '顺丰', trackingNumber: 'SF1234567890' } });
+    expect(shipped.statusCode).toBe(200);
+    expect(shipped.json()).toMatchObject({ order: { status: 'shipping', trackingNumber: 'SF1234567890' } });
+    const manualSettlement = await app.inject({ method: 'POST',
+      url: '/mobile/v1/provider/device-orders/60000000-0000-4000-8000-000000000001/settle',
+      headers: { authorization: 'Bearer route-test', 'idempotency-key': 'spark-device-settle-route-01' } });
+    expect(manualSettlement.statusCode).toBe(404);
     await app.close();
   });
 

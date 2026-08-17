@@ -10,7 +10,7 @@ import {
 import { launchNativeTopup } from './native-payments';
 import { colors } from './theme';
 import { distributionPolicy } from './distribution';
-import { creditAmount } from './format';
+import { creditAmount, cnyYuanToCreditEstimate } from './format';
 
 const amounts = [100, 500, 1000, 5000] as const;
 const statusLabel: Record<CreditTopup['status'], string> = {
@@ -18,7 +18,7 @@ const statusLabel: Record<CreditTopup['status'], string> = {
   cancelled: '已取消', manual_review: '核对中',
 };
 
-function creditForYuan(yuan: number) { return creditAmount((yuan / 1.002).toFixed(6)); }
+function creditForYuan(yuan: number) { return cnyYuanToCreditEstimate(yuan) ?? '—'; }
 function dateTime(value: string) { const date = new Date(value); return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; }
 
 export function CreditWalletSheet({ visible, balance, alipayReady, wechatReady, onClose, onChanged }: Readonly<{

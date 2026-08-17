@@ -27,3 +27,26 @@ export function cnyPrice(value: string) {
   const [whole, fraction = ''] = normalized.split('.');
   return `${whole}.${fraction.padEnd(2, '0').slice(0, 2)}`;
 }
+
+function decimalMicros(value: string) {
+  const normalized = value.trim();
+  if (!/^\d+(?:\.\d{1,6})?$/u.test(normalized)) return null;
+  const [whole, fraction = ''] = normalized.split('.');
+  return BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0'));
+}
+
+/** 1 KAI card-hour = CNY 1.002, rounded to the nearest fen using integer arithmetic. */
+export function creditToCnyEstimate(value: string) {
+  const micros = decimalMicros(value);
+  if (micros === null) return null;
+  const denominator = 10_000_000n;
+  const cents = (micros * 1_002n + denominator / 2n) / denominator;
+  return `${cents / 100n}.${(cents % 100n).toString().padStart(2, '0')}`;
+}
+
+/** Integer-yuan recharge preview converted to card-hours without binary floating point. */
+export function cnyYuanToCreditEstimate(yuan: number) {
+  if (!Number.isSafeInteger(yuan) || yuan < 0) return null;
+  const micros = (BigInt(yuan) * 1_000n * 1_000_000n + 501n) / 1_002n;
+  return creditAmount(`${micros / 1_000_000n}.${(micros % 1_000_000n).toString().padStart(6, '0')}`);
+}

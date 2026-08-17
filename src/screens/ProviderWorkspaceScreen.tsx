@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { CloudPayOrder, CloudPaySnapshot } from '../api';
+import type { CloudPayOrder, CloudPaySnapshot, DeviceOrder } from '../api';
+import { creditAmount } from '../format';
 import { Card } from '../components';
 import { OrderCard } from '../OrderCard';
 import {
@@ -9,13 +10,14 @@ import {
 } from '../provider-workspace-metrics';
 import { colors } from '../theme';
 
-export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNext, onLogin, onOpenOrder, onAllOrders }: Readonly<{
+export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNext, onLogin, onOpenOrder, onOpenDeviceOrder, onAllOrders }: Readonly<{
   snapshot: CloudPaySnapshot;
   refreshing: boolean;
   onRefresh: () => void;
   onNext: (route: string, entityId: string | null) => void;
   onLogin: () => void;
   onOpenOrder: (order: CloudPayOrder) => void;
+  onOpenDeviceOrder: (order: DeviceOrder) => void;
   onAllOrders: () => void;
 }>) {
   const workspace = snapshot.providerWorkspace;
@@ -28,6 +30,7 @@ export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNex
       || Date.parse(right.createdAt) - Date.parse(left.createdAt))
     .slice(0, 3);
   const staleWorkspace = Boolean(snapshot.providerWorkspaceError || snapshot.providerWorkspaceCachedAt);
+  const deviceOrders = snapshot.deviceOrders.filter((order) => order.side !== 'buyer');
 
   return (
     <View style={styles.root}>
@@ -91,6 +94,8 @@ export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNex
               </>
             ) : null}
             {snapshot.orderErrors.provider ? <Card style={styles.orderError}><Ionicons name="cloud-offline-outline" size={20} color={colors.red} /><View style={styles.orderErrorCopy}><Text style={styles.orderErrorTitle}>订单暂时没能同步</Text><Text style={styles.orderErrorText}>下拉刷新，不影响已经保存的订单。</Text></View></Card> : null}
+
+            {deviceOrders.length ? <><View style={styles.orderHeading}><Text style={styles.sectionTitle}>设备销售订单</Text><Text style={styles.orderCount}>{deviceOrders.length} 笔</Text></View>{deviceOrders.slice(0, 5).map((order) => <Pressable key={order.id} onPress={() => onOpenDeviceOrder(order)} style={styles.deviceOrder}><View style={styles.deviceOrderIcon}><Ionicons name="cube-outline" size={19} color={colors.ink} /></View><View style={styles.deviceOrderCopy}><Text style={styles.deviceOrderTitle}>{snapshot.deviceProducts.find((item) => item.id === order.productId)?.title ?? order.orderNumber}</Text><Text style={styles.deviceOrderMeta}>{order.quantity} 台 · {creditAmount(order.totalCredit)} 卡时</Text></View><Text style={styles.deviceOrderState}>{order.status === 'reserved' ? '待确认' : order.status === 'confirmed' ? '待发货' : order.status === 'shipping' ? '运输中' : order.status === 'received' ? '待结算' : '已结束'}</Text></Pressable>)}</> : null}
 
             <Text style={styles.sectionTitle}>上架流程</Text>
             <Card style={styles.roadmap}>
@@ -203,4 +208,5 @@ const styles = StyleSheet.create({
   loginCard: { marginTop: 30, padding: 26, alignItems: 'center' }, loginIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   loginTitle: { color: colors.ink, fontSize: 21, fontWeight: '900', marginTop: 17, textAlign: 'center' }, loginText: { color: colors.muted, fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 8 },
   primary: { minHeight: 48, marginTop: 18, paddingHorizontal: 22, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 14, fontWeight: '900' },
+  deviceOrder: { minHeight: 70, paddingHorizontal: 12, marginBottom: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, deviceOrderIcon: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, deviceOrderCopy: { flex: 1, marginHorizontal: 10 }, deviceOrderTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' }, deviceOrderMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, deviceOrderState: { color: colors.primary, fontSize: 9, fontWeight: '800' },
 });

@@ -2,6 +2,7 @@ import type { AccountPrincipal } from '../account/types.js';
 import type { SubjectAccess } from '../subjects/types.js';
 import type { CreditLedgerStore, PostCreditTransactionInput } from './store.js';
 import { formatCreditAmount } from './types.js';
+import { formatCreditDisplayMicros } from './display.js';
 
 export class CreditLedgerService {
   constructor(private readonly store: CreditLedgerStore, private readonly subjects: SubjectAccess) {}
@@ -27,6 +28,18 @@ export class CreditLedgerService {
       total: formatCreditAmount(available + reserved + receivable + supplierEarnings + payoutFrozen),
       conversion: '1 KAI卡时 = ¥1.002',
     };
+  }
+
+  async entries(principal: AccountPrincipal, limit = 30) {
+    const subject = await this.subjects.current(principal.userId, 'credits.read');
+    return (await this.store.listEntries(subject.subjectId, limit)).map((entry) => ({
+      id: entry.id, transactionId: entry.transactionId, accountKind: entry.accountKind,
+      direction: entry.amountMicros > 0n ? 'credit' as const : 'debit' as const,
+      amount: formatCreditDisplayMicros(entry.amountMicros < 0n ? -entry.amountMicros : entry.amountMicros),
+      signedAmount: `${entry.amountMicros < 0n ? '-' : '+'}${formatCreditDisplayMicros(entry.amountMicros < 0n ? -entry.amountMicros : entry.amountMicros)}`,
+      memo: entry.memo, scope: entry.scope, referenceType: entry.referenceType,
+      referenceId: entry.referenceId, description: entry.description, postedAt: entry.postedAt.toISOString(),
+    }));
   }
 
   async post(input: PostCreditTransactionInput) {

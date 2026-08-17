@@ -9,6 +9,7 @@ import {
   loadCachedProviderState,
   loadCloudPaySnapshot,
   loadCloudPayOrder,
+  loadDeviceOrder,
   markAllNotificationsRead,
   markNotificationRead,
   selectTradingSubject,
@@ -18,6 +19,7 @@ import {
   type AftercareReview,
   type MarketCreditListing,
   type DeviceProduct,
+  type DeviceOrder,
 } from './src/api';
 import { AftercareReviewSheet } from './src/AftercareReviewSheet';
 import { BottomNav, type TabKey, type WorkMode } from './src/components';
@@ -37,7 +39,7 @@ import { ProviderWorkspaceScreen } from './src/screens/ProviderWorkspaceScreen';
 import { ProviderHomeScreen } from './src/screens/ProviderHomeScreen';
 import { UnifiedAssetsScreen } from './src/screens/UnifiedAssetsScreen';
 import { PublishScreen } from './src/screens/PublishScreen';
-import { colors } from './src/theme';
+import { brand, colors } from './src/theme';
 import { loadWorkMode, saveWorkMode } from './src/work-mode';
 import { getSupplierOffer } from './src/publishing';
 import { distributionPolicy } from './src/distribution';
@@ -48,46 +50,13 @@ import {
 import { completeKaiAuth, isKaiAuthCallback, startKaiAuth } from './src/kai-auth';
 import { SparkProductDetailSheet } from './src/SparkProductDetailSheet';
 import { DeviceOrderSheet } from './src/DeviceOrderSheet';
+import { DeviceOrderDetailSheet } from './src/DeviceOrderDetailSheet';
 import { CreditPayoutSheet } from './src/CreditPayoutSheet';
+import { beginSubjectTransition, initialSnapshot, mergeSnapshot } from './src/snapshot-state';
+import { CreditScreen } from './src/screens/CreditScreen';
+import { deviceProductAvailability, marketAvailability } from './src/market-availability';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
-const initialSnapshot: CloudPaySnapshot = {
-  online: false,
-  loading: true,
-  updatedAt: null,
-  resources: [],
-  listings: [],
-  listingCatalogOnline: false,
-  priceNotice: '正在读取 CloudPay 市场口径…',
-  authenticated: false,
-  user: null,
-  sessionState: 'anonymous',
-  notifications: [],
-  unreadCount: 0,
-  alipayReady: false,
-  wechatReady: false,
-  smsReady: false,
-  pushReady: false,
-  releaseReady: false,
-  releaseBlockers: [],
-  subjects: [],
-  currentSubjectId: null,
-  creditBalance: null,
-  deviceProducts: [],
-  deviceOrders: [],
-  deviceAssets: [],
-  payoutProfile: null,
-  payouts: [],
-  commerceError: null,
-  providerWorkspace: null,
-  providerWorkspaceError: null,
-  providerWorkspaceCachedAt: null,
-  orders: [],
-  orderCursors: { buyer: null, provider: null },
-  orderErrors: { buyer: null, provider: null },
-  aftercareReviews: [],
-  error: null,
-};
 
 function CloudPayApp() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
@@ -113,22 +82,28 @@ function CloudPayApp() {
   const [selectedListing, setSelectedListing] = useState<MarketCreditListing | null>(null);
   const [selectedSparkProduct, setSelectedSparkProduct] = useState<DeviceProduct | null>(null);
   const [selectedDeviceProduct, setSelectedDeviceProduct] = useState<DeviceProduct | null>(null);
+  const [selectedDeviceOrder, setSelectedDeviceOrder] = useState<DeviceOrder | null>(null);
   const [payoutVisible, setPayoutVisible] = useState(false);
   const [selectedReview, setSelectedReview] = useState<AftercareReview | null>(null);
   const [creditWalletVisible, setCreditWalletVisible] = useState(false);
   const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
   const refreshInFlight = useRef<Promise<void> | null>(null);
+  const refreshGeneration = useRef(0);
 
-  const refresh = useCallback(async () => {
-    if (refreshInFlight.current) return refreshInFlight.current;
+  const refresh = useCallback(async (force = false) => {
+    if (refreshInFlight.current && !force) return refreshInFlight.current;
+    const generation = ++refreshGeneration.current;
     const operation = (async () => {
       setRefreshing(true);
       try {
         const next = await loadCloudPaySnapshot();
-        setSnapshot((current) => preserveLastKnownProviderState(current, next));
+        if (generation !== refreshGeneration.current) return;
+        setSnapshot((current) => mergeSnapshot(current, next));
         setSelectedOrder((current) => current ? next.orders.find((item) => item.id === current.id) ?? current : null);
         setSelectedReview((current) => current ? next.aftercareReviews.find((item) => item.refundId === current.refundId) ?? current : null);
-      } finally { setRefreshing(false); }
+      } finally {
+        if (generation === refreshGeneration.current) setRefreshing(false);
+      }
     })();
     refreshInFlight.current = operation;
     try { await operation; } finally {
@@ -264,20 +239,23 @@ function CloudPayApp() {
   const chooseSubject = useCallback(async (subjectId: string) => {
     try {
       const selected = await selectTradingSubject(subjectId);
-      setSnapshot((current) => ({
-        ...current,
-        currentSubjectId: selected.id,
-        subjects: current.subjects.map((subject) => ({ ...subject, selected: subject.id === selected.id })),
-        providerWorkspace: current.providerWorkspace?.subject.id === selected.id ? current.providerWorkspace : null,
-        providerWorkspaceError: null,
-        providerWorkspaceCachedAt: current.providerWorkspace?.subject.id === selected.id
-          ? current.providerWorkspaceCachedAt : null,
-        orders: [],
-        orderCursors: { buyer: null, provider: null },
-        orderErrors: { buyer: null, provider: null },
-      }));
+      refreshGeneration.current += 1;
+      setSnapshot((current) => beginSubjectTransition(current, selected.id));
+      setSelectedOrder(null);
+      setSelectedReview(null);
+      setSelectedListing(null);
+      setSelectedSparkProduct(null);
+      setSelectedDeviceProduct(null);
+      setSelectedDeviceOrder(null);
+      setPayoutVisible(false);
+      setCreditWalletVisible(false);
+      setOfferWizard(null);
+      setListingOfferId(null);
+      setPublishOfferToReveal(null);
+      setPublishListingToManage(null);
+      setResourceToOpenId(null);
     } finally {
-      await refresh();
+      await refresh(true);
     }
   }, [refresh]);
 
@@ -328,29 +306,21 @@ function CloudPayApp() {
         await refresh();
       }
       if (message.data.route === 'provider_order' && typeof message.data.orderId === 'string') {
-        setWorkMode('provider');
-        void saveWorkMode('provider');
         setActiveTab('messages');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
       if (message.data.route === 'buyer_order' && typeof message.data.orderId === 'string') {
-        setWorkMode('consumer');
-        void saveWorkMode('consumer');
         setActiveTab('orders');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
       if (message.data.route === 'provider_resource' && typeof message.data.resourceId === 'string') {
-        setWorkMode('provider');
-        void saveWorkMode('provider');
         setResourceToOpenId(message.data.resourceId);
         setActiveTab('resources');
         return;
       }
       if (message.data.route !== 'provider_offer' || typeof message.data.offerId !== 'string') return;
-      setWorkMode('provider');
-      void saveWorkMode('provider');
       setActiveTab('publish');
       const offer = await getSupplierOffer(message.data.offerId);
       const destination = providerOfferMessageDestination(offer.status);
@@ -402,15 +372,18 @@ function CloudPayApp() {
           onOpenPublish={() => setDemandComposerVisible(true)} onBuy={setSelectedListing}
           onOpenSparkDetail={openSparkDetail}
           onManageOwnListing={(listing) => {
-            setWorkMode('provider');
-            void saveWorkMode('provider');
             setPublishListingToManage(listing.id);
             setActiveTab('publish');
           }} />;
       case 'assets':
         return <UnifiedAssetsScreen snapshot={snapshot} mode={workMode} refreshing={refreshing} onRefresh={refresh}
-          onLogin={() => setAuthVisible(true)} onOpenCredits={() => setCreditWalletVisible(true)} onOpenOrder={setSelectedOrder}
-          onOpenMarket={() => navigate('market')} onOpenProviderAssets={() => navigate('resources')} onOpenPublish={() => navigate('publish')}
+          onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then(setSelectedOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
+          onOpenDeviceOrder={(orderId) => void loadDeviceOrder(orderId).then(setSelectedDeviceOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
+          onOpenMarket={() => navigate('market')} onOpenProviderAssets={(resourceId) => { setResourceToOpenId(resourceId ?? null); navigate('resources'); }} onOpenPublish={() => navigate('publish')}
+          onOpenPayout={() => setPayoutVisible(true)} />;
+      case 'credits':
+        return <CreditScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
+          onLogin={() => setAuthVisible(true)} onOpenWallet={() => setCreditWalletVisible(true)}
           onOpenPayout={() => setPayoutVisible(true)} />;
       case 'orders':
         return <OrdersScreen snapshot={snapshot} side={workMode === 'provider' ? 'provider' : 'buyer'} refreshing={refreshing} onRefresh={refresh}
@@ -424,6 +397,7 @@ function CloudPayApp() {
           onNext={openProviderNextAction}
           onLogin={() => setAuthVisible(true)}
           onOpenOrder={setSelectedOrder}
+          onOpenDeviceOrder={setSelectedDeviceOrder}
           onAllOrders={() => navigate('orders')}
         />;
       case 'resources':
@@ -458,7 +432,7 @@ function CloudPayApp() {
       case 'profile':
         return <ProfileScreen snapshot={snapshot} mode={workMode} onModeChange={changeWorkMode}
           onSelectSubject={(subjectId) => void chooseSubject(subjectId)} onSessionChanged={refresh} onLogin={() => setAuthVisible(true)}
-          onOpenPublish={() => navigate('publish')} onOpenCredits={() => setCreditWalletVisible(true)}
+          onOpenPublish={() => navigate('publish')} onOpenCredits={() => navigate('credits')}
           onOpenOrders={() => navigate('orders')} onOpenAssets={() => navigate('assets')} onOpenMessages={() => navigate('messages')} />;
       case 'home':
       default:
@@ -467,14 +441,21 @@ function CloudPayApp() {
           onOpenAssets={() => navigate('assets')} />
           : <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}
             onOpenDemand={() => setDemandComposerVisible(true)} onOpenSparkDetail={openSparkDetail}
-            onOpenCredits={() => snapshot.authenticated ? setCreditWalletVisible(true) : setAuthVisible(true)} />;
+            onOpenCredits={() => navigate('credits')} />;
     }
   })();
 
+  const selectedSparkAvailability = selectedSparkProduct
+    ? deviceProductAvailability(marketAvailability(snapshot, distributionPolicy.newOrders), selectedSparkProduct)
+    : { allowed: false, reason: null };
+  const selectedDeviceAvailability = selectedDeviceProduct
+    ? deviceProductAvailability(marketAvailability(snapshot, distributionPolicy.newOrders), selectedDeviceProduct)
+    : { allowed: false, reason: null };
+
   if (!workModeReady) return (
     <View style={styles.launch}>
-      <View style={styles.launchMark}><Text style={styles.launchMarkText}>K</Text></View>
-      <Text style={styles.launchTitle}>KAI Cloud</Text>
+      <View style={styles.launchMark}><Text style={styles.launchMarkText}>Z</Text></View>
+      <Text style={styles.launchTitle}>{brand.name}</Text>
       <ActivityIndicator color={colors.green} style={styles.launchSpinner} />
     </View>
   );
@@ -483,7 +464,7 @@ function CloudPayApp() {
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       <View style={styles.page}>{page}</View>
-      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' ? 'assets' : activeTab === 'workspace' || activeTab === 'publish' ? 'home' : activeTab} mode={workMode} onChange={navigate} unread={snapshot.unreadCount} />
+      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' ? 'assets' : activeTab === 'workspace' || activeTab === 'publish' ? 'home' : activeTab} mode={workMode} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}
@@ -540,50 +521,20 @@ function CloudPayApp() {
       <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
       <AftercareReviewSheet review={selectedReview} onClose={() => setSelectedReview(null)} onChanged={refresh} />
       <SparkProductDetailSheet product={selectedSparkProduct} visible={selectedSparkProduct !== null}
+        purchaseAllowed={selectedSparkAvailability.allowed} blockedReason={selectedSparkAvailability.reason}
         onClose={() => setSelectedSparkProduct(null)} onBuy={(product) => { setSelectedSparkProduct(null); if (snapshot.authenticated) setSelectedDeviceProduct(product); else setAuthVisible(true); }} />
       <DeviceOrderSheet product={selectedDeviceProduct} balance={snapshot.creditBalance} authenticated={snapshot.authenticated}
+        purchaseAllowed={selectedDeviceAvailability.allowed} blockedReason={selectedDeviceAvailability.reason}
         onClose={() => setSelectedDeviceProduct(null)} onLogin={() => { setSelectedDeviceProduct(null); setAuthVisible(true); }}
         onNeedCredits={() => { setSelectedDeviceProduct(null); setCreditWalletVisible(true); }}
         onCreated={() => refresh()} />
+      <DeviceOrderDetailSheet order={selectedDeviceOrder}
+        product={selectedDeviceOrder ? snapshot.deviceProducts.find((item) => item.id === selectedDeviceOrder.productId) ?? null : null}
+        onClose={() => setSelectedDeviceOrder(null)} onChanged={refresh} />
       <CreditPayoutSheet visible={payoutVisible} balance={snapshot.creditBalance} profile={snapshot.payoutProfile}
         onClose={() => setPayoutVisible(false)} onCreated={() => refresh()} />
     </SafeAreaView>
   );
-}
-
-function preserveLastKnownProviderState(current: CloudPaySnapshot, next: CloudPaySnapshot): CloudPaySnapshot {
-  const sameAccount = Boolean(current.user && next.user && current.user.id === next.user.id);
-  if (!sameAccount || !next.authenticated) return next;
-  const sameSubject = !next.currentSubjectId || next.currentSubjectId === current.currentSubjectId;
-  const workspaceMatchesSubject = !next.currentSubjectId
-    || current.providerWorkspace?.subject.id === next.currentSubjectId;
-  const currentBuyerOrders = current.orders.filter((order) => order.side === 'buyer');
-  const currentProviderOrders = current.orders.filter((order) => order.side === 'provider');
-  const nextBuyerOrders = next.orders.filter((order) => order.side === 'buyer');
-  const nextProviderOrders = next.orders.filter((order) => order.side === 'provider');
-  return {
-    ...next,
-    deviceProducts: next.commerceError && sameSubject ? current.deviceProducts : next.deviceProducts,
-    deviceOrders: next.commerceError && sameSubject ? current.deviceOrders : next.deviceOrders,
-    deviceAssets: next.commerceError && sameSubject ? current.deviceAssets : next.deviceAssets,
-    payoutProfile: next.commerceError && sameSubject ? current.payoutProfile : next.payoutProfile,
-    payouts: next.commerceError && sameSubject ? current.payouts : next.payouts,
-    providerWorkspace: next.providerWorkspace
-      ?? (next.providerWorkspaceError && workspaceMatchesSubject ? current.providerWorkspace : null),
-    providerWorkspaceCachedAt: next.providerWorkspace
-      ? next.providerWorkspaceCachedAt
-      : next.providerWorkspaceError && workspaceMatchesSubject && current.providerWorkspace
-        ? current.providerWorkspaceCachedAt ?? current.updatedAt?.toISOString() ?? null
-        : null,
-    orders: [
-      ...(next.orderErrors.buyer && sameSubject ? currentBuyerOrders : nextBuyerOrders),
-      ...(next.orderErrors.provider && sameSubject ? currentProviderOrders : nextProviderOrders),
-    ],
-    orderCursors: {
-      buyer: next.orderErrors.buyer && sameSubject ? current.orderCursors.buyer : next.orderCursors.buyer,
-      provider: next.orderErrors.provider && sameSubject ? current.orderCursors.provider : next.orderCursors.provider,
-    },
-  };
 }
 
 export default function App() {

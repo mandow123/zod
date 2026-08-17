@@ -9,7 +9,7 @@ import {
 import { ApiError } from './api-client';
 import {
   createOfferDraft, createOfferRevision, getOfferDraft, getOfferRevision, listOfferDrafts, listSupplierListings,
-  listSupplierOffers, loadSupplierWorkspace, previewKaiCredits,
+  listSupplierOffers, loadSupplierWorkspace,
   getSupplierOffer, saveOfferDraft, saveOfferRevision, submitOfferDraft, submitOfferRevision, type ComputeResource,
   type OfferRevisionDraft, type OfferWizardDraft, type OfferWizardPayload, type OfferWizardStep,
 } from './publishing';
@@ -17,9 +17,9 @@ import {
   draftSaveAccepted, isAmbiguousMutationFailure, revisionSubmissionAccepted, unknownSubmissionMessage, wizardSubmissionAccepted,
 } from './mutation-recovery';
 import { colors } from './theme';
-import { cnyPrice, compactDecimal, creditAmount } from './format';
+import { compactDecimal, creditAmount } from './format';
 import {
-  commonDeliveryTerms, draftPriceEvidence, formatCnyForEditing, normalizeCnyInput, shouldClearFormErrorOnEdit,
+  commonDeliveryTerms, contractPriceToCreditInput, creditInputToContractPrice, draftPriceEvidence, normalizeCreditInput, shouldClearFormErrorOnEdit,
   validateOfferWizardStep,
 } from './offer-wizard-form';
 import { dedicatedGpuServiceTitle, gpuNodeSummary, nodeGpuCount } from './compute-product';
@@ -34,7 +34,7 @@ type Form = {
   acceptance: string;
   refund: string;
   cleanup: string;
-  suggestedPriceCny: string;
+  suggestedUnitCredits: string;
   priceComponents: string;
   evidenceType: 'contract' | 'invoice' | 'market_quote' | 'cost_breakdown';
   evidenceSource: string;
@@ -43,7 +43,7 @@ type Form = {
 
 const emptyForm: Form = {
   title: '', serviceMode: 'dedicated', minimumQuantity: '1', availability: '', delivery: '', acceptance: '',
-  refund: '', cleanup: '', suggestedPriceCny: '', priceComponents: '', evidenceType: 'contract',
+  refund: '', cleanup: '', suggestedUnitCredits: '', priceComponents: '', evidenceType: 'contract',
   evidenceSource: '', evidenceSummary: '',
 };
 
@@ -70,7 +70,8 @@ function formFromDraft(draft: EditableOfferDraft): Form {
     title: payload.title ? dedicatedGpuServiceTitle(payload.title) : '', serviceMode: 'dedicated', minimumQuantity: payload.minimumQuantity ?? '1',
     availability: value(payload.sla, 'availability'), delivery: value(payload.deliveryTerms, 'summary'),
     acceptance: value(payload.acceptanceTerms, 'summary'), refund: value(payload.refundTerms, 'summary'),
-    cleanup: value(payload.cleanupTerms, 'summary'), suggestedPriceCny: formatCnyForEditing(payload.suggestedPriceCny ?? ''),
+    cleanup: value(payload.cleanupTerms, 'summary'), suggestedUnitCredits: value(payload.priceComponents, 'proposedUnitCredits')
+      || contractPriceToCreditInput(payload.suggestedPriceCny ?? ''),
     priceComponents: value(payload.priceComponents, 'summary'), evidenceType: evidence?.type ?? 'contract',
     evidenceSource: evidence?.source ?? '', evidenceSummary: evidence?.summary ?? '',
   };
@@ -90,8 +91,8 @@ function payloadFromForm(form: Form, capacityUnit: string, previous: OfferWizard
     acceptanceTerms: record(previous.acceptanceTerms, 'summary', form.acceptance),
     refundTerms: record(previous.refundTerms, 'summary', form.refund),
     cleanupTerms: record(previous.cleanupTerms, 'summary', form.cleanup),
-    suggestedPriceCny: form.suggestedPriceCny,
-    priceComponents: record(previous.priceComponents, 'summary', form.priceComponents),
+    suggestedPriceCny: creditInputToContractPrice(form.suggestedUnitCredits),
+    priceComponents: record(record(previous.priceComponents, 'summary', form.priceComponents), 'proposedUnitCredits', form.suggestedUnitCredits),
     priceEvidence: [
       ...draftPriceEvidence(form.evidenceType, form.evidenceSource, form.evidenceSummary, firstEvidence),
       ...(previous.priceEvidence?.slice(1) ?? []),
@@ -481,7 +482,6 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
     finally { submitInFlightRef.current = false; setSubmitting(false); }
   };
 
-  const pricePreview = previewKaiCredits(form.suggestedPriceCny);
   const revision = draft && isRevisionDraft(draft) ? draft : null;
   const currentResource = draft ? resources.find((resource) => resource.id === draft.resourceId) : null;
   const currentNodeGpuCount = currentResource ? nodeGpuCount(currentResource.specifications) : null;
@@ -571,9 +571,9 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
             </> : null}
 
             {step === 'price' ? <>
-              <SectionHeading icon="analytics-outline" title="价格与核价材料" caption="人民币用于核价；市场成交使用 KAI 卡时。" />
-              <Field label={`人民币依据 / ${draft.resource.capacityUnit}`} value={form.suggestedPriceCny} onChange={(value) => update('suggestedPriceCny', normalizeCnyInput(value))} placeholder="例如：31.20" decimal hint="仅作核价依据" />
-              <View style={styles.priceCard}><View><Text style={styles.priceLabel}>提交核价参考</Text>{pricePreview ? <Text style={styles.priceValue}>{creditAmount(pricePreview)} <Text style={styles.priceUnit}>KAI 卡时</Text></Text> : <Text style={styles.priceEmpty}>填写人民币依据后自动换算</Text>}</View><View style={styles.auditPill}><Ionicons name="time-outline" size={14} color={colors.amber} /><Text style={styles.auditText}>等待价格审核</Text></View><Text style={styles.conversion}>按 ¥1.002 / 卡时自动换算；最终挂牌价由价格审核锁定</Text></View>
+              <SectionHeading icon="analytics-outline" title="卡时定价与审核材料" caption="填写期望卡时单价，最终挂牌价由平台审核确认。" />
+              <Field label={`卡时单价 / ${draft.resource.capacityUnit}`} value={form.suggestedUnitCredits} onChange={(value) => update('suggestedUnitCredits', normalizeCreditInput(value))} placeholder="例如：31.20" decimal hint="KAI 卡时" />
+              <View style={styles.priceCard}><View><Text style={styles.priceLabel}>申请审核单价</Text>{form.suggestedUnitCredits ? <Text style={styles.priceValue}>{creditAmount(form.suggestedUnitCredits)} <Text style={styles.priceUnit}>KAI 卡时</Text></Text> : <Text style={styles.priceEmpty}>填写期望的卡时单价</Text>}</View><View style={styles.auditPill}><Ionicons name="time-outline" size={14} color={colors.amber} /><Text style={styles.auditText}>等待价格审核</Text></View><Text style={styles.conversion}>平台将结合资源配置、交付能力和审核材料锁定最终卡时单价</Text></View>
               <Field label="价格构成" value={form.priceComponents} onChange={(value) => update('priceComponents', value)} placeholder="说明设备折旧、电力、网络、运维与税费是否包含" multiline />
               <Text style={styles.fieldLabel}>核价凭证</Text><View style={styles.chips}>{evidenceOptions.map((option) => <Pressable key={option.value} onPress={() => update('evidenceType', option.value)} style={[styles.chip, form.evidenceType === option.value && styles.chipActive]}><Text style={[styles.chipText, form.evidenceType === option.value && styles.chipTextActive]}>{option.label}</Text></Pressable>)}</View>
               <Field label="凭证来源" value={form.evidenceSource} onChange={(value) => update('evidenceSource', value)} placeholder="例如：近三个月同型号成交合同" />
@@ -585,10 +585,10 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
               <ReviewRow label="服务" value={serviceSummary(form)} />
               <ReviewRow label="起售" value={`${compactDecimal(form.minimumQuantity)} ${draft.resource.capacityUnit}`} />
               <ReviewRow label="交付边界" value="自动开通、健康检查、按实耗结算和数据清理已确认" />
-              <ReviewRow label="提交核价参考" value={`¥${cnyPrice(form.suggestedPriceCny) || '—'} → ${pricePreview ? creditAmount(pricePreview) : '—'} KAI 卡时 / ${draft.resource.capacityUnit}；最终以审核结果为准`} />
+              <ReviewRow label="申请审核单价" value={`${form.suggestedUnitCredits ? creditAmount(form.suggestedUnitCredits) : '—'} KAI 卡时 / ${draft.resource.capacityUnit}；最终以审核结果为准`} />
               <ReviewRow label="核价凭证" value={`${evidenceOptions.find((item) => item.value === form.evidenceType)?.label ?? '凭证'} · ${form.evidenceSource.trim() || '未填写来源'}`} />
               <ReviewRow label="凭证说明" value={form.evidenceSummary.trim() || '未填写说明'} />
-              <View style={styles.auditMap}><View style={styles.auditNode}><Ionicons name="hardware-chip-outline" size={22} color={colors.primary} /><Text style={styles.auditNodeTitle}>资源审核</Text><Text style={styles.auditNodeText}>核对配置、控制权、容量和交付能力</Text></View><View style={styles.auditDivider} /><View style={styles.auditNode}><Ionicons name="calculator-outline" size={22} color={colors.primary} /><Text style={styles.auditNodeTitle}>价格审核</Text><Text style={styles.auditNodeText}>核对人民币依据，确定每小时卡时价</Text></View></View>
+              <View style={styles.auditMap}><View style={styles.auditNode}><Ionicons name="hardware-chip-outline" size={22} color={colors.primary} /><Text style={styles.auditNodeTitle}>资源审核</Text><Text style={styles.auditNodeText}>核对配置、控制权、容量和交付能力</Text></View><View style={styles.auditDivider} /><View style={styles.auditNode}><Ionicons name="calculator-outline" size={22} color={colors.primary} /><Text style={styles.auditNodeTitle}>价格审核</Text><Text style={styles.auditNodeText}>核对卡时价格构成与凭证，确定最终挂牌单价</Text></View></View>
             </> : null}
           </ScrollView>
           <View style={styles.footer}>

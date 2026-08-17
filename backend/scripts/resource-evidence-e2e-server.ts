@@ -264,6 +264,13 @@ const user = await accounts.createUser({
 await database.query(`UPDATE users SET role = 'supplier' WHERE id = $1`, [user.id]);
 const personal = await subjectsStore.ensurePersonal(user.id);
 await subjectsStore.select(user.id, personal.subjectId);
+const providerOrganization = await subjectsStore.createOrganization({
+  id: randomUUID(), userId: user.id, displayName: '白鸽在线',
+  clientRequestId: 'e2e-provider-organization-0001',
+  payloadDigest: secretHash('e2e-provider-organization-0001', config.AUDIT_PEPPER!),
+});
+if (providerOrganization.status === 'conflict') throw new Error('E2E_PROVIDER_ORGANIZATION_CONFLICT');
+const providerSubjectId = providerOrganization.membership.subjectId;
 const buyer = await accounts.createUser({
   phoneCiphertext: encryptPii('+8613800138001', config.PII_ENCRYPTION_KEY!),
   phoneLookupHash: lookupHash('+8613800138001', config.OTP_PEPPER!), displayName: '安卓验收购买方',
@@ -280,14 +287,14 @@ const operator = await accounts.createUser({
 });
 await database.query(`UPDATE users SET role = 'operator' WHERE id = $1`, [operator.id]);
 await creditPayoutStore.activateProfile({
-  subjectId: personal.subjectId,
+  subjectId: providerSubjectId,
   legalEntityDigest: `sha256:${'a'.repeat(64)}`,
   recipientReference: 'e2e-company-payout-recipient',
   operatorId: operator.id,
   now: new Date(),
 });
 const activatedSpark = await deviceCommerceStore.activateProduct(
-  SPARK_PRODUCT_ID, personal.subjectId, operator.id, new Date(),
+  SPARK_PRODUCT_ID, providerSubjectId, operator.id, new Date(),
 );
 if (!activatedSpark) throw new Error('E2E_SPARK_ACTIVATION_FAILED');
 const priceOperator = await accounts.createUser({

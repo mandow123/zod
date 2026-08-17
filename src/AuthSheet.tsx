@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { loadLegalDocuments, type LegalDocuments } from './api';
-import { colors } from './theme';
+import { brand, colors } from './theme';
 
 type AuthSheetProps = Readonly<{
   visible: boolean;
@@ -85,7 +85,7 @@ export function AuthSheet({
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>KAI 统一身份</Text>
-              <Text style={styles.title}>登录 CloudPay</Text>
+              <Text style={styles.title}>登录 {brand.name}</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="关闭" onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={23} color={colors.ink} />
@@ -95,7 +95,7 @@ export function AuthSheet({
           <ScrollView contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
             <View style={styles.securityNote}>
               <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
-              <Text style={styles.securityText}>与 cloud.kai.com 主站使用同一账号。登录会在系统浏览器中完成，密码不会交给 CloudPay App。</Text>
+              <Text style={styles.securityText}>与 cloud.kai.com 主站使用同一账号。登录会在系统浏览器中完成，密码不会交给 {brand.name} App。</Text>
             </View>
 
             <Pressable style={styles.consentRow} onPress={() => setConsented((value) => !value)}>

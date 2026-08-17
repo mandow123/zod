@@ -9,10 +9,11 @@ test('home always keeps the KAI credit account entry visible', async () => {
   ]);
   assert.match(home, /KAI 卡时账户/u);
   assert.match(home, /余额暂未更新/u);
-  assert.match(app, /onOpenCredits=\{\(\) => snapshot\.authenticated \? setCreditWalletVisible\(true\) : setAuthVisible\(true\)\}/u);
+  assert.match(app, /onOpenCredits=\{\(\) => navigate\('credits'\)\}/u);
+  assert.match(app, /<CreditScreen/u);
 });
 
-test('market listing contract and UI expose both audit decisions and the CNY reference', async () => {
+test('market keeps audit evidence in its contract but trades only in KAI card-hours', async () => {
   const [api, market] = await Promise.all([
     readFile(new URL('../src/api.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/screens/MarketScreen.tsx', import.meta.url), 'utf8'),
@@ -20,8 +21,8 @@ test('market listing contract and UI expose both audit decisions and the CNY ref
   assert.match(api, /referenceCny: string/u);
   assert.match(api, /conversion: '1 KAI卡时 = ¥1\.002'/u);
   assert.match(market, /资源与价格双审通过/u);
-  assert.match(market, /人民币参考 ¥\{cnyPrice\(item\.referenceCny\)\}/u);
   assert.match(market, /KAI 卡时/u);
+  assert.doesNotMatch(market, /人民币|¥|referenceCny|cnyPrice/u);
 });
 
 test('buyer home stays compact and its resource rows do not promise a hidden detail route', async () => {

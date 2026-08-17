@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { Database } from '../src/database.js';
 import { canonicalClaimProof, canonicalHeartbeatProof, normalizeInventory, type RawGpuInventory } from '../src/node-enrollment/protocol.js';
 import { NodeEnrollmentStore } from '../src/node-enrollment/store.js';
+import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -31,7 +32,21 @@ async function migrateAll(pglite: PGlite) {
 
 async function fixture(database: Database) {
   const userId = randomUUID(); const subjectId = randomUUID(); const supplierId = randomUUID();
-  await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES ($1,'node-owner','节点资源方','supplier')`, [userId]);
+  const feeOperator = randomUUID(); const feeApprover = randomUUID();
+  await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES
+    ($1,'node-owner','节点资源方','supplier'),($2,'node-fee-operator','费用运营','operator'),
+    ($3,'node-fee-approver','费用复核','operator')`, [userId, feeOperator, feeApprover]);
+  const feeStore = new PostgresSettlementFeeStore(database); const scheduleId = randomUUID(); const now = new Date();
+  await feeStore.createDraftSchedule({ id: scheduleId, version: `node-test-${randomUUID().slice(0, 8)}`,
+    operatorId: feeOperator, now, requestId: `node-fee-draft-${randomUUID()}`,
+    payloadDigest: `sha256:${'1'.repeat(64)}`, tiers: [
+      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 100_000_000_000n, rateBps: 100 },
+      { ordinal: 1, lowerBoundMicros: 100_000_000_000n, upperBoundMicros: 1_000_000_000_000n, rateBps: 80 },
+      { ordinal: 2, lowerBoundMicros: 1_000_000_000_000n, upperBoundMicros: 10_000_000_000_000n, rateBps: 50 },
+      { ordinal: 3, lowerBoundMicros: 10_000_000_000_000n, upperBoundMicros: null, rateBps: 20 },
+    ] });
+  await feeStore.activateSchedule({ scheduleId, operatorId: feeApprover, now: new Date(now.getTime() + 1),
+    requestId: `node-fee-approve-${randomUUID()}`, payloadDigest: `sha256:${'2'.repeat(64)}` });
   await database.query(`INSERT INTO trading_subjects(id,kind,display_name,owner_user_id) VALUES ($1,'personal','节点资源方',$2)`,
     [subjectId, userId]);
   await database.query(`INSERT INTO subject_memberships(subject_id,user_id,role) VALUES ($1,$2,'owner')`, [subjectId, userId]);

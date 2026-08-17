@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { Database } from '../database.js';
+import { PostgresSettlementFeeStore } from '../settlement-fees/store.js';
 import type { FulfillmentAttestation, FulfillmentRecord, SafeConnectionDescriptor } from './types.js';
 
 type FulfillmentRow = {
@@ -604,34 +605,54 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       for (const row of due.rows) {
         const credit = BigInt(row.captured_credit_micros);
         let transactionId: string | null = null;
+        let serviceFeeCreditMicros = 0n;
         if (credit > 0n) {
-          await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
-            VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
-            ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-          [randomUUID(), row.supplier_subject_id, `subject:${row.supplier_subject_id}:supplier_earnings_available`]);
-          const accounts = await client.query<{ id: string; account_kind: string }>(`SELECT id, account_kind
-            FROM kai_credit_accounts WHERE subject_id = $1
-            AND account_kind IN ('supplier_earnings_available','supplier_receivable')
-            ORDER BY id FOR UPDATE`, [row.supplier_subject_id]);
-          const supplierEarnings = accounts.rows.find((account) => account.account_kind === 'supplier_earnings_available')?.id;
-          const receivable = accounts.rows.find((account) => account.account_kind === 'supplier_receivable')?.id;
-          if (!supplierEarnings || !receivable) throw new Error('FULFILLMENT_SETTLEMENT_ACCOUNTS_MISSING');
-          transactionId = randomUUID();
-          await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
-            payload_digest, reference_type, reference_id, description, status)
-            VALUES ($1,$2,'COMPUTE_SUPPLIER_SETTLEMENT',$3,$4,'settlement',$5,'算力实耗结算到账','pending')`,
-          [transactionId, `subject:${row.supplier_subject_id}`, `compute-settle:${row.fulfillment_id}`,
-            `compute-settle:${row.fulfillment_id}:${credit}`, row.order_id]);
-          await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
-            ($1,$2,$3,$4,'算力结算到账'),($5,$2,$6,$7,'算力待结算转出')`,
-          [randomUUID(), transactionId, supplierEarnings, credit.toString(), randomUUID(), receivable, (-credit).toString()]);
-          await client.query(`UPDATE kai_credit_transactions SET status='posted', posted_at=$2 WHERE id=$1`, [transactionId, now]);
+          const feePolicyTable = await client.query<{ name: string | null }>(
+            `SELECT to_regclass('kai_credit_order_fee_policies')::text AS name`,
+          );
+          const policy = feePolicyTable.rows[0]?.name ? await client.query<{
+            policy_state: 'grandfathered_no_fee' | 'schedule_locked';
+          }>(`SELECT policy_state FROM kai_credit_order_fee_policies WHERE order_id=$1 FOR SHARE`, [row.order_id]) : null;
+          if (policy?.rows[0]?.policy_state === 'schedule_locked') {
+            const fee = await new PostgresSettlementFeeStore(this.database).assessSettlementInTransaction(client, {
+              id: randomUUID(), supplierSubjectId: row.supplier_subject_id, orderId: row.order_id,
+              sourceKind: 'compute_settlement', sourceId: `compute-fulfillment:${row.fulfillment_id}`,
+              grossCreditMicros: credit, idempotencyOwner: `subject:${row.supplier_subject_id}`,
+              idempotencyKey: `compute-settle:${row.fulfillment_id}`,
+              payloadDigest: `compute-settle:${row.fulfillment_id}:${credit}`, assessedAt: now,
+            });
+            if (fee.status === 'conflict') throw new Error('FULFILLMENT_SETTLEMENT_FEE_CONFLICT');
+            transactionId = fee.plan.ledgerTransactionId;
+            serviceFeeCreditMicros = fee.plan.serviceFeeCreditMicros;
+          } else {
+            await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
+              VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
+              ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
+            [randomUUID(), row.supplier_subject_id, `subject:${row.supplier_subject_id}:supplier_earnings_available`]);
+            const accounts = await client.query<{ id: string; account_kind: string }>(`SELECT id, account_kind
+              FROM kai_credit_accounts WHERE subject_id = $1
+              AND account_kind IN ('supplier_earnings_available','supplier_receivable')
+              ORDER BY id FOR UPDATE`, [row.supplier_subject_id]);
+            const supplierEarnings = accounts.rows.find((account) => account.account_kind === 'supplier_earnings_available')?.id;
+            const receivable = accounts.rows.find((account) => account.account_kind === 'supplier_receivable')?.id;
+            if (!supplierEarnings || !receivable) throw new Error('FULFILLMENT_SETTLEMENT_ACCOUNTS_MISSING');
+            transactionId = randomUUID();
+            await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
+              payload_digest, reference_type, reference_id, description, status)
+              VALUES ($1,$2,'COMPUTE_SUPPLIER_SETTLEMENT',$3,$4,'settlement',$5,'算力实耗结算到账','pending')`,
+            [transactionId, `subject:${row.supplier_subject_id}`, `compute-settle:${row.fulfillment_id}`,
+              `compute-settle:${row.fulfillment_id}:${credit}`, row.order_id]);
+            await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
+              ($1,$2,$3,$4,'算力结算到账'),($5,$2,$6,$7,'算力待结算转出')`,
+            [randomUUID(), transactionId, supplierEarnings, credit.toString(), randomUUID(), receivable, (-credit).toString()]);
+            await client.query(`UPDATE kai_credit_transactions SET status='posted', posted_at=$2 WHERE id=$1`, [transactionId, now]);
+          }
         }
         await client.query(`INSERT INTO compute_fulfillment_supplier_settlements(id,fulfillment_id,acceptance_id,
-          order_id,supplier_subject_id,credit_micros,settlement_transaction_id,available_at,settled_at)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          order_id,supplier_subject_id,credit_micros,service_fee_credit_micros,settlement_transaction_id,available_at,settled_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
         [randomUUID(), row.fulfillment_id, row.id, row.order_id, row.supplier_subject_id, credit.toString(),
-          transactionId, new Date(row.accepted_at.getTime() + 7 * 86_400_000), now]);
+          serviceFeeCreditMicros.toString(), transactionId, new Date(row.accepted_at.getTime() + 7 * 86_400_000), now]);
         await client.query(`UPDATE kai_credit_orders SET status='closed',closed_at=$2
           WHERE id=$1 AND status='accepted'`, [row.order_id, now]);
       }

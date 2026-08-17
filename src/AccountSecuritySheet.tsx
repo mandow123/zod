@@ -304,7 +304,7 @@ export function AccountSecuritySheet({
                   <Pressable onPress={() => setDeletionOpen(true)} style={[styles.row, styles.rowLast]}>
                     <View style={[styles.rowIcon, styles.dangerIcon]}><Ionicons name="person-remove-outline" size={20} color={colors.red} /></View>
                     <View style={styles.rowCopy}>
-                      <Text style={styles.rowTitle}>申请注销 CloudPay 账户</Text>
+                      <Text style={styles.rowTitle}>申请注销 Zod 账户</Text>
                       <Text style={styles.rowCaption}>需短信二次确认，并提供 7 天可撤回冷静期。</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={colors.subtle} />
@@ -361,7 +361,7 @@ export function AccountSecuritySheet({
                 )}
               </View>
             )}
-            <Text style={styles.footerNote}>CloudPay 不允许客户端自行宣告退出、注销或推送成功，所有状态均由服务端确认并留痕。</Text>
+            <Text style={styles.footerNote}>Zod 不允许客户端自行宣告退出、注销或推送成功，所有状态均由服务端确认并留痕。</Text>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

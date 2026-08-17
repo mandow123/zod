@@ -11,6 +11,7 @@ export type LocalE2EDemoListing = Readonly<{
   title: string;
   productCode: string;
   productKind: 'hardware_device' | 'compute_capacity';
+  campaignKey: 'nvidia-dgx-spark-200-baige-20off' | null;
   fulfillmentMode: 'physical_delivery' | 'compute_sidecar_v1';
   shippingEstimate: '预计3个月发货' | null;
   kind: 'gpu';
@@ -78,6 +79,7 @@ export function buildLocalE2EDemoCatalog(
       title: spark ? '02672 白鸽在线特供款' : `演示算力 ${String(index + 1).padStart(3, '0')} · ${product}`,
       productCode: product,
       productKind: spark ? 'hardware_device' : 'compute_capacity',
+      campaignKey: spark ? 'nvidia-dgx-spark-200-baige-20off' : null,
       fulfillmentMode: spark ? 'physical_delivery' : 'compute_sidecar_v1',
       shippingEstimate: spark ? '预计3个月发货' : null,
       kind: 'gpu', region: '华东-上海', serviceMode: 'dedicated',

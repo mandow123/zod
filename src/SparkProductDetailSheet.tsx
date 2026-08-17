@@ -1,19 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { DeviceProduct } from './api';
-import { cnyPrice, creditAmount } from './format';
+import { creditAmount } from './format';
 import { colors } from './theme';
 
 const artwork = require('../assets/baige-spark-campaign-v1.jpg');
 
-function groupedCny(value: string) {
-  const [whole = '0', fraction = ''] = cnyPrice(value).split('.');
-  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/gu, ',')}.${fraction}`;
-}
-
-export function SparkProductDetailSheet({ product, visible, onClose, onBuy }: Readonly<{
+export function SparkProductDetailSheet({ product, visible, purchaseAllowed, blockedReason, onClose, onBuy }: Readonly<{
   product: DeviceProduct | null;
   visible: boolean;
+  purchaseAllowed: boolean;
+  blockedReason: string | null;
   onClose: () => void;
   onBuy: (product: DeviceProduct) => void;
 }>) {
@@ -22,25 +19,24 @@ export function SparkProductDetailSheet({ product, visible, onClose, onBuy }: Re
     <View style={styles.backdrop}><View style={styles.sheet}>
       <View style={styles.handle} />
       <View style={styles.header}>
-        <View><Text style={styles.eyebrow}>白鸽在线 · 02672 特供</Text><Text style={styles.title}>NVIDIA DGX Spark</Text></View>
+        <View><Text style={styles.eyebrow}>{product.supplier.displayName} · 活动商品</Text><Text style={styles.title}>{product.title}</Text></View>
         <Pressable onPress={onClose} style={styles.close} accessibilityLabel="关闭白鸽在线特供款详情"><Ionicons name="close" size={23} color={colors.ink} /></Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ImageBackground source={artwork} resizeMode="cover" imageStyle={styles.heroImage} style={styles.hero}>
           <View style={styles.heroScrim} />
           <View style={styles.heroCopy}>
-            <Text style={styles.heroLabel}>白鸽在线 · 上海特供</Text>
-            <Text style={styles.heroTitle}>200 台限量</Text>
+            <Text style={styles.heroLabel}>{product.supplier.displayName} · 上海</Text>
+            <Text style={styles.heroTitle}>{product.inventory.total} 台限量</Text>
             <Text style={styles.heroCaption}>整机实物交付 · {product.expectedDelivery.label}</Text>
           </View>
         </ImageBackground>
 
         <View style={styles.priceCard}>
-          <View style={styles.discountBadge}><Text style={styles.discountText}>8 折 · 优惠 20%</Text></View>
-          <Text style={styles.priceLabel}>活动价 · 含税</Text>
-          <Text style={styles.price}>¥{groupedCny(product.pricing.salePriceCny)} <Text style={styles.unit}>/ 台</Text></Text>
-          <Text style={styles.original}>含税原价 ¥{groupedCny(product.pricing.listPriceCny)} / 台</Text>
-          <View style={styles.creditLine}><Text style={styles.creditLabel}>参考卡时</Text><Text style={styles.credit}>{creditAmount(product.pricing.unitCredit)} KAI 卡时 / 台</Text></View>
+          <View style={styles.discountBadge}><Text style={styles.discountText}>{product.pricing.discountPercent === 20 ? '8 折' : `优惠 ${product.pricing.discountPercent}%`}</Text></View>
+          <Text style={styles.priceLabel}>活动价</Text>
+          <Text style={styles.price}>{creditAmount(product.pricing.unitCredit)} <Text style={styles.unit}>KAI 卡时 / 台</Text></Text>
+          {product.pricing.listUnitCredit ? <Text style={styles.original}>{creditAmount(product.pricing.listUnitCredit)} KAI 卡时 / 台</Text> : null}
         </View>
 
         <View style={styles.inventoryCard}>
@@ -51,13 +47,13 @@ export function SparkProductDetailSheet({ product, visible, onClose, onBuy }: Re
           <Inventory label="剩余" value={`${product.inventory.available} 台`} strong />
         </View>
 
-        <Fact icon="cube-outline" title="整机商品" body="这是 NVIDIA DGX Spark 整机商品，采用实物交付，不作为 GPU 小时算力订单。" />
+        <Fact icon="cube-outline" title="整机商品" body={`${product.title} 采用实物交付，不作为 GPU 小时算力订单。`} />
         <Fact icon="time-outline" title="交付周期" body={`${product.expectedDelivery.label}，实际交付节点以订单和平台消息为准。`} />
-        <Fact icon="shield-checkmark-outline" title="价格说明" body={`含税原价 ¥${groupedCny(product.pricing.listPriceCny)}，活动价 ¥${groupedCny(product.pricing.salePriceCny)}；优惠 ${product.pricing.discountPercent}%。`} />
-        {!product.purchasable ? <View style={styles.blocked}><Ionicons name="alert-circle-outline" size={19} color={colors.amber} /><Text style={styles.noticeText}>{product.activationStatus === 'pending_activation' ? '供应主体和收款账户尚未完成核验，当前只能查看，不能下单。' : '该商品当前暂不可购买。'}</Text></View> : null}
+        <Fact icon="shield-checkmark-outline" title="价格说明" body={`原价 ${creditAmount(product.pricing.listUnitCredit ?? product.pricing.unitCredit)} KAI 卡时，活动价 ${creditAmount(product.pricing.unitCredit)} KAI 卡时；优惠 ${product.pricing.discountPercent}%。价格由服务端锁定。`} />
+        {!purchaseAllowed ? <View style={styles.blocked}><Ionicons name="alert-circle-outline" size={19} color={colors.amber} /><Text style={styles.noticeText}>{blockedReason ?? '该商品当前暂不可购买。'}</Text></View> : null}
         <View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.amber} /><Text style={styles.noticeText}>点击购买只会进入确认页；数量、价格与订单结果以服务端确认为准。</Text></View>
       </ScrollView>
-      <View style={styles.footer}><View><Text style={styles.footerLabel}>活动价 · 含税</Text><Text style={styles.footerPrice}>¥{groupedCny(product.pricing.salePriceCny)} / 台</Text></View><Pressable disabled={!product.purchasable} onPress={() => onBuy(product)} style={[styles.buy, !product.purchasable && styles.buyDisabled]}><Text style={styles.buyText}>{product.purchasable ? '立即购买' : '暂不可购买'}</Text><Ionicons name="arrow-forward" size={17} color={colors.surface} /></Pressable></View>
+      <View style={styles.footer}><View><Text style={styles.footerLabel}>活动价</Text><Text style={styles.footerPrice}>{creditAmount(product.pricing.unitCredit)} 卡时 / 台</Text></View><Pressable disabled={!purchaseAllowed} onPress={() => onBuy(product)} style={[styles.buy, !purchaseAllowed && styles.buyDisabled]}><Text style={styles.buyText}>{purchaseAllowed ? '立即购买' : '暂不可购买'}</Text><Ionicons name="arrow-forward" size={17} color={colors.surface} /></Pressable></View>
     </View></View>
   </Modal>;
 }

@@ -7,14 +7,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, shadows } from './theme';
+import { brand, colors, shadows } from './theme';
 
 export type WorkMode = 'consumer' | 'provider';
-export type TabKey = 'home' | 'market' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile';
+export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function BrandHeader({
-  title = 'KAI CloudPay',
+  title = brand.name,
   subtitle,
   onSearch,
   onMessages,
@@ -30,7 +30,7 @@ export function BrandHeader({
     <View style={styles.header}>
       <View style={styles.brandBlock}>
         <View style={styles.logo}>
-          <Text style={styles.logoText}>K</Text>
+          <Text style={styles.logoText}>Z</Text>
         </View>
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>{title}</Text>

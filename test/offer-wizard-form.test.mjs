@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   commonDeliveryTerms,
+  contractPriceToCreditInput,
+  creditInputToContractPrice,
   draftPriceEvidence,
-  formatCnyForEditing,
-  normalizeCnyInput,
+  normalizeCreditInput,
   shouldClearFormErrorOnEdit,
   validateOfferWizardStep,
 } from '../src/offer-wizard-form.ts';
@@ -12,30 +13,29 @@ import {
 const complete = {
   title: 'L40S 48G 整卡独享', minimumQuantity: '1',
   availability: '99.9%', delivery: '平台工作区交付', acceptance: '按验真配置验收',
-  refund: '按中断分钟退还卡时', cleanup: '结束后清理数据', suggestedPriceCny: '36.00',
+  refund: '按中断分钟退还卡时', cleanup: '结束后清理数据', suggestedUnitCredits: '36.00',
   priceComponents: '包含设备、电力、网络和运维', evidenceSource: '近期成交合同',
   evidenceSummary: '同地区同型号同期成交记录',
 };
 
-test('人民币核价输入只保留一个小数点和两位小数', () => {
-  assert.equal(normalizeCnyInput('36.00'), '36.00');
-  assert.equal(normalizeCnyInput('36..0099元'), '36.00');
-  assert.equal(normalizeCnyInput('.5'), '0.5');
-  assert.equal(normalizeCnyInput('12345678901'), '123456789');
+test('卡时单价输入只保留一个小数点和六位小数', () => {
+  assert.equal(normalizeCreditInput('36.00'), '36.00');
+  assert.equal(normalizeCreditInput('36..0099999卡时'), '36.009999');
+  assert.equal(normalizeCreditInput('.5'), '0.5');
+  assert.equal(normalizeCreditInput('12345678901'), '123456789');
 });
 
-test('服务端人民币精度转换成易读的两位编辑格式', () => {
-  assert.equal(formatCnyForEditing('31.200000'), '31.20');
-  assert.equal(formatCnyForEditing('31'), '31.00');
-  assert.equal(formatCnyForEditing('31.2'), '31.20');
-  assert.equal(formatCnyForEditing('31.234000'), '31.23');
-  assert.equal(formatCnyForEditing(''), '');
+test('卡时输入与既有服务端审计字段使用整数精度兼容', () => {
+  assert.equal(creditInputToContractPrice('36.00'), '36.072000');
+  assert.equal(contractPriceToCreditInput('36.072000'), '36.000000');
+  assert.equal(contractPriceToCreditInput('31.200000'), '31.137725');
+  assert.equal(contractPriceToCreditInput(''), '');
 });
 
 test('每一步都在进入下一步前检查必填内容', () => {
   assert.equal(validateOfferWizardStep('service', { ...complete, title: '' }), '请填写服务名称与最小起售量。');
   assert.equal(validateOfferWizardStep('terms', { ...complete, refund: '' }), '请完整定义保障、交付、验收、退款和数据清理边界。');
-  assert.equal(validateOfferWizardStep('price', { ...complete, suggestedPriceCny: '36.001' }), '请填写人民币依据、价格构成和一条可核验凭证。');
+  assert.equal(validateOfferWizardStep('price', { ...complete, suggestedUnitCredits: '36.0010001' }), '请填写卡时单价、价格构成和一条可核验凭证。');
   assert.equal(validateOfferWizardStep('price', complete), null);
 });
 

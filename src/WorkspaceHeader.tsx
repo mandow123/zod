@@ -43,9 +43,9 @@ export function WorkspaceHeader({
       <View style={styles.shell}>
         <View style={styles.topRow}>
           <View style={styles.brand}>
-            <View style={styles.logo}><Text style={styles.logoText}>K</Text></View>
+            <View style={styles.logo}><Text style={styles.logoText}>Z</Text></View>
             <View>
-              <Text style={styles.title}>KAI Cloud</Text>
+              <Text style={styles.title}>Zod</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="切换交易主体"

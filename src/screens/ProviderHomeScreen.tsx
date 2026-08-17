@@ -28,7 +28,7 @@ export function ProviderHomeScreen({ snapshot, refreshing, onRefresh, onLogin, o
       <Text style={styles.heroText}>设备、订单和结算都在这里。</Text>
     </LinearGradient>
 
-    {!snapshot.authenticated ? <View style={styles.loginCard}><Text style={styles.loginTitle}>登录后管理供给</Text><Text style={styles.loginText}>使用算力和提供算力共用同一账号。</Text><Pressable onPress={onLogin} style={styles.primary}><Text style={styles.primaryText}>登录 CloudPay</Text></Pressable></View> : !workspace ? <View style={styles.loginCard}><Text style={styles.loginTitle}>供给进度暂未载入</Text><Text style={styles.loginText}>{snapshot.providerWorkspaceError ?? '下拉重新读取。'}</Text></View> : <>
+    {!snapshot.authenticated ? <View style={styles.loginCard}><Text style={styles.loginTitle}>登录后管理供给</Text><Text style={styles.loginText}>使用算力和提供算力共用同一账号。</Text><Pressable onPress={onLogin} style={styles.primary}><Text style={styles.primaryText}>登录 Zod</Text></Pressable></View> : !workspace ? <View style={styles.loginCard}><Text style={styles.loginTitle}>供给进度暂未载入</Text><Text style={styles.loginText}>{snapshot.providerWorkspaceError ?? '下拉重新读取。'}</Text></View> : <>
       <Pressable onPress={() => onNext(workspace.nextAction.route, workspace.nextAction.entityId)} style={styles.todo}>
         <View style={styles.todoIcon}><Ionicons name="notifications-outline" size={20} color={colors.ink} /></View>
         <View style={styles.todoCopy}><Text style={styles.todoLabel}>当前待办</Text><Text style={styles.todoTitle}>{workspace.nextAction.label}</Text></View>

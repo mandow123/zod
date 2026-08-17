@@ -140,7 +140,7 @@ export function AuthSheet({ visible, onClose, onSignedIn }: AuthSheetProps) {
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>本机验收</Text>
-              <Text style={styles.title}>进入 CloudPay</Text>
+              <Text style={styles.title}>进入 Zod</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="关闭" onPress={close} style={styles.closeButton}>
               <Ionicons name="close" size={23} color={colors.ink} />

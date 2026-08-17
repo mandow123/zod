@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createCreditPayout, type CreditBalance, type CreditPayout, type CreditPayoutProfile } from './api';
 import { ApiError } from './api-client';
-import { creditAmount } from './format';
+import { creditAmount, creditToCnyEstimate } from './format';
 import { isAmbiguousMutationFailure } from './mutation-recovery';
 import { colors } from './theme';
 
@@ -47,7 +47,7 @@ export function CreditPayoutSheet({ visible, balance, profile, onClose, onCreate
       {!profileActive ? <View style={styles.warning}><Ionicons name="alert-circle-outline" size={18} color={colors.amber} /><Text style={styles.warningText}>{profile?.status === 'suspended' ? '收款账户已暂停，请联系平台处理。' : '收款主体尚待平台核验，激活前不能提交兑付。'}</Text></View> : null}
       {error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View> : null}
       <Text style={styles.label}>兑付卡时</Text><TextInput value={amount} onChangeText={(value) => { setAmount(value.replace(/[^0-9.]/gu, '')); setError(null); request.current = null; }} keyboardType="decimal-pad" placeholder="至少 1.00" placeholderTextColor={colors.subtle} style={styles.input} />
-      <Text style={styles.estimate}>预计公司付款：{valid ? `¥${(Number(normalized) * 1.002).toFixed(2)}` : '—'}</Text>
+      <Text style={styles.estimate}>预计公司付款：{valid ? `¥${creditToCnyEstimate(normalized)}` : '—'}</Text>
       <Pressable disabled={busy || !profileActive} onPress={() => void submit()} style={[styles.primary, (busy || !profileActive) && styles.disabled]}>{busy ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{profileActive ? '提交兑付申请' : '等待账户核验'}</Text>}</Pressable>
       <Text style={styles.footnote}>提交成功后卡时进入“兑付冻结”，公司付款成功后才完成核销；失败、拒绝或取消会原路退回可用余额。</Text>
     </View>

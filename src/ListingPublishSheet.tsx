@@ -11,7 +11,7 @@ import {
 } from './publishing';
 import { isAmbiguousMutationFailure, listingPublicationAccepted, unknownSubmissionMessage } from './mutation-recovery';
 import { colors } from './theme';
-import { cnyPrice, creditAmount } from './format';
+import { creditAmount } from './format';
 import { resourceIsDeliverable, resourceNodeCopy, type ResourceNodeUiState } from './resource-delivery-readiness';
 
 type StartChoice = 'now' | 'tomorrow' | 'scheduled';
@@ -209,7 +209,7 @@ export function ListingPublishSheet({ visible, offerId, onClose, onPublished }: 
             <View style={styles.approvedCard}>
               <View style={styles.approvedTop}><View><Text style={styles.approvedLabel}>双审通过</Text><Text style={styles.offerTitle}>{offer.title}</Text></View><Ionicons name="shield-checkmark" size={30} color={colors.green} /></View>
               <Text style={styles.price}>{creditAmount(approvedPrice)} <Text style={styles.priceUnit}>KAI 卡时 / {offer.nativeUnit}</Text></Text>
-              <Text style={styles.conversion}>核价 ¥{cnyPrice(offer.suggestedPriceCny)} / {offer.nativeUnit} · 1 KAI 卡时 = ¥1.002</Text>
+              <Text style={styles.conversion}>最终挂牌单价由平台价格审核锁定</Text>
             </View>
 
             <View style={[styles.nodeCard, node.state === 'ready' && styles.nodeReady, node.state === 'offline' && styles.nodeOffline, node.state === 'revoked' && styles.nodeRevoked]}>

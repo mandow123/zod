@@ -5,7 +5,7 @@ import test from 'node:test';
 test('供应方消息订单保持在可见消息页，资源入口直达资产页', async () => {
   const app = await readFile(new URL('../App.tsx', import.meta.url), 'utf8');
   assert.match(app, /message\.data\.route === 'provider_order'[\s\S]*?setActiveTab\('messages'\)/u);
-  assert.match(app, /onOpenProviderAssets=\{\(\) => navigate\('resources'\)\}/u);
+  assert.match(app, /onOpenProviderAssets=\{\(resourceId\) => \{ setResourceToOpenId\(resourceId \?\? null\); navigate\('resources'\); \}\}/u);
   assert.match(app, /onOpenPublish=\{\(\) => navigate\('publish'\)\}/u);
   assert.doesNotMatch(app, /onOpenPublish=\{\(\) => \{ setWorkMode\('provider'\)/u);
 });

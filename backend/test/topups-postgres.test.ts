@@ -14,6 +14,9 @@ import { creditMicrosForTopup, CreditTopupService } from '../src/topups/service.
 import { PostgresCreditTopupStore } from '../src/topups/store.js';
 import type { VerifiedTopupEvent } from '../src/topups/types.js';
 import { PostgresTopupRecoveryStore, TopupRecoveryWorker } from '../src/topups/recovery.js';
+import { PostgresTopupReversalStore } from '../src/topups/reversal-store.js';
+import { PostgresCreditLedgerStore } from '../src/credits/store.js';
+import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../src/credits/types.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -37,6 +40,7 @@ async function fixture() {
   for (const name of [
     '0001_cloudpay_ledger.sql', '0016_trading_subjects.sql',
     '0022_kai_credit_double_entry_ledger.sql', '0023_kai_credit_topups.sql',
+    '0050_topup_reversals.sql',
   ]) await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   const database = adapter(pglite);
   const userId = randomUUID(); const subjectId = randomUUID(); const otherUserId = randomUUID(); const otherSubjectId = randomUUID();
@@ -177,6 +181,63 @@ describe('verified RMB to KAI credit topups', () => {
     expect(errors).toEqual([]);
     expect((await store.get(subjectId, topup.id))?.status).toBe('succeeded');
     expect(await available(database, subjectId)).toBe(24_950_099n);
+    await database.close();
+  });
+
+  it('recovers credits through dual control without claiming an external cash refund', { timeout: 30_000 }, async () => {
+    const { database, userId, subjectId } = await fixture();
+    const firstOperator = randomUUID(); const secondOperator = randomUUID();
+    await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES
+      ($1,'topup-reversal-operator-1','冲正申请员','operator'),($2,'topup-reversal-operator-2','冲正复核员','operator')`,
+    [firstOperator, secondOperator]);
+    const topups = new PostgresCreditTopupStore(database); const reversals = new PostgresTopupReversalStore(database);
+    const topup = await prepare(topups, subjectId, userId);
+    expect(await topups.applyVerifiedEvent(verified({ providerReference: topup.providerReference,
+      providerTransactionId: 'ALI-REVERSAL-RECEIPT-001' }), new Date())).toBe('succeeded');
+    const requested = await reversals.create({ id: randomUUID(), topupId: topup.id, operatorId: firstOperator,
+      kind: 'refund', amountCents: 10_000, providerEventReference: 'ALI-REFUND-EVIDENCE-001',
+      evidenceDigest: `sha256:${'c'.repeat(64)}`, clientRequestId: 'topup-reversal-request-0001',
+      payloadDigest: `sha256:${'d'.repeat(64)}`, now: new Date() });
+    expect(requested).toMatchObject({ status: 'created', reversal: { status: 'submitted', creditMicros: 99_800_399n } });
+    if (!('reversal' in requested)) throw new Error('missing reversal');
+    expect(await reversals.recoverCredits({ reversalId: requested.reversal.id, operatorId: firstOperator, now: new Date() }))
+      .toEqual({ status: 'same_operator' });
+    expect(await reversals.recoverCredits({ reversalId: requested.reversal.id, operatorId: secondOperator, now: new Date() }))
+      .toMatchObject({ status: 'updated', reversal: { status: 'credit_recovered_external_unverified' } });
+    expect(await reversals.recoverCredits({ reversalId: requested.reversal.id, operatorId: secondOperator, now: new Date() }))
+      .toMatchObject({ status: 'replayed' });
+    expect(await available(database, subjectId)).toBe(0n);
+    const updated = await database.query<{ reversed_amount_cents: string; reversed_credit_micros: string }>(
+      `SELECT reversed_amount_cents::text,reversed_credit_micros::text FROM kai_credit_topups WHERE id=$1`, [topup.id]);
+    expect(updated.rows[0]).toEqual({ reversed_amount_cents: '10000', reversed_credit_micros: '99800399' });
+    await database.close();
+  });
+
+  it('does not over-allocate reversal requests or debit credits already in use', { timeout: 30_000 }, async () => {
+    const { database, userId, subjectId } = await fixture(); const operatorA = randomUUID(); const operatorB = randomUUID();
+    await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES
+      ($1,'topup-reversal-a','冲正A','operator'),($2,'topup-reversal-b','冲正B','operator')`, [operatorA, operatorB]);
+    const topups = new PostgresCreditTopupStore(database); const reversals = new PostgresTopupReversalStore(database);
+    const topup = await prepare(topups, subjectId, userId, { amountCents: 1000 });
+    await topups.applyVerifiedEvent(verified({ providerReference: topup.providerReference, amountCents: 1000 }), new Date());
+    const one = await reversals.create({ id: randomUUID(), topupId: topup.id, operatorId: operatorA, kind: 'chargeback',
+      amountCents: 700, providerEventReference: 'ALI-CHARGEBACK-0001', evidenceDigest: `sha256:${'e'.repeat(64)}`,
+      clientRequestId: 'topup-reversal-limit-0001', payloadDigest: `sha256:${'f'.repeat(64)}`, now: new Date() });
+    expect(one.status).toBe('created');
+    expect((await reversals.create({ id: randomUUID(), topupId: topup.id, operatorId: operatorA, kind: 'chargeback',
+      amountCents: 400, providerEventReference: 'ALI-CHARGEBACK-0002', evidenceDigest: `sha256:${'1'.repeat(64)}`,
+      clientRequestId: 'topup-reversal-limit-0002', payloadDigest: `sha256:${'2'.repeat(64)}`, now: new Date() })).status)
+      .toBe('amount_exceeds_remaining');
+    const ledger = new PostgresCreditLedgerStore(database); const accounts = await ledger.ensureSubjectAccounts(subjectId);
+    await ledger.post({ id: randomUUID(), idempotencyOwner: `subject:${subjectId}`, scope: 'TOPUP_TEST_SPEND',
+      idempotencyKey: `topup-test-spend-${randomUUID()}`, payloadDigest: `sha256:${'3'.repeat(64)}`,
+      referenceType: 'adjustment', description: '测试消费', entries: [
+        { accountId: accounts.find((item) => item.kind === 'available')!.accountId, amountMicros: -5_000_000n, memo: '测试消费' },
+        { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.clearing, amountMicros: 5_000_000n, memo: '测试清算' },
+      ] });
+    if (!('reversal' in one)) throw new Error('missing reversal');
+    expect(await reversals.recoverCredits({ reversalId: one.reversal.id, operatorId: operatorB, now: new Date() }))
+      .toEqual({ status: 'insufficient_credits' });
     await database.close();
   });
 });

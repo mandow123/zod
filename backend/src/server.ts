@@ -49,8 +49,12 @@ import { CreditPayoutService } from './payouts/service.js';
 import { PostgresDeviceCommerceStore } from './device-commerce/store.js';
 import { DeviceCommerceService } from './device-commerce/service.js';
 import { DeviceOrderExpiryWorker } from './device-commerce/expiry-worker.js';
+import { DeviceSettlementWorker } from './device-commerce/settlement-worker.js';
 import { PostgresShippingAddressStore } from './shipping-addresses/store.js';
 import { ShippingAddressService } from './shipping-addresses/service.js';
+import { PostgresTopupReversalStore } from './topups/reversal-store.js';
+import { TopupReversalService } from './topups/reversal-service.js';
+import { AssetPortfolioService } from './assets/service.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -96,6 +100,9 @@ const creditTopupStore = database ? new PostgresCreditTopupStore(database) : und
 const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
   ? new CreditTopupService(creditTopupStore, accountStore, subjectService, paymentProviders, config)
   : undefined;
+const topupReversalService = database && config.readiness.capabilities.tokenSecurity.available
+  ? new TopupReversalService(new PostgresTopupReversalStore(database), config)
+  : undefined;
 const creditPayoutService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
   ? new CreditPayoutService(new PostgresCreditPayoutStore(database), subjectService, config)
   : undefined;
@@ -115,6 +122,10 @@ const fulfillmentService = fulfillmentStore && subjectService && config.readines
   : undefined;
 const creditOrderService = creditOrderStore && subjectService && config.readiness.capabilities.tokenSecurity.available
   ? new CreditOrderService(creditOrderStore, subjectService, config, undefined, fulfillmentService)
+  : undefined;
+const assetPortfolioService = marketStore && deviceCommerceStore && creditOrderStore && subjectService
+  && config.readiness.capabilities.tokenSecurity.available
+  ? new AssetPortfolioService(marketStore, deviceCommerceStore, creditOrderStore, subjectService)
   : undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
@@ -140,6 +151,7 @@ const app = await buildApp({
   ...(resourceEvidenceService ? { resourceEvidenceService } : {}),
   ...(creditLedgerService ? { creditLedgerService } : {}),
   ...(creditTopupService ? { creditTopupService } : {}),
+  ...(topupReversalService ? { topupReversalService } : {}),
   ...(creditPayoutService ? { creditPayoutService } : {}),
   ...(deviceCommerceService ? { deviceCommerceService } : {}),
   ...(shippingAddressService ? { shippingAddressService } : {}),
@@ -147,6 +159,7 @@ const app = await buildApp({
   ...(fulfillmentService ? { fulfillmentService } : {}),
   ...(nodeEnrollmentService ? { nodeEnrollmentService } : {}),
   ...(kaiOidc ? { kaiOidc } : {}),
+  ...(assetPortfolioService ? { assetPortfolioService } : {}),
 });
 const topupRecoveryWorker = database && creditTopupStore && paymentProviders.size > 0
   ? new TopupRecoveryWorker(new PostgresTopupRecoveryStore(database), creditTopupStore, paymentProviders, app.log as WorkerLogger)
@@ -162,6 +175,9 @@ const fulfillmentExpiryWorker = fulfillmentService && computeProvider.available
   : undefined;
 const deviceOrderExpiryWorker = deviceCommerceStore
   ? new DeviceOrderExpiryWorker(deviceCommerceStore, app.log as WorkerLogger)
+  : undefined;
+const deviceSettlementWorker = deviceCommerceStore
+  ? new DeviceSettlementWorker(deviceCommerceStore, app.log as WorkerLogger)
   : undefined;
 const resourceEvidenceWorker = database && privateObjects && malwareScanner
   ? new EvidenceScanWorker(new ResourceEvidenceScanStore(database), privateObjects, malwareScanner, app.log as WorkerLogger)
@@ -183,6 +199,7 @@ creditOrderExpiryWorker?.start();
 creditSupplierSettlementWorker?.start();
 fulfillmentExpiryWorker?.start();
 deviceOrderExpiryWorker?.start();
+deviceSettlementWorker?.start();
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'graceful shutdown');
@@ -194,6 +211,7 @@ const shutdown = async (signal: string) => {
   await creditSupplierSettlementWorker?.stop();
   await fulfillmentExpiryWorker?.stop();
   await deviceOrderExpiryWorker?.stop();
+  await deviceSettlementWorker?.stop();
   await app.close();
   await database?.close();
   process.exit(0);

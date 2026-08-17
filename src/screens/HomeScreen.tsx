@@ -4,8 +4,8 @@ import { ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Tex
 import type { CloudPaySnapshot, DeviceProduct } from '../api';
 import type { TabKey } from '../components';
 import { creditAmount } from '../format';
-import { colors } from '../theme';
-import { isBaigeSparkListing } from './MarketScreen';
+import { brand, colors } from '../theme';
+import { isSparkCampaignListing, isSparkCampaignProduct } from '../campaign';
 
 const sparkArtwork = require('../../assets/baige-spark-campaign-v1.jpg');
 
@@ -27,15 +27,15 @@ const shortcuts = [
 ];
 
 export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpenDemand, onOpenCredits, onOpenSparkDetail }: Props) {
-  const spark = snapshot.deviceProducts.find((item) => item.id === '02672000-0000-4000-8000-000000000200') ?? null;
-  const resources = snapshot.listings.filter((item) => !isBaigeSparkListing(item)).slice(0, 3);
+  const spark = snapshot.deviceProducts.find(isSparkCampaignProduct) ?? null;
+  const resources = snapshot.listings.filter((item) => !isSparkCampaignListing(item)).slice(0, 3);
   const pending = snapshot.orders.filter((order) => order.side === 'buyer' && order.requiresAttention).length;
   const available = snapshot.creditBalance ? creditAmount(snapshot.creditBalance.available) : snapshot.authenticated ? '余额暂未更新' : '登录后查看';
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
     <LinearGradient colors={['#E8F8F7', '#F1EEFF', '#FFFFFF']} style={styles.hero}>
-      <View style={styles.heroTop}><View><Text style={styles.brand}>KAI Cloud</Text><Text style={styles.heroTitle}>找到正在可用的算力</Text></View><View style={styles.onlineDot} /></View>
+      <View style={styles.heroTop}><View><Text style={styles.brand}>{brand.name}</Text><Text style={styles.heroTitle}>找到正在可用的算力</Text></View><View style={styles.onlineDot} /></View>
       <Pressable onPress={() => onNavigate('market')} style={styles.search}><Ionicons name="search-outline" size={20} color={colors.ink} /><Text style={styles.searchText}>搜索 H100、地区或交付时段</Text></Pressable>
     </LinearGradient>
 

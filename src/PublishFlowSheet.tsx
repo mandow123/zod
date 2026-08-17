@@ -320,7 +320,7 @@ export function PublishFlowSheet({
           {!authenticated ? (
             <View style={styles.loginGate}>
               <View style={styles.gateIcon}><Ionicons name="lock-closed-outline" size={32} color={colors.primary} /></View>
-              <Text style={styles.gateTitle}>先确认你的 CloudPay 身份</Text>
+              <Text style={styles.gateTitle}>先确认你的 Zod 身份</Text>
               <Text style={styles.gateText}>主体资料、资源和上架进度都会绑定当前交易主体；登录后可在同一账号内切换。</Text>
               <Pressable onPress={() => { onClose(); onLogin(); }} style={styles.primaryButton}><Text style={styles.primaryText}>前往 KAI 统一登录</Text></Pressable>
             </View>

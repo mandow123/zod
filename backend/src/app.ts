@@ -39,6 +39,10 @@ import { registerDeviceCommerceRoutes } from './device-commerce/routes.js';
 import type { DeviceCommerceService } from './device-commerce/service.js';
 import { registerShippingAddressRoutes } from './shipping-addresses/routes.js';
 import type { ShippingAddressService } from './shipping-addresses/service.js';
+import { registerAssetPortfolioRoutes } from './assets/routes.js';
+import type { AssetPortfolioService } from './assets/service.js';
+import { registerTopupReversalRoutes } from './topups/reversal-routes.js';
+import type { TopupReversalService } from './topups/reversal-service.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -52,6 +56,7 @@ type BuildAppOptions = Readonly<{
   resourceEvidenceService?: ResourceEvidenceService;
   creditLedgerService?: CreditLedgerService;
   creditTopupService?: CreditTopupService;
+  topupReversalService?: TopupReversalService;
   creditPayoutService?: CreditPayoutService;
   deviceCommerceService?: DeviceCommerceService;
   shippingAddressService?: ShippingAddressService;
@@ -59,16 +64,18 @@ type BuildAppOptions = Readonly<{
   fulfillmentService?: FulfillmentService;
   nodeEnrollmentService?: NodeEnrollmentService;
   kaiOidc?: KaiOidcBroker;
+  assetPortfolioService?: AssetPortfolioService;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
         paths: [
           'req.headers.authorization', 'req.headers.cookie', 'req.headers.wechatpay-signature',
           'req.headers.wechatpay-nonce', 'req.headers.wechatpay-serial', 'res.headers.set-cookie',
+          'req.body.trackingNumber',
         ],
         censor: '[REDACTED]',
       },
@@ -181,12 +188,14 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && resourceEvidenceService) await registerResourceEvidenceRoutes(app, accountService, resourceEvidenceService);
   if (accountService && creditLedgerService) await registerCreditRoutes(app, accountService, creditLedgerService);
   if (accountService && creditTopupService) await registerCreditTopupRoutes(app, accountService, creditTopupService);
+  if (accountService && topupReversalService) await registerTopupReversalRoutes(app, accountService, topupReversalService);
   if (accountService && creditPayoutService) await registerCreditPayoutRoutes(app, accountService, creditPayoutService);
   if (accountService && deviceCommerceService) await registerDeviceCommerceRoutes(app, accountService, deviceCommerceService);
   if (accountService && shippingAddressService) await registerShippingAddressRoutes(app, accountService, shippingAddressService);
   if (accountService && creditOrderService) await registerCreditOrderRoutes(app, accountService, creditOrderService);
   if (accountService && fulfillmentService) await registerFulfillmentRoutes(app, accountService, fulfillmentService);
   if (accountService && nodeEnrollmentService) await registerNodeEnrollmentRoutes(app, accountService, nodeEnrollmentService);
+  if (accountService && assetPortfolioService) await registerAssetPortfolioRoutes(app, accountService, assetPortfolioService);
   if (operationsService) await registerOperationsRoutes(app, accountService, operationsService);
 
   return app;

@@ -18,6 +18,11 @@ export const colors = {
   red: '#D92D20',
 };
 
+export const brand = Object.freeze({
+  name: 'Zod',
+  legalProductName: 'Zod 算力市场',
+});
+
 export const shadows = {
   card: {
     shadowColor: '#23395D',

@@ -29,13 +29,14 @@ type AssessmentRow = QueryResultRow & {
   source_kind: SupplierFeeBillItem['sourceKind']; source_id: string; original_assessment_id: string | null;
   payload_digest: string; gross_credit_micros: string; service_fee_credit_micros: string;
   net_credit_micros: string; cumulative_before_micros: string; cumulative_after_micros: string;
+  ledger_transaction_id: string | null;
   assessed_at: Date;
 };
 
 const assessmentColumns = `id, supplier_subject_id, order_id, schedule_id, schedule_version, period_id,
   period_start, kind, source_kind, source_id, original_assessment_id, payload_digest,
   gross_credit_micros::text, service_fee_credit_micros::text, net_credit_micros::text,
-  cumulative_before_micros::text, cumulative_after_micros::text, assessed_at`;
+  cumulative_before_micros::text, cumulative_after_micros::text, ledger_transaction_id, assessed_at`;
 
 function mapTier(row: TierRow): FeeTier {
   return {
@@ -55,6 +56,7 @@ export type FeeAssessmentResult =
   | Readonly<{ status: 'created' | 'replayed'; assessmentId: string; plan: {
       grossCreditMicros: bigint; serviceFeeCreditMicros: bigint; netCreditMicros: bigint;
       cumulativeBeforeMicros: bigint; cumulativeAfterMicros: bigint; segments: readonly FeeSegment[];
+      ledgerTransactionId: string;
     } }>
   | Readonly<{ status: 'conflict' }>;
 
@@ -86,6 +88,21 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
   async createDraftSchedule(input: Parameters<SettlementFeeStore['createDraftSchedule']>[0]) {
     const tiers = validateFeeTiers(input.tiers);
     return this.database.transaction(async (client) => {
+      const requestsTable = await client.query<{ name: string | null }>(
+        `SELECT to_regclass('kai_credit_fee_schedule_operator_requests')::text AS name`,
+      );
+      if (requestsTable.rows[0]?.name) {
+        const replay = await client.query<{ action: string; schedule_id: string; payload_digest: string }>(
+          `SELECT action,schedule_id,payload_digest FROM kai_credit_fee_schedule_operator_requests
+           WHERE operator_id=$1 AND idempotency_key=$2 FOR UPDATE`, [input.operatorId, input.requestId],
+        );
+        if (replay.rows[0]) {
+          if (replay.rows[0].action !== 'draft' || replay.rows[0].payload_digest !== input.payloadDigest) {
+            throw new Error('FEE_SCHEDULE_IDEMPOTENCY_CONFLICT');
+          }
+          return this.scheduleById(client, replay.rows[0].schedule_id);
+        }
+      }
       const inserted = await client.query<ScheduleRow>(`INSERT INTO kai_credit_fee_schedules(
           id, version, fee_category, created_by_user_id, created_at)
         VALUES ($1, $2, 'compute_trade', $3, $4)
@@ -96,6 +113,10 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [randomUUID(), input.id, tier.ordinal, tier.lowerBoundMicros.toString(),
         tier.upperBoundMicros?.toString() ?? null, tier.rateBps, input.now]);
+      if (requestsTable.rows[0]?.name) await client.query(`INSERT INTO kai_credit_fee_schedule_operator_requests(
+          operator_id,idempotency_key,action,schedule_id,payload_digest,created_at)
+        VALUES($1,$2,'draft',$3,$4,$5)`,
+      [input.operatorId, input.requestId, input.id, input.payloadDigest, input.now]);
       await this.audit(client, input.operatorId, 'KAI_CREDIT_FEE_SCHEDULE_DRAFTED', input.id,
         input.requestId, input.payloadDigest, { version: input.version, tierCount: tiers.length });
       return { ...this.mapSchedule(inserted.rows[0]!), tiers };
@@ -104,24 +125,47 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
 
   async activateSchedule(input: Parameters<SettlementFeeStore['activateSchedule']>[0]) {
     return this.database.transaction(async (client) => {
+      const requestsTable = await client.query<{ name: string | null }>(
+        `SELECT to_regclass('kai_credit_fee_schedule_operator_requests')::text AS name`,
+      );
+      if (requestsTable.rows[0]?.name) {
+        const replay = await client.query<{ action: string; schedule_id: string; payload_digest: string }>(
+          `SELECT action,schedule_id,payload_digest FROM kai_credit_fee_schedule_operator_requests
+           WHERE operator_id=$1 AND idempotency_key=$2 FOR UPDATE`, [input.operatorId, input.requestId],
+        );
+        if (replay.rows[0]) {
+          if (replay.rows[0].action !== 'approve_and_activate' || replay.rows[0].schedule_id !== input.scheduleId
+            || replay.rows[0].payload_digest !== input.payloadDigest) throw new Error('FEE_SCHEDULE_IDEMPOTENCY_CONFLICT');
+          return this.scheduleById(client, replay.rows[0].schedule_id);
+        }
+      }
       const draft = await client.query<ScheduleRow>(`SELECT id, version, status, effective_from, effective_to
-        FROM kai_credit_fee_schedules WHERE id = $1 FOR UPDATE`, [input.scheduleId]);
+          ,created_by_user_id FROM kai_credit_fee_schedules WHERE id = $1 FOR UPDATE`, [input.scheduleId]);
       const row = draft.rows[0];
       if (!row) throw new Error('FEE_SCHEDULE_NOT_FOUND');
-      if (row.status === 'active') return this.scheduleWithTiers(client, row);
       if (row.status !== 'draft') throw new Error('FEE_SCHEDULE_NOT_ACTIVATABLE');
+      const creator = (row as ScheduleRow & { created_by_user_id: string }).created_by_user_id;
+      if (creator === input.operatorId) throw new Error('FEE_SCHEDULE_INDEPENDENT_APPROVER_REQUIRED');
       const tiers = await this.tiers(client, row.id);
       validateFeeTiers(tiers);
       const active = await client.query<ScheduleRow>(`SELECT id, version, status, effective_from, effective_to
         FROM kai_credit_fee_schedules WHERE fee_category = 'compute_trade' AND status = 'active' FOR UPDATE`);
       if (active.rows[0]) await client.query(`UPDATE kai_credit_fee_schedules SET status = 'retired', effective_to = $2
         WHERE id = $1 AND status = 'active'`, [active.rows[0].id, input.now]);
+      if (requestsTable.rows[0]?.name) await client.query(`INSERT INTO kai_credit_fee_schedule_approvals(schedule_id,
+          requested_by_user_id,approved_by_user_id,approval_request_id,approval_payload_digest,approved_at)
+        VALUES($1,$2,$3,$4,$5,$6)`,
+      [row.id, creator, input.operatorId, input.requestId, input.payloadDigest, input.now]);
       const activated = await client.query<ScheduleRow>(`UPDATE kai_credit_fee_schedules SET status = 'active',
           effective_from = $2, activated_by_user_id = $3, activated_at = $2
         WHERE id = $1 AND status = 'draft'
         RETURNING id, version, status, effective_from, effective_to`,
       [row.id, input.now, input.operatorId]);
       if (!activated.rows[0]) throw new Error('FEE_SCHEDULE_ACTIVATION_RACE');
+      if (requestsTable.rows[0]?.name) await client.query(`INSERT INTO kai_credit_fee_schedule_operator_requests(
+          operator_id,idempotency_key,action,schedule_id,payload_digest,created_at)
+        VALUES($1,$2,'approve_and_activate',$3,$4,$5)`,
+      [input.operatorId, input.requestId, row.id, input.payloadDigest, input.now]);
       await this.audit(client, input.operatorId, 'KAI_CREDIT_FEE_SCHEDULE_ACTIVATED', row.id,
         input.requestId, input.payloadDigest, { version: row.version, replacedScheduleId: active.rows[0]?.id ?? null });
       return { ...this.mapSchedule(activated.rows[0]), tiers };
@@ -137,7 +181,13 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
 
   async assessSettlement(input: Parameters<SettlementFeeStore['assessSettlement']>[0]): Promise<FeeAssessmentResult> {
     if (input.grossCreditMicros <= 0n) throw new Error('FEE_ASSESSMENT_VOLUME_INVALID');
-    return this.database.transaction(async (client) => {
+    return this.database.transaction(async (client) => this.assessSettlementInTransaction(client, input));
+  }
+
+  async assessSettlementInTransaction(
+    client: PoolClient,
+    input: Parameters<SettlementFeeStore['assessSettlement']>[0],
+  ): Promise<FeeAssessmentResult> {
       const replay = await this.replay(client, input.idempotencyOwner, input.idempotencyKey, input.payloadDigest);
       if (replay) return replay;
       const source = await client.query<{ payload_digest: string }>(`SELECT payload_digest FROM kai_credit_fee_assessments
@@ -176,8 +226,7 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
       await this.audit(client, null, 'KAI_CREDIT_SETTLEMENT_FEE_ASSESSED', input.id,
         null, input.payloadDigest, { orderId: input.orderId, scheduleVersion: schedule.rows[0].version,
           grossCreditMicros: plan.grossCreditMicros.toString(), feeCreditMicros: plan.serviceFeeCreditMicros.toString() });
-      return { status: 'created', assessmentId: input.id, plan };
-    });
+      return { status: 'created', assessmentId: input.id, plan: { ...plan, ledgerTransactionId: transactionId } };
   }
 
   async reverseSettlement(input: Parameters<SettlementFeeStore['reverseSettlement']>[0]): Promise<FeeAssessmentResult> {
@@ -271,7 +320,7 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         serviceFeeCreditMicros: reversal.reversedServiceFeeCreditMicros,
         netCreditMicros: reversal.reversedNetCreditMicros,
         cumulativeBeforeMicros: cumulativeBefore, cumulativeAfterMicros: cumulativeAfter,
-        segments: reversalSegments,
+        segments: reversalSegments, ledgerTransactionId: transactionId,
       } };
     });
   }
@@ -314,6 +363,13 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
 
   private async scheduleWithTiers(client: PoolClient | Database, row: ScheduleRow) {
     return { ...this.mapSchedule(row), tiers: await this.tiers(client, row.id) };
+  }
+
+  private async scheduleById(client: PoolClient, scheduleId: string) {
+    const result = await client.query<ScheduleRow>(`SELECT id,version,status,effective_from,effective_to
+      FROM kai_credit_fee_schedules WHERE id=$1`, [scheduleId]);
+    if (!result.rows[0]) throw new Error('FEE_SCHEDULE_NOT_FOUND');
+    return this.scheduleWithTiers(client, result.rows[0]);
   }
 
   private async tiers(client: PoolClient | Database, scheduleId: string) {
@@ -396,7 +452,8 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
 
   private async insertAssessment(client: PoolClient,
     input: Parameters<SettlementFeeStore['assessSettlement']>[0], schedule: ScheduleRow,
-    periodId: string, periodStart: string, plan: Exclude<FeeAssessmentResult, { status: 'conflict' }>['plan'],
+    periodId: string, periodStart: string,
+    plan: Omit<Exclude<FeeAssessmentResult, { status: 'conflict' }>['plan'], 'ledgerTransactionId'>,
     transactionId: string) {
     await client.query(`INSERT INTO kai_credit_fee_assessments(id, supplier_subject_id, order_id,
         schedule_id, schedule_version, period_id, period_start, kind, source_kind, source_id,
@@ -458,6 +515,7 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
       netCreditMicros: BigInt(row.net_credit_micros),
       cumulativeBeforeMicros: BigInt(row.cumulative_before_micros),
       cumulativeAfterMicros: BigInt(row.cumulative_after_micros),
+      ledgerTransactionId: row.ledger_transaction_id ?? (() => { throw new Error('FEE_LEDGER_TRANSACTION_MISSING'); })(),
       segments: segments.rows.map((segment, ordinal) => ({
         ordinal, tierOrdinal: segment.tier_ordinal, lowerBoundMicros: BigInt(segment.lower_bound_micros),
         upperBoundMicros: segment.upper_bound_micros === null ? null : BigInt(segment.upper_bound_micros),

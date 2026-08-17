@@ -9,6 +9,8 @@ import {
 } from './session';
 import { loadProviderReadCache, saveProviderWorkspaceCache } from './provider-read-cache';
 import { mergeLocalDemoListings } from './demo-market';
+import type { DeviceAsset, DeviceOrder, DeviceProduct } from './device-commerce';
+export * from './device-commerce';
 
 export type ResourceKind = 'gpu' | 'token_capacity' | 'token_usage' | 'rack' | 'storage' | 'apple_silicon';
 
@@ -16,6 +18,7 @@ export type MarketResource = Readonly<{
   id: string;
   productCode: string;
   productKind?: 'hardware_device' | 'compute_capacity';
+  campaignKey?: string | null;
   fulfillmentMode?: 'physical_delivery' | 'compute_sidecar_v1';
   shippingEstimate?: string;
   kind: ResourceKind;
@@ -34,6 +37,7 @@ export type MarketCreditListing = Readonly<{
   serviceMode: 'dedicated' | 'shared' | 'slice' | 'node' | 'reserved';
   productCode: string;
   productKind?: 'hardware_device' | 'compute_capacity';
+  campaignKey?: string | null;
   fulfillmentMode?: 'physical_delivery' | 'compute_sidecar_v1';
   shippingEstimate?: string | null;
   kind: ResourceKind;
@@ -56,6 +60,9 @@ export type MarketCreditListing = Readonly<{
   createdAt: string;
   audits: Readonly<{ resource: true; price: true }>;
   ownedByCurrentSubject: boolean;
+  /** Server-authored purchase decision. Older servers omit these fields and fall back to readiness. */
+  purchasable?: boolean;
+  blockedReason?: string | null;
   demo?: Readonly<{
     mode: 'local_e2e'; label: '演示资源'; payment: 'sandbox_only';
     purchasable: boolean; simulatedAudit: true;
@@ -84,80 +91,6 @@ export type CreditBalance = Readonly<{
   payoutFrozen: string;
   total: string;
   conversion: '1 KAI卡时 = ¥1.002';
-}>;
-
-export type DeviceProduct = Readonly<{
-  id: string;
-  sku: string;
-  title: string;
-  productType: 'physical_delivery';
-  supplier: Readonly<{ displayName: string }>;
-  activationStatus: 'pending_activation' | 'active' | 'suspended';
-  purchasable: boolean;
-  inventory: Readonly<{ total: number; reserved: number; sold: number; available: number }>;
-  pricing: Readonly<{
-    listPriceCny: string;
-    salePriceCny: string;
-    unitCredit: string;
-    discountPercent: number;
-    conversion: '1 KAI卡时 = ¥1.002';
-  }>;
-  expectedDelivery: Readonly<{ days: number; label: string }>;
-  specifications: Record<string, unknown>;
-}>;
-
-export type DeviceOrderStatus = 'reserved' | 'confirmed' | 'shipping' | 'received' | 'cancelled' | 'expired';
-export type DeviceOrder = Readonly<{
-  id: string;
-  orderNumber: string;
-  productId: string;
-  status: DeviceOrderStatus;
-  quantity: number;
-  unitCredit: string;
-  totalCredit: string;
-  serviceFeeCredit: string | null;
-  supplierNetCredit: string | null;
-  reservationTransactionId: string;
-  resolutionTransactionId: string | null;
-  reservationExpiresAt: string;
-  confirmedAt: string | null;
-  shippedAt: string | null;
-  receivedAt: string | null;
-  createdAt: string;
-}>;
-
-export type DeviceAsset = Readonly<{
-  id: string;
-  orderId: string;
-  ownerSubjectId: string;
-  productId: string;
-  title: string;
-  quantity: number;
-  status: 'owned';
-  acquiredAt: string;
-}>;
-
-export type ShippingAddress = Readonly<{
-  id: string;
-  reference: string;
-  recipientName: string;
-  phone: string;
-  province: string;
-  city: string;
-  district: string;
-  detail: string;
-  isDefault: boolean;
-  createdAt: string;
-}>;
-
-export type ShippingAddressInput = Readonly<{
-  recipientName: string;
-  phone: string;
-  province: string;
-  city: string;
-  district: string;
-  detail: string;
-  isDefault?: boolean;
 }>;
 
 export type CreditPayoutProfile = Readonly<{
@@ -520,6 +453,8 @@ export type CloudPaySnapshot = {
   pushReady: boolean;
   releaseReady: boolean;
   releaseBlockers: string[];
+  creditCommerceReady: boolean;
+  commerceBlockers: string[];
   subjects: TradingSubject[];
   currentSubjectId: string | null;
   creditBalance: CreditBalance | null;
@@ -570,7 +505,8 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
 }
 type ReadinessResponse = {
   ok: boolean;
-  capabilities: { sms: boolean; push: boolean; alipay: boolean; wechat: boolean };
+  capabilities: { sms: boolean; push: boolean; alipay: boolean; wechat: boolean; creditCommerce?: boolean };
+  commerce?: { ready: boolean; blockers: string[] };
   release: { ready: boolean; blockers: string[] };
 };
 type MeResponse = { ok: boolean; user: CloudPayUser };
@@ -820,6 +756,11 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     pushReady: ready?.capabilities.push ?? false,
     releaseReady: ready?.release.ready ?? false,
     releaseBlockers: ready?.release.blockers ?? [],
+    creditCommerceReady: LOCAL_E2E_DEMO_ENABLED
+      || ready?.commerce?.ready
+      || ready?.capabilities.creditCommerce
+      || false,
+    commerceBlockers: LOCAL_E2E_DEMO_ENABLED ? [] : ready?.commerce?.blockers ?? ready?.release.blockers ?? [],
     subjects,
     currentSubjectId,
     creditBalance,
@@ -921,81 +862,6 @@ export async function createCloudPayOrder(
     method: 'POST', auth: 'required', retry: false, body: { listingId, quantity },
     headers: { 'idempotency-key': idempotencyKey },
   });
-  return response.order;
-}
-
-export async function loadDeviceProducts() {
-  const response = await apiRequest<DeviceProductsResponse>('/mobile/v1/device-products', {
-    auth: 'optional', retry: false,
-  });
-  return response.products;
-}
-
-export async function loadDeviceProduct(productId: string) {
-  const response = await apiRequest<{ ok: true; product: DeviceProduct }>(
-    `/mobile/v1/device-products/${encodeURIComponent(productId)}`, { auth: 'optional', retry: false },
-  );
-  return response.product;
-}
-
-export async function createDeviceOrder(input: Readonly<{
-  productId: string; quantity: number; shippingAddressReference: string; idempotencyKey: string;
-}>) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>('/mobile/v1/device-orders', {
-    method: 'POST', auth: 'required', retry: false,
-    body: { productId: input.productId, quantity: input.quantity, shippingAddressReference: input.shippingAddressReference },
-    headers: { 'idempotency-key': input.idempotencyKey },
-  });
-  return response.order;
-}
-
-export async function loadDeviceOrders() {
-  const response = await apiRequest<DeviceOrdersResponse>('/mobile/v1/device-orders', { auth: 'required', retry: false });
-  return response.orders;
-}
-
-export async function loadDeviceAssets() {
-  const response = await apiRequest<DeviceAssetsResponse>('/mobile/v1/device-assets', { auth: 'required', retry: false });
-  return response.assets;
-}
-
-export async function loadShippingAddresses() {
-  const response = await apiRequest<{ ok: true; addresses: ShippingAddress[] }>('/mobile/v1/shipping-addresses', {
-    auth: 'required', retry: false,
-  });
-  return response.addresses;
-}
-
-export async function createShippingAddress(input: ShippingAddressInput, idempotencyKey: string) {
-  const response = await apiRequest<{ ok: true; address: ShippingAddress }>('/mobile/v1/shipping-addresses', {
-    method: 'POST', auth: 'required', retry: false, body: input,
-    headers: { 'idempotency-key': idempotencyKey },
-  });
-  return response.address;
-}
-
-export async function deleteShippingAddress(addressId: string, idempotencyKey = orderActionKey('shipping-address-delete')) {
-  return apiRequest<{ ok: true; deleted: true }>(`/mobile/v1/shipping-addresses/${encodeURIComponent(addressId)}`, {
-    method: 'DELETE', auth: 'required', retry: false,
-    headers: { 'idempotency-key': idempotencyKey },
-  });
-}
-
-export async function cancelDeviceOrder(orderId: string, idempotencyKey = orderActionKey('device-order-cancel')) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>(
-    `/mobile/v1/device-orders/${encodeURIComponent(orderId)}/cancel`, {
-      method: 'POST', auth: 'required', retry: false, body: {}, headers: { 'idempotency-key': idempotencyKey },
-    },
-  );
-  return response.order;
-}
-
-export async function receiveDeviceOrder(orderId: string, idempotencyKey = orderActionKey('device-order-receive')) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>(
-    `/mobile/v1/device-orders/${encodeURIComponent(orderId)}/receive`, {
-      method: 'POST', auth: 'required', retry: false, body: {}, headers: { 'idempotency-key': idempotencyKey },
-    },
-  );
   return response.order;
 }
 

@@ -4,7 +4,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { logoutCloudPay, type CloudPaySnapshot } from '../api';
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
 import type { WorkMode } from '../components';
-import { colors } from '../theme';
+import { brand, colors } from '../theme';
 
 function PrivacySheet({ visible, onClose }: Readonly<{ visible: boolean; onClose: () => void }>) {
   return <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}><View style={styles.backdrop}><View style={styles.sheet}><View style={styles.handle} /><View style={styles.sheetHeading}><Text style={styles.sheetTitle}>隐私与数据</Text><Pressable onPress={onClose}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>{[
@@ -39,7 +39,7 @@ export function ProfileScreen({ snapshot, mode, onModeChange, onSelectSubject, o
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <Text style={styles.pageTitle}>我的</Text>
-    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'KC'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? '访客模式'}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? '登录后查看账号资产'}</Text></View><Pressable onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : '登录 CloudPay'}</Text></Pressable></View>
+    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? '访客模式'}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? '登录后查看账号资产'}</Text></View><Pressable onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : '登录 Zod'}</Text></Pressable></View>
 
     <Text style={styles.sectionLabel}>当前视角</Text>
     <View style={styles.modeSwitch}><Pressable onPress={() => onModeChange('consumer')} style={[styles.modeItem, mode === 'consumer' && styles.modeActive]}><Ionicons name="flash-outline" size={17} color={mode === 'consumer' ? colors.ink : colors.muted} /><Text style={[styles.modeText, mode === 'consumer' && styles.modeTextActive]}>使用算力</Text></Pressable><Pressable onPress={() => onModeChange('provider')} style={[styles.modeItem, mode === 'provider' && styles.modeActive]}><Ionicons name="server-outline" size={17} color={mode === 'provider' ? colors.ink : colors.muted} /><Text style={[styles.modeText, mode === 'provider' && styles.modeTextActive]}>提供算力</Text></Pressable></View>
@@ -53,11 +53,11 @@ export function ProfileScreen({ snapshot, mode, onModeChange, onSelectSubject, o
       <Menu icon="wallet-outline" label="费用与结算" meta="卡时、预留、待结算和明细" onPress={onOpenCredits} />
       <Menu icon="shield-checkmark-outline" label="认证与供给资格" meta={snapshot.providerWorkspace?.supplier?.status ?? '尚未开通'} onPress={onOpenPublish} />
       <Menu icon="cube-outline" label="我的资产" meta="购买与提供记录" onPress={onOpenAssets} />
-      <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta="通过消息联系平台" onPress={onOpenMessages} />
+      <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta={`通过消息联系 ${brand.name}`} onPress={onOpenMessages} />
       <Menu icon="settings-outline" label="账号设置" meta="安全、设备与隐私" onPress={() => snapshot.authenticated ? setSecurityVisible(true) : onLogin()} />
       <Menu icon="document-text-outline" label="隐私与数据" onPress={() => setPrivacyVisible(true)} last />
     </View>
-    <Text style={styles.version}>KAI CloudPay · 1.0.0</Text>
+    <Text style={styles.version}>{brand.name} · 1.0.0</Text>
   </ScrollView><PrivacySheet visible={privacyVisible} onClose={() => setPrivacyVisible(false)} /><AccountSecuritySheet visible={securityVisible} pushBackendReady={snapshot.pushReady} phoneReauthenticationAvailable={Boolean(snapshot.user?.phone)} onClose={() => setSecurityVisible(false)} onAccountChanged={onSessionChanged} /></View>;
 }
 

@@ -85,6 +85,9 @@ class MemoryMarketStore implements MarketStore {
     } : null;
   }
   async listProviderAssets() { return this.providerAssets; }
+  async countProviderAssets(subjectId: string) {
+    return this.supplier?.subjectId === subjectId ? this.providerAssets.length : 0;
+  }
   async getProviderAsset(_subjectId: string, assetId: string) { return this.providerAssets.find((asset) => asset.id === assetId) ?? null; }
   async createResource(input: {
     id: string; assetId: string; subjectId: string; requestedByUserId: string; kind: ResourceKind; productCode: string; region: string;

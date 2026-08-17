@@ -8,6 +8,7 @@ import type { Database } from '../src/database.js';
 import { PostgresMarketStore } from '../src/market/store.js';
 import { canonicalClaimProof, canonicalHeartbeatProof, normalizeInventory, type RawGpuInventory } from '../src/node-enrollment/protocol.js';
 import { NodeEnrollmentStore } from '../src/node-enrollment/store.js';
+import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -94,8 +95,19 @@ describe('provider asset foundation', () => {
   it('derives only evidence-backed statuses and isolates every read by provider subject', { timeout: 30_000 }, async () => {
     const pglite = new PGlite(); await migrateAll(pglite); const database = adapter(pglite);
     const owner = await provider(database, '201'); const outsider = await provider(database, '202');
-    const reviewerId = randomUUID();
-    await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES ($1,'asset-reviewer','审核员','operator')`, [reviewerId]);
+    const reviewerId = randomUUID(); const feeApprover = randomUUID();
+    await database.query(`INSERT INTO users(id,phone_ciphertext,display_name,role) VALUES
+      ($1,'asset-reviewer','审核员','operator'),($2,'asset-fee-approver','费用复核','operator')`, [reviewerId, feeApprover]);
+    const feeSchedules = new PostgresSettlementFeeStore(database); const scheduleId = randomUUID(); const feeNow = new Date();
+    await feeSchedules.createDraftSchedule({ id: scheduleId, version: 'provider-assets-fee-v1', operatorId: reviewerId,
+      now: feeNow, requestId: 'provider-assets-fee-draft-01', payloadDigest: `sha256:${'6'.repeat(64)}`, tiers: [
+        { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 100_000_000_000n, rateBps: 100 },
+        { ordinal: 1, lowerBoundMicros: 100_000_000_000n, upperBoundMicros: 1_000_000_000_000n, rateBps: 80 },
+        { ordinal: 2, lowerBoundMicros: 1_000_000_000_000n, upperBoundMicros: 10_000_000_000_000n, rateBps: 50 },
+        { ordinal: 3, lowerBoundMicros: 10_000_000_000_000n, upperBoundMicros: null, rateBps: 20 },
+      ] });
+    await feeSchedules.activateSchedule({ scheduleId, operatorId: feeApprover, now: new Date(feeNow.getTime() + 1),
+      requestId: 'provider-assets-fee-approve-01', payloadDigest: `sha256:${'7'.repeat(64)}` });
     const store = new PostgresMarketStore(database);
 
     const create = async (productCode: string, fingerprint: string) => {

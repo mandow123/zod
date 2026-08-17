@@ -117,7 +117,7 @@ async function fixture() {
       { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.issuance, amountMicros: -500n * C, memo: '测试发行' },
     ],
   });
-  return { database, buyerUserId, supplierUserId, operatorOne, buyerSubjectId, supplierSubjectId,
+  return { database, buyerUserId, supplierUserId, operatorOne, operatorTwo, buyerSubjectId, supplierSubjectId,
     listingId, orders: new PostgresCreditOrderStore(database), fees: new PostgresSettlementFeeStore(database) };
 }
 
@@ -154,7 +154,7 @@ async function activateFixtureSchedule(f: Awaited<ReturnType<typeof fixture>>) {
   await f.fees.createDraftSchedule({ id, version: 'fee-test-v1', tiers: fixtureTiers,
     operatorId: f.operatorOne, now: new Date('2026-08-01T00:00:00.000+08:00'),
     requestId: 'fee-schedule-draft-request', payloadDigest: `sha256:${'1'.repeat(64)}` });
-  return f.fees.activateSchedule({ scheduleId: id, operatorId: f.operatorOne,
+  return f.fees.activateSchedule({ scheduleId: id, operatorId: f.operatorTwo,
     now: new Date('2026-08-01T00:01:00.000+08:00'), requestId: 'fee-schedule-activate-request',
     payloadDigest: `sha256:${'2'.repeat(64)}` });
 }

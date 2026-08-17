@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
+import { PostgresSettlementFeeStore } from '../settlement-fees/store.js';
 import type { CreditOrderRecord } from './types.js';
 import { formatCreditMicros, totalCreditMicros } from './types.js';
 import { formatCreditDisplayMicros } from '../credits/display.js';
@@ -60,6 +61,7 @@ export interface CreditOrderStore {
   }>): Promise<CreateCreditOrderResult>;
   getForSubject(subjectId: string, orderId: string): Promise<CreditOrderRecord | null>;
   listForSubject(subjectId: string, limit: number, side?: CreditOrderListSide, cursor?: CreditOrderListCursor | null): Promise<CreditOrderRecord[]>;
+  countForSubject(subjectId: string, side?: CreditOrderListSide): Promise<Readonly<{ total: number; actionRequired: number }>>;
   expireReservations(now: Date, limit: number): Promise<number>;
   confirm(input: Readonly<{
     subjectId: string; userId: string; orderId: string; clientRequestId: string; payloadDigest: string;
@@ -345,6 +347,15 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
     return result.rows.map(mapOrder);
   }
 
+  async countForSubject(subjectId: string, side: CreditOrderListSide = 'all') {
+    const ownership = side === 'buyer' ? 'buyer_subject_id = $1' : side === 'provider'
+      ? 'supplier_subject_id = $1' : '(buyer_subject_id = $1 OR supplier_subject_id = $1)';
+    const result = await this.database.query<{ total: string; action_required: string }>(`SELECT count(*)::text total,
+      count(*) FILTER (WHERE status IN ('reserved','acceptance_pending','disputed'))::text action_required
+      FROM kai_credit_orders WHERE ${ownership}`, [subjectId]);
+    return { total: Number(result.rows[0]?.total ?? '0'), actionRequired: Number(result.rows[0]?.action_required ?? '0') };
+  }
+
   async confirm(input: Parameters<CreditOrderStore['confirm']>[0]): Promise<CreditOrderActionResult> {
     return this.database.transaction(async (client) => {
       await this.lockActionRequest(client, input, 'confirm');
@@ -623,8 +634,16 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
         VALUES ($1, $2, $3, $4, 'accepted', $5, $6, $7, $8)`,
       [randomUUID(), order.id, input.subjectId, input.userId, input.evidenceDigest, captureTransactionId,
         input.now, completedDelivery.rows[0].id]);
-      const updated = await client.query<OrderRow>(`UPDATE kai_credit_orders SET status = 'accepted', accepted_at = $2,
-        accepted_by_user_id = $3, closed_at = $2 WHERE id = $1 RETURNING ${orderColumns}`, [order.id, input.now, input.userId]);
+      const actorColumn = await client.query<{ present: boolean }>(`SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema()
+          AND table_name='kai_credit_orders' AND column_name='accepted_actor') AS present`);
+      const updated = actorColumn.rows[0]?.present
+        ? await client.query<OrderRow>(`UPDATE kai_credit_orders SET status = 'accepted', accepted_at = $2,
+            accepted_by_user_id = $3, accepted_actor = 'buyer', closed_at = $2 WHERE id = $1 RETURNING ${orderColumns}`,
+          [order.id, input.now, input.userId])
+        : await client.query<OrderRow>(`UPDATE kai_credit_orders SET status = 'accepted', accepted_at = $2,
+            accepted_by_user_id = $3, closed_at = $2 WHERE id = $1 RETURNING ${orderColumns}`,
+          [order.id, input.now, input.userId]);
       await this.event(client, order.id, input.userId, 'user', 'DELIVERY_ACCEPTED', 'acceptance_pending', 'accepted', {
         evidenceDigest: input.evidenceDigest, captureTransactionId,
       });
@@ -1557,43 +1576,76 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
       WHERE order_id = $1 AND status = 'succeeded'`, [order.id]);
     const settlementCreditMicros = order.totalCreditMicros - BigInt(compensation.rows[0]?.credit_micros ?? '0');
     if (settlementCreditMicros <= 0n) throw new Error('KAI_CREDIT_SETTLEMENT_AMOUNT_INVALID');
-    const subjects = await client.query<{ id: string }>(`SELECT id FROM trading_subjects
-      WHERE id = $1 AND status IN ('active', 'suspended') FOR UPDATE`, [order.supplierSubjectId]);
-    if (!subjects.rows[0]) throw new Error('ACTIVE_TRADING_SUBJECT_REQUIRED');
-    await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
-      VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
-      ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
-    [randomUUID(), order.supplierSubjectId, `subject:${order.supplierSubjectId}:supplier_earnings_available`]);
-    const accounts = await client.query<{ id: string; account_kind: 'supplier_earnings_available' | 'supplier_receivable' }>(`SELECT id,
-        account_kind FROM kai_credit_accounts WHERE subject_id = $1
-        AND account_kind IN ('supplier_earnings_available', 'supplier_receivable') ORDER BY id FOR UPDATE`, [order.supplierSubjectId]);
-    const supplierEarnings = accounts.rows.find((row) => row.account_kind === 'supplier_earnings_available')?.id;
-    const receivable = accounts.rows.find((row) => row.account_kind === 'supplier_receivable')?.id;
-    if (!supplierEarnings || !receivable) throw new Error('KAI_CREDIT_SETTLEMENT_ACCOUNTS_MISSING');
-    const settlementTransactionId = randomUUID();
-    await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
-        payload_digest, reference_type, reference_id, description, status)
-      VALUES ($1, $2, 'CREDIT_SUPPLIER_SETTLEMENT', $3, $4, 'settlement', $5, $6, 'pending')`,
-    [settlementTransactionId, `subject:${order.supplierSubjectId}`, `order-settlement:${order.id}`,
-      `order-settlement:${order.id}:${settlementCreditMicros}`, order.id, `订单 ${order.orderNumber} 提供方结算`]);
-    await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo) VALUES
-      ($1, $2, $3, $4, '提供方结算到账'), ($5, $2, $6, $7, '提供方结算转出')`,
-    [randomUUID(), settlementTransactionId, supplierEarnings, settlementCreditMicros.toString(), randomUUID(), receivable,
-      (-settlementCreditMicros).toString()]);
-    await client.query(`UPDATE kai_credit_transactions SET status = 'posted', posted_at = $2 WHERE id = $1`,
-    [settlementTransactionId, now]);
+    const feePolicyTable = await client.query<{ name: string | null }>(
+      `SELECT to_regclass('kai_credit_order_fee_policies')::text AS name`,
+    );
+    const policy = feePolicyTable.rows[0]?.name ? await client.query<{
+      policy_state: 'grandfathered_no_fee' | 'schedule_locked';
+    }>(`SELECT policy_state FROM kai_credit_order_fee_policies WHERE order_id = $1 FOR SHARE`, [order.id]) : null;
+    let settlementTransactionId: string;
+    let serviceFeeCreditMicros = 0n;
+    let netCreditMicros = settlementCreditMicros;
+    if (policy?.rows[0]?.policy_state === 'schedule_locked') {
+      const fee = await new PostgresSettlementFeeStore(this.database).assessSettlementInTransaction(client, {
+        id: randomUUID(), supplierSubjectId: order.supplierSubjectId, orderId: order.id,
+        sourceKind: 'compute_settlement', sourceId: `standard-delivery:${order.id}`,
+        grossCreditMicros: settlementCreditMicros, idempotencyOwner: `subject:${order.supplierSubjectId}`,
+        idempotencyKey: `order-settlement:${order.id}`,
+        payloadDigest: `order-settlement:${order.id}:${settlementCreditMicros}`, assessedAt: now,
+      });
+      if (fee.status === 'conflict') throw new Error('KAI_CREDIT_SETTLEMENT_FEE_CONFLICT');
+      settlementTransactionId = fee.plan.ledgerTransactionId;
+      serviceFeeCreditMicros = fee.plan.serviceFeeCreditMicros;
+      netCreditMicros = fee.plan.netCreditMicros;
+    } else {
+      const subjects = await client.query<{ id: string }>(`SELECT id FROM trading_subjects
+        WHERE id = $1 AND status IN ('active', 'suspended') FOR UPDATE`, [order.supplierSubjectId]);
+      if (!subjects.rows[0]) throw new Error('ACTIVE_TRADING_SUBJECT_REQUIRED');
+      await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
+        VALUES ($1, 'subject', $2, $3, 'supplier_earnings_available', false)
+        ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
+      [randomUUID(), order.supplierSubjectId, `subject:${order.supplierSubjectId}:supplier_earnings_available`]);
+      const accounts = await client.query<{ id: string; account_kind: 'supplier_earnings_available' | 'supplier_receivable' }>(`SELECT id,
+          account_kind FROM kai_credit_accounts WHERE subject_id = $1
+          AND account_kind IN ('supplier_earnings_available', 'supplier_receivable') ORDER BY id FOR UPDATE`, [order.supplierSubjectId]);
+      const supplierEarnings = accounts.rows.find((row) => row.account_kind === 'supplier_earnings_available')?.id;
+      const receivable = accounts.rows.find((row) => row.account_kind === 'supplier_receivable')?.id;
+      if (!supplierEarnings || !receivable) throw new Error('KAI_CREDIT_SETTLEMENT_ACCOUNTS_MISSING');
+      settlementTransactionId = randomUUID();
+      await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
+          payload_digest, reference_type, reference_id, description, status)
+        VALUES ($1, $2, 'CREDIT_SUPPLIER_SETTLEMENT', $3, $4, 'settlement', $5, $6, 'pending')`,
+      [settlementTransactionId, `subject:${order.supplierSubjectId}`, `order-settlement:${order.id}`,
+        `order-settlement:${order.id}:${settlementCreditMicros}`, order.id, `订单 ${order.orderNumber} 提供方结算`]);
+      await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo) VALUES
+        ($1, $2, $3, $4, '提供方结算到账'), ($5, $2, $6, $7, '提供方结算转出')`,
+      [randomUUID(), settlementTransactionId, supplierEarnings, settlementCreditMicros.toString(), randomUUID(), receivable,
+        (-settlementCreditMicros).toString()]);
+      await client.query(`UPDATE kai_credit_transactions SET status = 'posted', posted_at = $2 WHERE id = $1`,
+      [settlementTransactionId, now]);
+    }
     const updated = await client.query<OrderRow>(`UPDATE kai_credit_orders SET status = 'closed'
       WHERE id = $1 AND status = 'accepted' RETURNING ${orderColumns}`, [order.id]);
     if (!updated.rows[0]) throw new Error('KAI_CREDIT_SETTLEMENT_ORDER_STATE_CHANGED');
-    await client.query(`INSERT INTO kai_credit_supplier_settlements(id, order_id, acceptance_id,
-        supplier_subject_id, triggered_by, settled_by_user_id, credit_micros, settlement_transaction_id,
-        status, available_at, settled_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'succeeded', $9, $10)`,
-    [randomUUID(), order.id, acceptance.id, order.supplierSubjectId, trigger.triggeredBy, trigger.userId,
-      settlementCreditMicros.toString(), settlementTransactionId, acceptance.available_at, now]);
+    if (feePolicyTable.rows[0]?.name) {
+      await client.query(`INSERT INTO kai_credit_supplier_settlements(id, order_id, acceptance_id,
+          supplier_subject_id, triggered_by, settled_by_user_id, credit_micros, service_fee_credit_micros,
+          settlement_transaction_id, status, available_at, settled_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'succeeded', $10, $11)`,
+      [randomUUID(), order.id, acceptance.id, order.supplierSubjectId, trigger.triggeredBy, trigger.userId,
+        settlementCreditMicros.toString(), serviceFeeCreditMicros.toString(), settlementTransactionId, acceptance.available_at, now]);
+    } else {
+      await client.query(`INSERT INTO kai_credit_supplier_settlements(id, order_id, acceptance_id,
+          supplier_subject_id, triggered_by, settled_by_user_id, credit_micros, settlement_transaction_id,
+          status, available_at, settled_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'succeeded', $9, $10)`,
+      [randomUUID(), order.id, acceptance.id, order.supplierSubjectId, trigger.triggeredBy, trigger.userId,
+        settlementCreditMicros.toString(), settlementTransactionId, acceptance.available_at, now]);
+    }
     await this.event(client, order.id, trigger.userId, trigger.triggeredBy === 'system' ? 'system' : 'provider',
       'SUPPLIER_CREDITS_SETTLED', 'accepted', 'closed', {
-        settledCreditMicros: settlementCreditMicros.toString(), settlementTransactionId,
+        settledCreditMicros: settlementCreditMicros.toString(), serviceFeeCreditMicros: serviceFeeCreditMicros.toString(),
+        netCreditMicros: netCreditMicros.toString(), settlementTransactionId,
         availableAt: acceptance.available_at.toISOString(), triggeredBy: trigger.triggeredBy,
       });
     await client.query(`INSERT INTO audit_events(id, actor_id, actor_kind, action, entity_type, entity_id,
@@ -1602,6 +1654,7 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
     [randomUUID(), trigger.userId, trigger.triggeredBy === 'system' ? 'system' : 'provider', order.id,
       trigger.requestId, trigger.ipHash, trigger.payloadDigest, JSON.stringify({
         supplierSubjectId: order.supplierSubjectId, settledCreditMicros: settlementCreditMicros.toString(),
+        serviceFeeCreditMicros: serviceFeeCreditMicros.toString(), netCreditMicros: netCreditMicros.toString(),
         settlementTransactionId, availableAt: acceptance.available_at.toISOString(), triggeredBy: trigger.triggeredBy,
       })]);
     await this.notifySubject(client, order.supplierSubjectId, '卡时已结算',
