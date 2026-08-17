@@ -7,6 +7,7 @@ export const initialSnapshot: CloudPaySnapshot = {
   resources: [],
   listings: [],
   listingCatalogOnline: false,
+  deviceCatalogOnline: false,
   priceNotice: '正在读取市场数据…',
   authenticated: false,
   user: null,

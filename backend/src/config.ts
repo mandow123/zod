@@ -85,7 +85,21 @@ const environmentSchema = z.object({
   KAI_OIDC_SUBJECT_PEPPER: optionalText,
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: optionalText,
   KAI_OIDC_APP_REDIRECT_URIS: optionalText,
+  VAST_API_URL: z.string().url().default('https://console.vast.ai'),
+  VAST_API_KEY: optionalText,
+  VAST_PRICING_POLICY_JSON: optionalText,
 });
+
+const vastPricingPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  cardHourMicrosPerProviderUsd: z.string().regex(/^[1-9]\d*$/u).transform(BigInt),
+  markupBasisPoints: z.number().int().min(0).max(10_000),
+  quoteTtlSeconds: z.number().int().min(30).max(600),
+  reconciliationGraceSeconds: z.number().int().min(30).max(3_600),
+  defaultImage: z.string().trim().min(1).max(1_024),
+  defaultDiskGb: z.number().int().min(8).max(2_048),
+  defaultRuntype: z.enum(['ssh','ssh_direct','jupyter','jupyter_direct']),
+}).strict();
 
 type Capability = Readonly<{ available: boolean; missing: string[] }>;
 
@@ -239,6 +253,20 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       (value) => value !== 'kaicloudpay://auth/kai/callback',
     ) ? ['KAI_OIDC_APP_REDIRECT_URIS(registered exact app redirects)'] : []),
   ]);
+  let vastPricingPolicy: z.infer<typeof vastPricingPolicySchema> | null = null;
+  const vastInvalid: string[] = [];
+  if (parsed.VAST_PRICING_POLICY_JSON) {
+    try {
+      const result = vastPricingPolicySchema.safeParse(JSON.parse(parsed.VAST_PRICING_POLICY_JSON));
+      if (result.success) vastPricingPolicy = result.data;
+      else vastInvalid.push('VAST_PRICING_POLICY_JSON(valid server pricing policy)');
+    } catch { vastInvalid.push('VAST_PRICING_POLICY_JSON(valid JSON)'); }
+  }
+  const vastProtocol = new URL(parsed.VAST_API_URL).protocol;
+  const vastAi = mergeCapability(capability(environment,['VAST_API_KEY','VAST_PRICING_POLICY_JSON']), [
+    ...vastInvalid,
+    ...(parsed.NODE_ENV === 'production' && vastProtocol !== 'https:' ? ['VAST_API_URL(HTTPS)'] : []),
+  ]);
   const creditCommerce = kaiCreditCommerceCapability({
     verifiedTopupProviderAvailable: alipayTopup.available || wechat.available,
     computeProviderAvailable: computeFulfillment.available,
@@ -310,6 +338,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     backupS3ForcePathStyle: parsed.BACKUP_S3_FORCE_PATH_STYLE === 'true',
     nodeSupportedAgentVersions: supportedAgentVersions,
     kaiOidcAppRedirects: kaiOidcRedirects,
+    vastPricingPolicy,
     readiness: {
       coreReady: coreBlockers.length === 0,
       serviceReady: serviceBlockers.length === 0,
@@ -319,7 +348,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
         database, tokenSecurity, kaiOidc, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
-        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment,
+        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi,
       },
     },
   } as const;

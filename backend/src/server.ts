@@ -55,6 +55,10 @@ import { ShippingAddressService } from './shipping-addresses/service.js';
 import { PostgresTopupReversalStore } from './topups/reversal-store.js';
 import { TopupReversalService } from './topups/reversal-service.js';
 import { AssetPortfolioService } from './assets/service.js';
+import { createVastAiProvider } from './vast-market/provider.js';
+import { PostgresVastMarketStore } from './vast-market/store.js';
+import { VastMarketService } from './vast-market/service.js';
+import { VastReconciliationWorker } from './vast-market/recovery-worker.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -127,6 +131,10 @@ const assetPortfolioService = marketStore && deviceCommerceStore && creditOrderS
   && config.readiness.capabilities.tokenSecurity.available
   ? new AssetPortfolioService(marketStore, deviceCommerceStore, creditOrderStore, subjectService)
   : undefined;
+const vastProvider = createVastAiProvider(config);
+const vastMarketService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+  ? new VastMarketService(new PostgresVastMarketStore(database),subjectService,vastProvider,config.vastPricingPolicy)
+  : undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
@@ -160,7 +168,11 @@ const app = await buildApp({
   ...(nodeEnrollmentService ? { nodeEnrollmentService } : {}),
   ...(kaiOidc ? { kaiOidc } : {}),
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
+  ...(vastMarketService ? { vastMarketService } : {}),
 });
+const vastReconciliationWorker = vastMarketService && vastProvider.available
+  ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
+  : undefined;
 const topupRecoveryWorker = database && creditTopupStore && paymentProviders.size > 0
   ? new TopupRecoveryWorker(new PostgresTopupRecoveryStore(database), creditTopupStore, paymentProviders, app.log as WorkerLogger)
   : undefined;
@@ -192,6 +204,7 @@ const accountDeletionWorker = database && config.readiness.capabilities.tokenSec
   ? new AccountDeletionWorker(new PostgresAccountDeletionStore(database, config), app.log as WorkerLogger)
   : undefined;
 pushWorker?.start();
+vastReconciliationWorker?.start();
 accountDeletionWorker?.start();
 resourceEvidenceWorker?.start();
 topupRecoveryWorker?.start();
@@ -212,6 +225,7 @@ const shutdown = async (signal: string) => {
   await fulfillmentExpiryWorker?.stop();
   await deviceOrderExpiryWorker?.stop();
   await deviceSettlementWorker?.stop();
+  vastReconciliationWorker?.stop();
   await app.close();
   await database?.close();
   process.exit(0);

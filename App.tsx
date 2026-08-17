@@ -370,7 +370,7 @@ function CloudPayApp() {
       case 'market':
         return <MarketScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
           onOpenPublish={() => setDemandComposerVisible(true)} onBuy={setSelectedListing}
-          onOpenSparkDetail={openSparkDetail}
+          onOpenSparkDetail={openSparkDetail} onLogin={() => setAuthVisible(true)}
           onManageOwnListing={(listing) => {
             setPublishListingToManage(listing.id);
             setActiveTab('publish');

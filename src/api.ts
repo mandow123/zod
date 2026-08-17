@@ -9,6 +9,7 @@ import {
 } from './session';
 import { loadProviderReadCache, saveProviderWorkspaceCache } from './provider-read-cache';
 import { mergeLocalDemoListings } from './demo-market';
+import { ensureSparkCampaignProduct } from './campaign';
 import type { DeviceAsset, DeviceOrder, DeviceProduct } from './device-commerce';
 export * from './device-commerce';
 
@@ -435,6 +436,7 @@ export type CloudPaySnapshot = {
   resources: MarketResource[];
   listings: MarketCreditListing[];
   listingCatalogOnline: boolean;
+  deviceCatalogOnline: boolean;
   priceNotice: string;
   authenticated: boolean;
   user: CloudPayUser | null;
@@ -556,6 +558,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
   let currentSubjectId: string | null = null;
   let creditBalance: CreditBalance | null = null;
   let deviceProducts: DeviceProduct[] = [];
+  let protectedDeviceCatalogOnline = false;
   let deviceOrders: DeviceOrder[] = [];
   let deviceAssets: DeviceAsset[] = [];
   let payoutProfile: CreditPayoutProfile | null = null;
@@ -660,6 +663,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     if (buyerOrderResult.status === 'rejected' && providerOrderResult.status === 'rejected' && !accountError) {
       accountError = reasonOf(buyerOrderResult) ?? reasonOf(providerOrderResult);
     }
+    protectedDeviceCatalogOnline = deviceProductsResult.status === 'fulfilled';
     deviceProducts = deviceProductsResult.status === 'fulfilled' ? deviceProductsResult.value.products : [];
     deviceOrders = deviceOrdersResult.status === 'fulfilled' ? deviceOrdersResult.value.orders : [];
     deviceAssets = deviceAssetsResult.status === 'fulfilled' ? deviceAssetsResult.value.assets : [];
@@ -724,6 +728,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
   if (deviceProducts.length === 0 && publicDeviceProducts.status === 'fulfilled') {
     deviceProducts = publicDeviceProducts.value.products;
   }
+  deviceProducts = ensureSparkCampaignProduct(deviceProducts);
   const ready = readiness.status === 'fulfilled' ? readiness.value : null;
   const errors = [reasonOf(health), reasonOf(resourceCatalog), reasonOf(listingCatalog), accountError]
     .filter((value): value is string => Boolean(value));
@@ -735,6 +740,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
     resources: resourceData,
     listings: listingData,
     listingCatalogOnline: listingCatalog.status === 'fulfilled',
+    deviceCatalogOnline: protectedDeviceCatalogOnline || publicDeviceProducts.status === 'fulfilled',
     priceNotice: listingCatalog.status === 'fulfilled'
       ? '市场价格均为审核通过的 KAI 卡时价。'
       : '市场暂时不可连接，下拉即可重试。',

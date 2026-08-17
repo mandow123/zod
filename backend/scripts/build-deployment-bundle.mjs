@@ -43,8 +43,8 @@ try {
 
   const migrations = (await readdir(join(backendRoot, 'migrations')))
     .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-  if (migrations.length !== 45 || migrations.at(-1) !== '0045_kai_oidc_mobile_broker.sql') {
-    throw new Error(`Expected migrations 0001..0045; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+  if (migrations.length !== 56 || migrations.at(-1) !== '0056_vast_external_compute.sql') {
+    throw new Error(`Expected migrations 0001..0056; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [

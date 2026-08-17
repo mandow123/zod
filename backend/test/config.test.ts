@@ -138,4 +138,18 @@ describe('runtime configuration', () => {
       .toContain('NODE_CLAIM_TOKEN_ENCRYPTION_KEY(base64 32 bytes)');
     expect(config.readiness.capabilities.computeFulfillment.available).toBe(false);
   });
+
+  it('keeps Vast.ai unavailable until both the API key and server pricing policy are valid', () => {
+    const missing = loadConfig(secureEnvironment);
+    expect(missing.readiness.capabilities.vastAi.available).toBe(false);
+    expect(missing.vastPricingPolicy).toBeNull();
+    const configured = loadConfig({ ...secureEnvironment,VAST_API_KEY:'vast-key-for-server-only-use',
+      VAST_PRICING_POLICY_JSON:JSON.stringify({ version:'ops-v1',cardHourMicrosPerProviderUsd:'2000000',
+        markupBasisPoints:500,quoteTtlSeconds:120,reconciliationGraceSeconds:300,
+        defaultImage:'vastai/base-image:latest',defaultDiskGb:32,defaultRuntype:'ssh_direct' }) });
+    expect(configured.readiness.capabilities.vastAi.available).toBe(true);
+    expect(configured.vastPricingPolicy).toMatchObject({ version:'ops-v1',cardHourMicrosPerProviderUsd:2_000_000n });
+    const invalid = loadConfig({ ...secureEnvironment,VAST_API_KEY:'vast-key',VAST_PRICING_POLICY_JSON:'{}' });
+    expect(invalid.readiness.capabilities.vastAi.available).toBe(false);
+  });
 });

@@ -3,6 +3,7 @@ import { apiRequest } from './api-client';
 
 export type DeviceProduct = Readonly<{
   id: string; sku: string; title: string; productType: 'physical_delivery'; campaignKey: string;
+  catalogSource?: 'server' | 'bundled_campaign';
   template?: Readonly<{ key: string }>;
   supplier: Readonly<{ displayName: string; verified?: boolean }>;
   activationStatus: 'pending_activation' | 'active' | 'suspended';

@@ -41,6 +41,8 @@ import { registerShippingAddressRoutes } from './shipping-addresses/routes.js';
 import type { ShippingAddressService } from './shipping-addresses/service.js';
 import { registerAssetPortfolioRoutes } from './assets/routes.js';
 import type { AssetPortfolioService } from './assets/service.js';
+import { registerVastMarketRoutes } from './vast-market/routes.js';
+import type { VastMarketService } from './vast-market/service.js';
 import { registerTopupReversalRoutes } from './topups/reversal-routes.js';
 import type { TopupReversalService } from './topups/reversal-service.js';
 
@@ -65,10 +67,11 @@ type BuildAppOptions = Readonly<{
   nodeEnrollmentService?: NodeEnrollmentService;
   kaiOidc?: KaiOidcBroker;
   assetPortfolioService?: AssetPortfolioService;
+  vastMarketService?: VastMarketService;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -167,6 +170,7 @@ export async function buildApp({ config, database, accountService, subjectServic
         creditCommerce: config.readiness.capabilities.creditCommerce.available,
         nodeEnrollment: config.readiness.capabilities.nodeEnrollment.available,
         computeFulfillment: config.readiness.capabilities.computeFulfillment.available,
+        vastAi: config.readiness.capabilities.vastAi.available,
       },
       database: { connected: databaseConnected, schema },
       deployment: { ready: deploymentReady, blockers: deploymentBlockers },
@@ -196,6 +200,7 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && fulfillmentService) await registerFulfillmentRoutes(app, accountService, fulfillmentService);
   if (accountService && nodeEnrollmentService) await registerNodeEnrollmentRoutes(app, accountService, nodeEnrollmentService);
   if (accountService && assetPortfolioService) await registerAssetPortfolioRoutes(app, accountService, assetPortfolioService);
+  if (accountService && vastMarketService) await registerVastMarketRoutes(app,accountService,vastMarketService);
   if (operationsService) await registerOperationsRoutes(app, accountService, operationsService);
 
   return app;
