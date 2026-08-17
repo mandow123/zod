@@ -6,11 +6,12 @@ import type { RuntimeConfig } from '../config.js';
 import { AppError } from '../errors.js';
 import type { ListingAuditStore } from './store.js';
 import {
-  creditMicrosFromCnyMicros, formatCnyMicros, formatCreditMicros, KAI_CNY_MICROS_PER_CREDIT,
-  parseCnyMicros, type AuditKind, type CreditListing, type OfferAudit, type OfferRevisionDraft, type OfferTemplate, type OfferWizardDraft,
+  cnyMicrosFromCreditMicros, formatCreditMicros, KAI_CNY_MICROS_PER_CREDIT,
+  parseCreditMicros, type AuditKind, type CreditListing, type OfferAudit, type OfferRevisionDraft, type OfferTemplate, type OfferWizardDraft,
   type OfferWizardPayload, type OfferWizardStep, type PublicCreditListing, type ServiceMode,
 } from './types.js';
 import type { SubjectAccess } from '../subjects/types.js';
+import { isCreditCentAligned, quantizeCreditMicros } from '../credits/precision.js';
 
 type Context = Readonly<{ requestId: string; ip: string }>;
 type OfferInput = Readonly<{
@@ -24,7 +25,7 @@ type OfferInput = Readonly<{
   acceptanceTerms: Record<string, unknown>;
   refundTerms: Record<string, unknown>;
   cleanupTerms: Record<string, unknown>;
-  suggestedPriceCnyMicros: string;
+  suggestedUnitCreditMicros: string;
   priceComponents: Record<string, unknown>;
   priceEvidence: unknown[];
 }>;
@@ -37,7 +38,7 @@ function required(value: string | undefined, name: string) {
 function positiveMicros(value: string, code: string, message: string) {
   if (!/^\d{1,18}$/u.test(value)) throw new AppError(code, 400, message);
   const result = BigInt(value);
-  if (result <= 0n) throw new AppError(code, 400, message);
+  if (result <= 0n || !isCreditCentAligned(result)) throw new AppError(code, 400, message);
   return result;
 }
 
@@ -60,6 +61,12 @@ function publicObject(value: Record<string, unknown>) {
   };
   if (!walk(value)) throw new AppError('OFFER_SENSITIVE_DATA_FORBIDDEN', 400, '公开商品方案不能包含密码、密钥、地址或访问凭证。');
   return value;
+}
+
+function publicPriceComponents(value: Record<string, unknown>) {
+  const normalized = publicObject(value);
+  const { authoritativeUnitCreditMicros: _legacyInternalPrice, ...publicValue } = normalized;
+  return publicValue;
 }
 
 function evidenceList(value: unknown[]) {
@@ -333,7 +340,7 @@ export class ListingAuditService {
   async decideAudit(principal: AccountPrincipal, input: Readonly<{
     offerId: string; kind: AuditKind; decision: 'approve' | 'changes_requested' | 'reject';
     decisionReason: string; evidenceSummary: string; evidenceDigest: string;
-    validUntil?: string; approvedReferenceCnyMicros?: string; returnStep?: 'service' | 'terms' | 'price';
+    validUntil?: string; approvedUnitCreditMicros?: string; returnStep?: 'service' | 'terms' | 'price';
   }>, context: Context) {
     this.assertReviewer(principal, input.kind);
     if (!/^sha256:[a-f0-9]{64}$/u.test(input.evidenceDigest)) {
@@ -361,10 +368,10 @@ export class ListingAuditService {
         throw new AppError('AUDIT_VALIDITY_INVALID', 400, `${input.kind === 'resource' ? '资源' : '价格'}审核有效期不能超过 ${maximumDays} 天。`);
       }
       if (input.kind === 'price') {
-        approvedReferenceCnyMicros = positiveMicros(
-          input.approvedReferenceCnyMicros ?? '', 'AUDITED_PRICE_INVALID', '价格审核必须填写大于零的人民币 micros。',
+        approvedUnitCreditMicros = positiveMicros(
+          input.approvedUnitCreditMicros ?? '', 'AUDITED_PRICE_INVALID', '价格审核必须填写大于零的卡时 micros。',
         );
-        approvedUnitCreditMicros = creditMicrosFromCnyMicros(approvedReferenceCnyMicros);
+        approvedReferenceCnyMicros = cnyMicrosFromCreditMicros(approvedUnitCreditMicros);
       }
     }
     const decisionDigest = this.digest({ ...input, reviewerId: principal.userId, validUntil: validUntil?.toISOString() ?? null });
@@ -494,23 +501,24 @@ export class ListingAuditService {
     if (input.serviceMode !== 'dedicated' || input.nativeUnit.trim() !== 'GPU时') {
       throw new AppError('COMPUTE_PRODUCT_CONTRACT_UNSUPPORTED', 400, '当前只支持一单一张、按 GPU时计量的整卡独享方案。');
     }
-    const suggestedPriceCnyMicros = positiveMicros(
-      input.suggestedPriceCnyMicros, 'SUGGESTED_PRICE_INVALID', '建议价格必须使用大于零的人民币 micros。',
+    const suggestedUnitCreditMicros = positiveMicros(
+      input.suggestedUnitCreditMicros, 'SUGGESTED_PRICE_INVALID', '卡时单价必须大于零且最多保留两位小数。',
     );
     return {
       resourceId: input.resourceId, title: input.title.trim(), serviceMode: input.serviceMode,
       nativeUnit: input.nativeUnit.trim(), minimumQuantity: decimalQuantity(input.minimumQuantity),
       sla: publicObject(input.sla), deliveryTerms: publicObject(input.deliveryTerms),
       acceptanceTerms: publicObject(input.acceptanceTerms), refundTerms: publicObject(input.refundTerms),
-      cleanupTerms: publicObject(input.cleanupTerms), suggestedPriceCnyMicros,
-      priceComponents: publicObject(input.priceComponents), priceEvidence: evidenceList(input.priceEvidence),
+      cleanupTerms: publicObject(input.cleanupTerms), suggestedUnitCreditMicros,
+      suggestedPriceCnyMicros: cnyMicrosFromCreditMicros(suggestedUnitCreditMicros),
+      priceComponents: publicPriceComponents(input.priceComponents), priceEvidence: evidenceList(input.priceEvidence),
     };
   }
 
   private normalizeWizardPayload(input: OfferWizardPayload): OfferWizardPayload {
-    const suggestedPriceCny = optionalText(input.suggestedPriceCny, 32);
-    if (suggestedPriceCny && !parseCnyMicros(suggestedPriceCny)) {
-      throw new AppError('SUGGESTED_PRICE_INVALID', 400, '人民币依据必须大于零且最多保留六位小数。');
+    const suggestedUnitCredits = optionalText(input.suggestedUnitCredits, 32);
+    if (suggestedUnitCredits && !parseCreditMicros(suggestedUnitCredits)) {
+      throw new AppError('SUGGESTED_PRICE_INVALID', 400, '卡时单价必须大于零且最多保留两位小数。');
     }
     if (input.minimumQuantity?.trim() && !/^(?:0|[1-9]\d{0,11})(?:\.\d{0,6})?$/u.test(input.minimumQuantity.trim())) {
       throw new AppError('LISTING_QUANTITY_INVALID', 400, '数量最多保留六位小数。');
@@ -525,16 +533,16 @@ export class ListingAuditService {
       ...(input.acceptanceTerms === undefined ? {} : { acceptanceTerms: publicObject(input.acceptanceTerms) }),
       ...(input.refundTerms === undefined ? {} : { refundTerms: publicObject(input.refundTerms) }),
       ...(input.cleanupTerms === undefined ? {} : { cleanupTerms: publicObject(input.cleanupTerms) }),
-      ...(suggestedPriceCny === undefined ? {} : { suggestedPriceCny }),
-      ...(input.priceComponents === undefined ? {} : { priceComponents: publicObject(input.priceComponents) }),
+      ...(suggestedUnitCredits === undefined ? {} : { suggestedUnitCredits }),
+      ...(input.priceComponents === undefined ? {} : { priceComponents: publicPriceComponents(input.priceComponents) }),
       ...(input.priceEvidence === undefined ? {} : { priceEvidence: draftEvidenceList(input.priceEvidence) }),
     };
   }
 
   private wizardOfferInput(draft: Pick<OfferWizardDraft | OfferRevisionDraft, 'resourceId' | 'capacityUnit' | 'payload'>) {
     const payload = draft.payload;
-    const suggestedPriceCnyMicros = parseCnyMicros(payload.suggestedPriceCny ?? '');
-    if (!suggestedPriceCnyMicros) throw new AppError('OFFER_DRAFT_INCOMPLETE', 400, '请完成价格依据后再提交审核。');
+    const suggestedUnitCreditMicros = parseCreditMicros(payload.suggestedUnitCredits ?? '');
+    if (!suggestedUnitCreditMicros) throw new AppError('OFFER_DRAFT_INCOMPLETE', 400, '请完成卡时单价后再提交审核。');
     const requiredRecord = (value: Record<string, unknown> | undefined, message: string) => {
       if (!value || Object.keys(value).length === 0) throw new AppError('OFFER_DRAFT_INCOMPLETE', 400, message);
       return value;
@@ -550,7 +558,7 @@ export class ListingAuditService {
       acceptanceTerms: requiredRecord(payload.acceptanceTerms, '请填写验收规则后再提交审核。'),
       refundTerms: requiredRecord(payload.refundTerms, '请填写退款规则后再提交审核。'),
       cleanupTerms: requiredRecord(payload.cleanupTerms, '请填写数据清理规则后再提交审核。'),
-      suggestedPriceCnyMicros: suggestedPriceCnyMicros.toString(),
+      suggestedUnitCreditMicros: suggestedUnitCreditMicros.toString(),
       priceComponents: requiredRecord(payload.priceComponents, '请填写价格构成后再提交审核。'),
       priceEvidence: wizardEvidenceList(payload.priceEvidence ?? []),
     });
@@ -561,15 +569,20 @@ export class ListingAuditService {
   }
 
   private serializeWizardDraft(draft: OfferWizardDraft) {
-    const cnyMicros = draft.payload.suggestedPriceCny ? parseCnyMicros(draft.payload.suggestedPriceCny) : null;
+    const unitCredits = draft.payload.suggestedUnitCredits;
+    const { suggestedPriceCny: _legacySuggestedPrice, ...publicPayload } = draft.payload as OfferWizardPayload & { suggestedPriceCny?: string };
+    const priceComponents = publicPayload.priceComponents
+      ? publicPriceComponents(publicPayload.priceComponents)
+      : undefined;
     return {
       id: draft.id, resourceId: draft.resourceId,
       resource: { name: draft.resourceName, kind: draft.resourceKind, capacityUnit: draft.capacityUnit },
-      version: draft.version, currentStep: draft.currentStep, payload: draft.payload, status: draft.status,
+      version: draft.version, currentStep: draft.currentStep,
+      payload: { ...publicPayload, ...(priceComponents ? { priceComponents } : {}),
+        ...(unitCredits ? { suggestedUnitCredits: unitCredits } : {}) }, status: draft.status,
       convertedOfferId: draft.convertedOfferId, createdAt: draft.createdAt.toISOString(), updatedAt: draft.updatedAt.toISOString(),
-      pricePreview: cnyMicros ? {
-        referenceCny: formatCnyMicros(cnyMicros), unitCredits: formatCreditMicros(creditMicrosFromCnyMicros(cnyMicros)),
-        conversion: '1 KAI卡时 = ¥1.002', auditStatus: 'pending_price_audit',
+      pricePreview: unitCredits ? {
+        unitCredits, auditStatus: 'pending_price_audit',
       } : null,
     };
   }
@@ -600,11 +613,10 @@ export class ListingAuditService {
       title: offer.title, serviceMode: offer.serviceMode, nativeUnit: offer.nativeUnit,
       minimumQuantity: offer.minimumQuantity, sla: offer.sla, deliveryTerms: offer.deliveryTerms,
       acceptanceTerms: offer.acceptanceTerms, refundTerms: offer.refundTerms, cleanupTerms: offer.cleanupTerms,
-      suggestedPriceCny: formatCnyMicros(offer.suggestedPriceCnyMicros), priceComponents: offer.priceComponents,
+      suggestedUnitCredits: formatCreditMicros(offer.suggestedUnitCreditMicros),
+      priceComponents: publicPriceComponents(offer.priceComponents),
       priceEvidence: offer.priceEvidence, status: offer.status,
-      approvedReferenceCny: offer.approvedReferenceCnyMicros ? formatCnyMicros(offer.approvedReferenceCnyMicros) : null,
       approvedUnitCredits: offer.approvedUnitCreditMicros ? formatCreditMicros(offer.approvedUnitCreditMicros) : null,
-      conversion: offer.conversionCnyMicrosPerCredit ? '1 KAI卡时 = ¥1.002' : null,
       auditValidUntil: offer.auditValidUntil?.toISOString() ?? null,
       submittedAt: offer.submittedAt?.toISOString() ?? null, approvedAt: offer.approvedAt?.toISOString() ?? null,
       createdAt: offer.createdAt.toISOString(), updatedAt: offer.updatedAt.toISOString(),
@@ -624,8 +636,7 @@ export class ListingAuditService {
       capacityReserved: listing.capacityReserved, capacitySold: listing.capacitySold,
       capacityAvailable,
       capacityUnit: listing.capacityUnit, minimumQuantity: listing.minimumQuantity,
-      unitCredits: formatCreditMicros(listing.unitCreditMicros), referenceCny: formatCnyMicros(listing.referenceCnyMicros),
-      conversion: '1 KAI卡时 = ¥1.002', status: listing.status, sellingStage, startsAt: listing.startsAt.toISOString(),
+      unitCredits: formatCreditMicros(listing.unitCreditMicros), status: listing.status, sellingStage, startsAt: listing.startsAt.toISOString(),
       expiresAt: listing.expiresAt.toISOString(), auditValidUntil: listing.auditValidUntil.toISOString(),
       createdAt: listing.createdAt.toISOString(), audits: { resource: true, price: true },
       selloutEstimate: {
@@ -683,6 +694,9 @@ function remainingQuantity(total: string, reserved: string, sold: string) {
 function grossCreditsForQuantity(quantity: string, unitCreditMicros: bigint) {
   const [whole = '0', fraction = ''] = quantity.split('.');
   const quantityMicros = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0'));
-  const grossMicros = (quantityMicros * unitCreditMicros + 999_999n) / 1_000_000n;
+  const grossMicros = quantizeCreditMicros(
+    (quantityMicros * unitCreditMicros + 999_999n) / 1_000_000n,
+    'ceil',
+  );
   return formatCreditMicros(grossMicros);
 }

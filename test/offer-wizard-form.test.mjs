@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   commonDeliveryTerms,
-  contractPriceToCreditInput,
-  creditInputToContractPrice,
   draftPriceEvidence,
   normalizeCreditInput,
   shouldClearFormErrorOnEdit,
@@ -18,24 +16,18 @@ const complete = {
   evidenceSummary: '同地区同型号同期成交记录',
 };
 
-test('卡时单价输入只保留一个小数点和六位小数', () => {
+test('卡时单价输入保留第三位用于明确拒绝，不会静默截断', () => {
   assert.equal(normalizeCreditInput('36.00'), '36.00');
-  assert.equal(normalizeCreditInput('36..0099999卡时'), '36.009999');
+  assert.equal(normalizeCreditInput('36..0099999卡时'), '36.009');
   assert.equal(normalizeCreditInput('.5'), '0.5');
   assert.equal(normalizeCreditInput('12345678901'), '123456789');
-});
-
-test('卡时输入与既有服务端审计字段使用整数精度兼容', () => {
-  assert.equal(creditInputToContractPrice('36.00'), '36.072000');
-  assert.equal(contractPriceToCreditInput('36.072000'), '36.000000');
-  assert.equal(contractPriceToCreditInput('31.200000'), '31.137725');
-  assert.equal(contractPriceToCreditInput(''), '');
 });
 
 test('每一步都在进入下一步前检查必填内容', () => {
   assert.equal(validateOfferWizardStep('service', { ...complete, title: '' }), '请填写服务名称与最小起售量。');
   assert.equal(validateOfferWizardStep('terms', { ...complete, refund: '' }), '请完整定义保障、交付、验收、退款和数据清理边界。');
-  assert.equal(validateOfferWizardStep('price', { ...complete, suggestedUnitCredits: '36.0010001' }), '请填写卡时单价、价格构成和一条可核验凭证。');
+  assert.equal(validateOfferWizardStep('price', { ...complete, suggestedUnitCredits: '36.001' }),
+    '请填写卡时单价（最多两位小数）、价格构成和一条可核验凭证。');
   assert.equal(validateOfferWizardStep('price', complete), null);
 });
 

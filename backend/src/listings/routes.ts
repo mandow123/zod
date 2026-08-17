@@ -24,7 +24,7 @@ const wizardPayload = z.object({
   acceptanceTerms: publicRecord.optional(),
   refundTerms: publicRecord.optional(),
   cleanupTerms: publicRecord.optional(),
-  suggestedPriceCny: z.string().max(32).optional(),
+  suggestedUnitCredits: z.string().max(32).optional(),
   priceComponents: publicRecord.optional(),
   priceEvidence: z.array(draftPriceEvidence).max(20).optional(),
 }).strict();
@@ -171,14 +171,14 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
       evidenceDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/u),
       returnStep: z.enum(['service', 'terms', 'price']).optional(),
       validUntil: z.string().datetime().optional(),
-      approvedReferenceCnyMicros: z.string().regex(/^\d{1,18}$/u).optional(),
+      approvedUnitCreditMicros: z.string().regex(/^\d{1,18}$/u).optional(),
     }), request.body);
     return { ok: true, offer: await listings.decideAudit(principal, {
       offerId: parameters.offerId, kind: parameters.kind, decision: body.decision,
       decisionReason: body.decisionReason, evidenceSummary: body.evidenceSummary, evidenceDigest: body.evidenceDigest,
       ...(body.returnStep === undefined ? {} : { returnStep: body.returnStep }),
       ...(body.validUntil === undefined ? {} : { validUntil: body.validUntil }),
-      ...(body.approvedReferenceCnyMicros === undefined ? {} : { approvedReferenceCnyMicros: body.approvedReferenceCnyMicros }),
+      ...(body.approvedUnitCreditMicros === undefined ? {} : { approvedUnitCreditMicros: body.approvedUnitCreditMicros }),
     }, context(request)) };
   });
 

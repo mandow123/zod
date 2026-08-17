@@ -18,8 +18,9 @@ test('market keeps audit evidence in its contract but trades only in KAI card-ho
     readFile(new URL('../src/api.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/screens/MarketScreen.tsx', import.meta.url), 'utf8'),
   ]);
-  assert.match(api, /referenceCny: string/u);
-  assert.match(api, /conversion: '1 KAI卡时 = ¥1\.002'/u);
+  assert.doesNotMatch(api, /referenceCny: string/u);
+  const balanceContract = api.match(/export type CreditBalance = Readonly<\{[\s\S]*?\}>;/u)?.[0] ?? '';
+  assert.doesNotMatch(balanceContract, /conversion|人民币|¥/u);
   assert.match(market, /资源与价格双审通过/u);
   assert.match(market, /KAI 卡时/u);
   assert.doesNotMatch(market, /人民币|¥|referenceCny|cnyPrice/u);

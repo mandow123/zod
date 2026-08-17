@@ -19,6 +19,61 @@ function enabledConfig() {
 }
 
 describe('listing publish service', () => {
+  it('submits a card-hour-only draft and returns the exact two-decimal price', async () => {
+    const subjectId = '20000000-0000-4000-8000-000000000004';
+    const userId = '20000000-0000-4000-8000-000000000005';
+    const draftId = '20000000-0000-4000-8000-000000000006';
+    const submissions: Array<Parameters<ListingAuditStore['submitWizardDraft']>[0]> = [];
+    const now = new Date('2026-08-17T00:00:00.000Z');
+    const store = {
+      getWizardDraft: async () => ({
+        id: draftId, supplierId: subjectId, resourceId: '20000000-0000-4000-8000-000000000003',
+        resourceName: 'H100', resourceKind: 'gpu', capacityUnit: 'GPU时', version: 2,
+        currentStep: 'review', status: 'active', convertedOfferId: null, createdAt: now, updatedAt: now,
+        payload: {
+          title: 'H100 独享', serviceMode: 'dedicated', nativeUnit: 'GPU时', minimumQuantity: '1',
+          sla: { availability: '99.9%' }, deliveryTerms: { summary: '自动交付' },
+          acceptanceTerms: { summary: '按配置验收' }, refundTerms: { summary: '故障退卡时' },
+          cleanupTerms: { summary: '结束后清理' }, suggestedUnitCredits: '31.14',
+          priceComponents: { summary: '设备、电力和运维' },
+          priceEvidence: [{ type: 'contract', source: '近期合同', summary: '同型号成交记录' }],
+        },
+      }),
+      submitWizardDraft: async (input: Parameters<ListingAuditStore['submitWizardDraft']>[0]) => {
+        submissions.push(input);
+        const offer: OfferTemplate = {
+          id: '20000000-0000-4000-8000-000000000007', supplierId: subjectId,
+          resourceId: '20000000-0000-4000-8000-000000000003',
+          version: 1, submissionVersion: 1, title: input.title, serviceMode: input.serviceMode,
+          nativeUnit: input.nativeUnit, minimumQuantity: input.minimumQuantity, sla: input.sla,
+          deliveryTerms: input.deliveryTerms, acceptanceTerms: input.acceptanceTerms,
+          refundTerms: input.refundTerms, cleanupTerms: input.cleanupTerms,
+          suggestedUnitCreditMicros: input.suggestedUnitCreditMicros,
+          suggestedPriceCnyMicros: input.suggestedPriceCnyMicros, priceComponents: input.priceComponents,
+          priceEvidence: input.priceEvidence, status: 'under_review', approvedReferenceCnyMicros: null,
+          approvedUnitCreditMicros: null, conversionCnyMicrosPerCredit: null, auditValidUntil: null,
+          submittedAt: now, approvedAt: null, createdAt: now, updatedAt: now,
+        };
+        return { status: 'created' as const, offer, audits: [] };
+      },
+    } as unknown as ListingAuditStore;
+    const service = new ListingAuditService(
+      store, { recordAudit: async () => undefined } as unknown as AccountStore, enabledConfig(),
+      { current: async () => ({ subjectId, userId, kind: 'personal', displayName: '供应方',
+        subjectStatus: 'active', role: 'owner', permissions: ['provider.offer.manage'] }) } as SubjectAccess,
+      () => now,
+    );
+    const result = await service.submitWizardDraft(
+      { userId, sessionId: 'session', role: 'supplier' }, draftId, 2, 'legacy-draft-submit-0001',
+      { requestId: 'legacy-submit', ip: '127.0.0.1' },
+    );
+    expect(result.offer).toMatchObject({ suggestedUnitCredits: '31.14' });
+    expect(result.offer).not.toHaveProperty('suggestedPriceCny');
+    expect(result.offer.priceComponents).not.toHaveProperty('authoritativeUnitCreditMicros');
+    expect(submissions[0]?.suggestedUnitCreditMicros).toBe(31_140_000n);
+    expect(submissions[0]?.priceComponents).toEqual({ summary: '设备、电力和运维' });
+  });
+
   it('hides stale public listings and blocks new publication when node delivery is not configured', async () => {
     let publicReads = 0; let publishes = 0; let subjectReads = 0;
     const store = {
@@ -67,7 +122,7 @@ describe('listing publish service', () => {
       title: 'H100 80G 整卡独享', serviceMode: 'dedicated', productCode: 'H100', kind: 'gpu', region: '上海',
       specifications: { memory: '80GB' }, sla: { availability: '99.9%' },
       capacityTotal: '8', capacityReserved: '0', capacitySold: '0', capacityAvailable: '8',
-      capacityUnit: 'GPU时', minimumQuantity: '1', unitCreditMicros: 31_137_725n,
+      capacityUnit: 'GPU时', minimumQuantity: '1', unitCreditMicros: 31_140_000n,
       referenceCnyMicros: 31_200_000n, conversionCnyMicrosPerCredit: 1_002_000n, status: 'active',
       startsAt: new Date('2026-08-13T08:00:00.000Z'), expiresAt: new Date('2026-08-20T08:00:00.000Z'),
       auditValidUntil: new Date('2026-09-01T08:00:00.000Z'), createdAt: new Date('2026-08-13T08:00:00.000Z'),
@@ -83,9 +138,9 @@ describe('listing publish service', () => {
     );
     const anonymous = (await service.publicListings(20))[0]!;
     expect(anonymous).toMatchObject({
-      ownedByCurrentSubject: false, unitCredits: '31.137725',
+      ownedByCurrentSubject: false, unitCredits: '31.14',
       selloutEstimate: {
-        kind: 'gross_before_fee', grossCredits: '249.101800', basis: 'remaining_capacity',
+        kind: 'gross_before_fee', grossCredits: '249.12', basis: 'remaining_capacity',
         remainingCapacity: '8.000000', asOf: expect.any(String),
         disclosure: '按当前剩余容量全部售完测算，未扣服务费',
       },
@@ -95,7 +150,7 @@ describe('listing publish service', () => {
     const authenticated = (await service.publicListings(20, {
       userId: '20000000-0000-4000-8000-000000000005', sessionId: 'session', role: 'supplier',
     }))[0]!;
-    expect(authenticated).toMatchObject({ ownedByCurrentSubject: true, unitCredits: '31.137725' });
+    expect(authenticated).toMatchObject({ ownedByCurrentSubject: true, unitCredits: '31.14' });
     expect(authenticated).not.toHaveProperty('supplierId');
     expect(authenticated).not.toHaveProperty('supplierSubjectId');
   });
@@ -116,7 +171,7 @@ describe('listing publish service', () => {
           id: '20000000-0000-4000-8000-000000000001', offerId: input.offerId,
           resourceId: '20000000-0000-4000-8000-000000000002', supplierId: '20000000-0000-4000-8000-000000000003',
           capacityTotal: input.capacityTotal, capacityReserved: '0', capacitySold: '0', capacityUnit: 'GPU时', minimumQuantity: '1',
-          unitCreditMicros: 31_137_725n, referenceCnyMicros: 31_200_000n,
+          unitCreditMicros: 31_140_000n, referenceCnyMicros: 31_200_000n,
           conversionCnyMicrosPerCredit: 1_002_000n, status: 'active', startsAt: input.startsAt,
           expiresAt: input.expiresAt, auditValidUntil: new Date('2027-02-01T00:00:00.000Z'), createdAt: input.startsAt,
         };
@@ -158,7 +213,8 @@ describe('listing publish service', () => {
       resourceId: '20000000-0000-4000-8000-000000000003', version: 7, submissionVersion: 2,
       title: 'H100 80G 整卡独享', serviceMode: 'dedicated', nativeUnit: 'GPU时', minimumQuantity: '1',
       sla: {}, deliveryTerms: {}, acceptanceTerms: {}, refundTerms: {}, cleanupTerms: {},
-      suggestedPriceCnyMicros: 31_200_000n, priceComponents: {}, priceEvidence: [], status: 'expired',
+      suggestedUnitCreditMicros: 31_140_000n, suggestedPriceCnyMicros: 31_200_000n,
+      priceComponents: {}, priceEvidence: [], status: 'expired',
       approvedReferenceCnyMicros: null, approvedUnitCreditMicros: null, conversionCnyMicrosPerCredit: null,
       auditValidUntil: null, submittedAt: new Date('2026-08-01T00:00:00.000Z'), approvedAt: null,
       createdAt: new Date('2026-07-01T00:00:00.000Z'), updatedAt: new Date('2026-08-01T00:00:00.000Z'),
@@ -231,7 +287,7 @@ describe('listing publish service', () => {
       id: '20000000-0000-4000-8000-000000000001', offerId: '20000000-0000-4000-8000-000000000002',
       resourceId: '20000000-0000-4000-8000-000000000003', supplierId: '20000000-0000-4000-8000-000000000004',
       capacityTotal: '8', capacityReserved: '0', capacitySold: '0', capacityUnit: 'GPU时', minimumQuantity: '1',
-      unitCreditMicros: 31_137_725n, referenceCnyMicros: 31_200_000n, conversionCnyMicrosPerCredit: 1_002_000n,
+      unitCreditMicros: 31_140_000n, referenceCnyMicros: 31_200_000n, conversionCnyMicrosPerCredit: 1_002_000n,
       status: 'active', startsAt: new Date('2026-08-12T08:00:00.000Z'), expiresAt: new Date('2026-08-20T08:00:00.000Z'),
       auditValidUntil: new Date('2027-02-01T00:00:00.000Z'), createdAt: new Date('2026-08-12T08:00:00.000Z'),
     };

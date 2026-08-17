@@ -14,28 +14,24 @@ describe('local E2E demo catalog', () => {
     expect(() => buildLocalE2EDemoCatalog('production' as never, now)).toThrow('DEMO_CATALOG_LOCAL_E2E_ONLY');
   });
 
-  it('uses the server conversion and per-unit rounding for the 02672 NVIDIA Spark 200-unit market promotion', () => {
+  it('publishes the 02672 NVIDIA Spark promotion using card-hour prices only', () => {
     const catalog = buildLocalE2EDemoCatalog('local_e2e', new Date('2026-08-15T04:20:00.000Z'));
     const spark = catalog[0]!;
     expect(spark).toMatchObject({
       title: '02672 白鸽在线特供款', productCode: 'NVIDIA Spark', capacityTotal: '200.000000', capacityAvailable: '200.000000',
       productKind: 'hardware_device', fulfillmentMode: 'physical_delivery',
       shippingEstimate: '预计3个月发货',
-      capacityUnit: '台', minimumQuantity: '1.000000', unitCredits: '32534.930140',
+      capacityUnit: '台', minimumQuantity: '1.000000', unitCredits: '32534.93',
       promotion: {
         label: '限时8折', discountPercent: 20,
-        originalReferenceCny: '40750.00', discountedReferenceCny: '32600.00',
-        originalUnitCredits: '40668.662675', discountedUnitCredits: '32534.930140', taxIncluded: true,
+        originalUnitCredits: '40668.66', discountedUnitCredits: '32534.93', taxIncluded: true,
         priceEvidence: { sourceType: 'local_e2e_fixture', sourceLabel: '白鸽在线演示报价', productionAudit: false },
       },
-      selloutEstimate: { grossCredits: '6506986.028000', remainingCapacity: '200.000000' },
+      selloutEstimate: { grossCredits: '6506986.00', remainingCapacity: '200.000000' },
     });
     expect(['1', '200'].every(validWholeUnitDemoQuantity)).toBe(true);
     expect(['0', '1.5', '201', '500', '-1'].some(validWholeUnitDemoQuantity)).toBe(false);
-    expect(catalog.slice(1).every((item) => {
-      const micros = BigInt(item.unitCredits.replace('.', ''));
-      const expectedCnyMicros = micros * 1_002_000n / 1_000_000n;
-      return item.referenceCny === `${expectedCnyMicros / 1_000_000n}.${(expectedCnyMicros % 1_000_000n).toString().padStart(6, '0')}`;
-    })).toBe(true);
+    expect(catalog.every((item) => !('referenceCny' in item))).toBe(true);
+    expect(catalog.every((item) => !item.promotion || !('originalReferenceCny' in item.promotion))).toBe(true);
   });
 });

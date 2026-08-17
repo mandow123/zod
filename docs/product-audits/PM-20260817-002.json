@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260817-002",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-17T13:57:37+08:00",
+  "baseCommit": "aa8e6b70ed0438a52e1ee9cdc5d1f01ee530c382",
+  "stagedDiffSha256": "526d36330b6924e0348c0fac38f72557eb860fa27ba2115b692cae5b17e0d7f5",
+  "summary": "终审确认普通供应商兑付仅展示卡时、存量预留迁移覆盖 active 与 secured、公开需求人民币字段已删除；卡时全链路严格保留两位小数且第三位拒绝，Spark 价格、库存及供应商范围正确，快钱只位于充值和内部兑付边界，本地算力闭环与回归测试全部通过。"
+}

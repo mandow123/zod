@@ -52,6 +52,10 @@ function periodLabel(value: string | Date) {
   return value.toISOString().slice(0, 7);
 }
 
+function compactLedgerEntries<T extends Readonly<{ amount: bigint }>>(entries: readonly T[]) {
+  return entries.filter((entry) => entry.amount !== 0n);
+}
+
 export type FeeAssessmentResult =
   | Readonly<{ status: 'created' | 'replayed'; assessmentId: string; plan: {
       grossCreditMicros: bigint; serviceFeeCreditMicros: bigint; netCreditMicros: bigint;
@@ -205,8 +209,8 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
       const periodStart = shanghaiPeriodStart(input.assessedAt);
       const period = await this.lockPeriod(client, input.supplierSubjectId, periodStart);
       const plan = planSettlementFee(tiers, BigInt(period.net_settled_credit_micros), input.grossCreditMicros);
-      if (plan.serviceFeeCreditMicros <= 0n || plan.netCreditMicros <= 0n) {
-        throw new Error('FEE_LEDGER_THREE_LEGS_REQUIRED');
+      if (plan.serviceFeeCreditMicros < 0n || plan.netCreditMicros <= 0n) {
+        throw new Error('FEE_LEDGER_AMOUNT_INVALID');
       }
       const accounts = await this.lockSettlementAccounts(client, input.supplierSubjectId);
       const transactionId = randomUUID();
@@ -214,11 +218,11 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         id: transactionId, owner: input.idempotencyOwner, scope: 'CREDIT_SUPPLIER_SETTLEMENT_WITH_FEE',
         key: input.idempotencyKey, digest: input.payloadDigest, referenceType: 'settlement',
         referenceId: input.orderId, description: '算力成交结算与服务费', now: input.assessedAt,
-        entries: [
+        entries: compactLedgerEntries([
           { accountId: accounts.receivable, amount: -plan.grossCreditMicros, memo: '成交毛额结转' },
           { accountId: accounts.supplierEarnings, amount: plan.netCreditMicros, memo: '提供方净收益到账' },
           { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue, amount: plan.serviceFeeCreditMicros, memo: '平台成交服务费' },
-        ],
+        ]),
       });
       await this.insertAssessment(client, input, schedule.rows[0], period.id, periodStart, plan, transactionId);
       await client.query(`UPDATE kai_credit_supplier_fee_periods SET net_settled_credit_micros = $2, version = version + 1
@@ -275,8 +279,8 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         reversedFeeCreditMicros: BigInt(reversed.rows.find((item) => item.original_segment_id === row.id)?.reversed_fee_credit_micros ?? '0'),
       }));
       const reversal = planFeeReversal(reversible, input.grossCreditMicros);
-      if (reversal.reversedServiceFeeCreditMicros <= 0n || reversal.reversedNetCreditMicros <= 0n) {
-        throw new Error('FEE_LEDGER_THREE_LEGS_REQUIRED');
+      if (reversal.reversedServiceFeeCreditMicros < 0n || reversal.reversedNetCreditMicros <= 0n) {
+        throw new Error('FEE_LEDGER_AMOUNT_INVALID');
       }
       const parties = await client.query<{ buyer_subject_id: string }>(`SELECT buyer_subject_id
         FROM kai_credit_orders WHERE id = $1 AND supplier_subject_id = $2 FOR SHARE`,
@@ -289,11 +293,11 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
         scope: 'CREDIT_SETTLEMENT_REFUND_WITH_FEE_REVERSAL', key: input.idempotencyKey,
         digest: input.payloadDigest, referenceType: 'service_fee_reversal', referenceId: input.orderId,
         description: '算力成交退款与服务费冲正', now: input.assessedAt,
-        entries: [
+        entries: compactLedgerEntries([
           { accountId: accounts.supplierEarnings, amount: -reversal.reversedNetCreditMicros, memo: '提供方结算净收益冲回' },
           { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue, amount: -reversal.reversedServiceFeeCreditMicros, memo: '平台服务费冲正' },
           { accountId: accounts.buyerAvailable, amount: reversal.reversedGrossCreditMicros, memo: '买方退款到账' },
-        ],
+        ]),
       });
       const cumulativeBefore = BigInt(period.rows[0].net_settled_credit_micros);
       const cumulativeAfter = cumulativeBefore - input.grossCreditMicros;
@@ -432,9 +436,9 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
     referenceType: 'settlement' | 'service_fee_reversal'; referenceId: string; description: string; now: Date;
     entries: readonly { accountId: string; amount: bigint; memo: string }[];
   }>) {
-    if (input.entries.length !== 3 || input.entries.some((entry) => entry.amount === 0n)
+    if (input.entries.length < 2 || input.entries.length > 3 || input.entries.some((entry) => entry.amount === 0n)
       || input.entries.reduce((sum, entry) => sum + entry.amount, 0n) !== 0n) {
-      throw new Error('FEE_LEDGER_THREE_LEGS_UNBALANCED');
+      throw new Error('FEE_LEDGER_ENTRIES_UNBALANCED');
     }
     const entries = [...input.entries].sort((left, right) => left.accountId.localeCompare(right.accountId));
     await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,

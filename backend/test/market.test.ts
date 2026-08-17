@@ -162,12 +162,10 @@ class MemoryMarketStore implements MarketStore {
   }
   async createDemand(input: {
     id: string; buyerId: string; kind: ResourceKind; title: string; productHint: string; region: string;
-    quantity: string; capacityUnit: string; budgetMaxCents: number | null; desiredStartAt: Date; deadlineAt: Date; description: string;
+    quantity: string; capacityUnit: string; desiredStartAt: Date; deadlineAt: Date; description: string;
   }) {
     const now = new Date();
-    const demand: ComputeDemand = {
-      ...input, currency: 'CNY', status: 'open', createdAt: now, updatedAt: now,
-    };
+    const demand: ComputeDemand = { ...input, status: 'open', createdAt: now, updatedAt: now };
     this.demands.set(demand.id, demand);
     return demand;
   }
@@ -529,7 +527,7 @@ describe('verified market and order lifecycle', () => {
     const { service } = harness();
     const created = await service.createDemand(buyer, {
       kind: 'gpu', title: '两周内训练 70B 模型', productHint: 'H100 80G', region: '华东-上海',
-      quantity: '128', capacityUnit: 'GPU时', budgetMaxCents: 480_000,
+      quantity: '128', capacityUnit: 'GPU时',
       desiredStartAt: new Date(Date.now() + 60_000).toISOString(),
       deadlineAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
       description: '需要八卡节点与高速互联，分阶段交付并提供任务状态。',

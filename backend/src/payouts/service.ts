@@ -132,8 +132,7 @@ export class CreditPayoutService {
     const credits = (value: bigint | null) => value === null ? null : formatCreditDisplayMicros(value);
     return {
       id: record.id, payoutNumber: record.payoutNumber, status: record.status,
-      creditAmount: formatCreditDisplayMicros(record.creditMicros), amountCny: this.cny(record.paymentAmountCents),
-      conversion: '1 KAI卡时 = ¥1.002', freezeTransactionId: record.freezeTransactionId,
+      creditAmount: formatCreditDisplayMicros(record.creditMicros), freezeTransactionId: record.freezeTransactionId,
       resolutionTransactionId: record.resolutionTransactionId, companyPaymentReference: record.companyPaymentReference,
       failureCode: record.failureCode, resolutionReason: record.resolutionReason,
       balances: {
@@ -147,7 +146,8 @@ export class CreditPayoutService {
       },
       reviewedAt: record.reviewedAt?.toISOString() ?? null, payingAt: record.payingAt?.toISOString() ?? null,
       resolvedAt: record.resolvedAt?.toISOString() ?? null, createdAt: record.createdAt.toISOString(),
-      ...(operator ? { subjectId: record.subjectId, companyPaymentFlowDigest: record.companyPaymentFlowDigest,
+      ...(operator ? { subjectId: record.subjectId, amountCny: this.cny(record.paymentAmountCents),
+        conversion: '1 KAI卡时 = ¥1.002', companyPaymentFlowDigest: record.companyPaymentFlowDigest,
         companyPaymentAmountCny: record.companyPaymentAmountCents === null ? null : this.cny(record.companyPaymentAmountCents) } : {}),
     };
   }

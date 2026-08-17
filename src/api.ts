@@ -51,8 +51,6 @@ export type MarketCreditListing = Readonly<{
   capacityUnit: string;
   minimumQuantity: string;
   unitCredits: string;
-  referenceCny: string;
-  conversion: '1 KAI卡时 = ¥1.002';
   status: 'active';
   startsAt: string;
   expiresAt: string;
@@ -69,7 +67,6 @@ export type MarketCreditListing = Readonly<{
   }>;
   promotion?: null | Readonly<{
     kind: 'percentage'; label: string; discountPercent: number;
-    originalReferenceCny: string; discountedReferenceCny: string;
     originalUnitCredits: string; discountedUnitCredits: string;
     taxIncluded: boolean; startsAt: string; endsAt: string;
   }>;
@@ -83,14 +80,13 @@ export type MarketCreditListing = Readonly<{
 export type CreditBalance = Readonly<{
   subjectId: string;
   unit: 'KAI_CREDIT';
-  precision: 6;
+  precision: 2;
   available: string;
   reserved: string;
   supplierReceivable: string;
   redeemableSupplierEarnings: string;
   payoutFrozen: string;
   total: string;
-  conversion: '1 KAI卡时 = ¥1.002';
 }>;
 
 export type CreditPayoutProfile = Readonly<{
@@ -104,8 +100,6 @@ export type CreditPayout = Readonly<{
   payoutNumber: string;
   status: CreditPayoutStatus;
   creditAmount: string;
-  amountCny: string;
-  conversion: '1 KAI卡时 = ¥1.002';
   freezeTransactionId: string;
   resolutionTransactionId: string | null;
   companyPaymentReference: string | null;
@@ -483,7 +477,7 @@ type LocalE2EDemoCatalogResponse = { ok: true; listings: Array<{
   fulfillmentMode: 'physical_delivery' | 'compute_sidecar_v1';
   serviceMode: MarketCreditListing['serviceMode']; capacityTotal: string; capacityReserved: string;
   capacitySold: string; capacityAvailable: string; capacityUnit: string; minimumQuantity: string;
-  unitCredits: string; referenceCny: string; status: 'active'; startsAt: string; expiresAt: string;
+  unitCredits: string; status: 'active'; startsAt: string; expiresAt: string;
   shippingEstimate?: string | null;
   demo: NonNullable<MarketCreditListing['demo']>; promotion: MarketCreditListing['promotion'];
   selloutEstimate: MarketCreditListing['selloutEstimate'];
@@ -496,7 +490,6 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
     offerId: listing.resourceId,
     specifications: { source: 'local_e2e_catalog', productCode: listing.productCode },
     sla: { mode: 'sandbox_preview' },
-    conversion: '1 KAI卡时 = ¥1.002',
     auditValidUntil: listing.expiresAt,
     createdAt: listing.startsAt,
     audits: { resource: true, price: true },

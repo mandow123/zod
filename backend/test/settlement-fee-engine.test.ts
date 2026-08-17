@@ -15,8 +15,8 @@ const proposedFixture: readonly FeeTier[] = [
 
 describe('settlement fee engine', () => {
   it('uses the cumulative fee function so split and combined settlements are identical', () => {
-    const start = 99_999n * C + 999_993n;
-    const volumes = [3n, 8n, 499_999n * C, 1_500_001n * C, 9n];
+    const start = 99_999n * C + 990_000n;
+    const volumes = [30_000n, 80_000n, 499_999n * C, 1_500_001n * C, 90_000n];
     let cursor = start;
     let splitFee = 0n;
     for (const volume of volumes) {
@@ -37,8 +37,8 @@ describe('settlement fee engine', () => {
     const plan = planSettlementFee(proposedFixture, 99_999n * C, 2n * C);
     expect(plan.segments.map((segment) => ({ volume: segment.settledCreditMicros, rate: segment.rateBps })))
       .toEqual([{ volume: 1n * C, rate: 100 }, { volume: 1n * C, rate: 80 }]);
-    expect(plan.serviceFeeCreditMicros).toBe(18_000n);
-    expect(plan.netCreditMicros).toBe(1_982_000n);
+    expect(plan.serviceFeeCreditMicros).toBe(20_000n);
+    expect(plan.netCreditMicros).toBe(1_980_000n);
   });
 
   it('reverses original segments LIFO, is split invariant, and cannot over-reverse', () => {
@@ -60,17 +60,17 @@ describe('settlement fee engine', () => {
     expect(first.reversedServiceFeeCreditMicros + second.reversedServiceFeeCreditMicros)
       .toBe(once.reversedServiceFeeCreditMicros);
     expect(once.allocations[0]).toMatchObject({ originalTierOrdinal: 1, reversedCreditMicros: 1_000_000n });
-    expect(() => planFeeReversal(segments, 2_000_001n)).toThrow('FEE_REVERSAL_EXCEEDS_ORIGINAL');
+    expect(() => planFeeReversal(segments, 2_010_000n)).toThrow('FEE_REVERSAL_EXCEEDS_ORIGINAL');
   });
 
   it('rejects gaps and identifies natural months in Asia/Shanghai', () => {
     expect(() => validateFeeTiers([
-      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 10n, rateBps: 100 },
-      { ordinal: 1, lowerBoundMicros: 11n, upperBoundMicros: null, rateBps: 80 },
+      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 10_000n, rateBps: 100 },
+      { ordinal: 1, lowerBoundMicros: 20_000n, upperBoundMicros: null, rateBps: 80 },
     ])).toThrow('FEE_TIERS_NOT_CONTIGUOUS');
     expect(() => validateFeeTiers([
-      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 10n, rateBps: 20 },
-      { ordinal: 1, lowerBoundMicros: 10n, upperBoundMicros: null, rateBps: 21 },
+      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 10_000n, rateBps: 20 },
+      { ordinal: 1, lowerBoundMicros: 10_000n, upperBoundMicros: null, rateBps: 21 },
     ])).toThrow('FEE_TIER_RATE_MUST_NOT_INCREASE');
     expect(shanghaiPeriodStart(new Date('2026-07-31T16:00:00.000Z'))).toBe('2026-08-01');
   });

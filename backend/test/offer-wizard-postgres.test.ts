@@ -6,7 +6,7 @@ import type { PoolClient } from 'pg';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../src/database.js';
 import { PostgresListingAuditStore } from '../src/listings/store.js';
-import { creditMicrosFromCnyMicros, parseCnyMicros } from '../src/listings/types.js';
+import { cnyMicrosFromCreditMicros, creditMicrosFromCnyMicros, parseCreditMicros } from '../src/listings/types.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -29,7 +29,7 @@ async function migrate(pglite: PGlite) {
   for (const name of [
     '0001_cloudpay_ledger.sql', '0003_market_reservations.sql', '0012_mobile_publish.sql',
     '0015_credit_listing_audits.sql', '0016_trading_subjects.sql', '0017_offer_wizard_drafts.sql',
-    '0021_offer_revision_drafts.sql', '0035_offer_wizard_draft_abandonment.sql',
+    '0021_offer_revision_drafts.sql', '0035_offer_wizard_draft_abandonment.sql', '0054_offer_card_hour_price.sql',
   ]) await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
 }
 
@@ -67,7 +67,7 @@ describe('mobile offer wizard drafts', () => {
       title: 'H100 80G 独享算力', serviceMode: 'dedicated' as const, nativeUnit: 'GPU时', minimumQuantity: '1',
       sla: { availability: '99.9%' }, deliveryTerms: { mode: '平台工作区' }, acceptanceTerms: { criteria: '配置与时长' },
       refundTerms: { policy: '故障按分钟退还卡时' }, cleanupTerms: { policy: '任务结束即清理' },
-      suggestedPriceCny: '31.20', priceComponents: { summary: '设备、电力、网络与运维' },
+      suggestedUnitCredits: '31.14', priceComponents: { summary: '设备、电力、网络与运维' },
       priceEvidence: [{ type: 'contract', source: '近三个月合同', summary: '同型号同地区已成交合同' }],
     };
     const saved = await store.updateWizardDraft({
@@ -84,7 +84,9 @@ describe('mobile offer wizard drafts', () => {
       submitPayloadDigest: 'formal-digest', resourceId, title: payload.title, serviceMode: payload.serviceMode,
       nativeUnit: payload.nativeUnit, minimumQuantity: payload.minimumQuantity, sla: payload.sla,
       deliveryTerms: payload.deliveryTerms, acceptanceTerms: payload.acceptanceTerms, refundTerms: payload.refundTerms,
-      cleanupTerms: payload.cleanupTerms, suggestedPriceCnyMicros: parseCnyMicros(payload.suggestedPriceCny)!,
+      cleanupTerms: payload.cleanupTerms,
+      suggestedUnitCreditMicros: parseCreditMicros(payload.suggestedUnitCredits)!,
+      suggestedPriceCnyMicros: cnyMicrosFromCreditMicros(parseCreditMicros(payload.suggestedUnitCredits)!),
       priceComponents: payload.priceComponents, priceEvidence: payload.priceEvidence,
     };
     const submitted = await store.submitWizardDraft(submit);
@@ -92,7 +94,7 @@ describe('mobile offer wizard drafts', () => {
     if (!('offer' in submitted)) throw new Error('draft was not submitted');
     expect(submitted.offer.status).toBe('under_review');
     expect(submitted.audits.map((item) => item.kind).sort()).toEqual(['price', 'resource']);
-    expect(creditMicrosFromCnyMicros(submitted.offer.suggestedPriceCnyMicros)).toBe(31_137_725n);
+    expect(submitted.offer.suggestedUnitCreditMicros).toBe(31_140_000n);
     expect((await store.submitWizardDraft(submit)).status).toBe('replayed');
     const submittedDraft = await store.getWizardDraft(subjectId, created.draft.id);
     expect(submittedDraft?.status).toBe('submitted');
@@ -127,10 +129,10 @@ describe('mobile offer wizard drafts', () => {
     await database.close();
   });
 
-  it('parses RMB decimals exactly before the mandatory upward card-hour conversion', () => {
-    expect(parseCnyMicros('31.20')).toBe(31_200_000n);
-    expect(parseCnyMicros('0')).toBeNull();
-    expect(parseCnyMicros('1.0000001')).toBeNull();
-    expect(creditMicrosFromCnyMicros(parseCnyMicros('31.20')!)).toBe(31_137_725n);
+  it('parses card-hour decimals exactly at the public offer boundary', () => {
+    expect(parseCreditMicros('31.14')).toBe(31_140_000n);
+    expect(parseCreditMicros('0')).toBeNull();
+    expect(parseCreditMicros('1.0000001')).toBeNull();
+    expect(creditMicrosFromCnyMicros(cnyMicrosFromCreditMicros(31_140_000n))).toBe(31_140_000n);
   });
 });

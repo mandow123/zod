@@ -137,7 +137,6 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
       region: z.string().trim().min(2).max(80),
       quantity: z.string().trim().min(1).max(40),
       capacityUnit: z.string().trim().min(1).max(40),
-      budgetMaxCents: z.number().int().positive().max(100_000_000_000).optional(),
       desiredStartAt: z.string().datetime(),
       deadlineAt: z.string().datetime(),
       description: z.string().trim().min(8).max(2_000),
@@ -146,7 +145,6 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
       kind: body.kind, title: body.title, productHint: body.productHint, region: body.region,
       quantity: body.quantity, capacityUnit: body.capacityUnit, desiredStartAt: body.desiredStartAt,
       deadlineAt: body.deadlineAt, description: body.description,
-      ...(body.budgetMaxCents === undefined ? {} : { budgetMaxCents: body.budgetMaxCents }),
     };
     return reply.status(201).send({ ok: true, demand: await market.createDemand(principal, demand, context(request)) });
   });

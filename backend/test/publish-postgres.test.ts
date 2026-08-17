@@ -56,7 +56,7 @@ describe('PostgreSQL native publish workflow', () => {
     const now = new Date('2026-08-12T08:00:00.000Z');
     const demand = await store.createDemand({
       id: randomUUID(), buyerId, kind: 'gpu', title: '训练 70B 模型', productHint: 'H100 80G',
-      region: '华东-上海', quantity: '128', capacityUnit: 'GPU时', budgetMaxCents: 480_000,
+      region: '华东-上海', quantity: '128', capacityUnit: 'GPU时',
       desiredStartAt: new Date(now.getTime() + 86_400_000), deadlineAt: new Date(now.getTime() + 14 * 86_400_000),
       description: '需要高速互联，并提供可核验的交付记录。',
     });

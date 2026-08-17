@@ -29,8 +29,8 @@ function order(status: CreditOrderRecord['status']): CreditOrderRecord {
   return {
     id: orderId, orderNumber: 'KC20260812DELIVERY001', buyerSubjectId, supplierSubjectId: providerSubjectId,
     createdByUserId: '10000000-0000-4000-8000-000000000005', listingId: '10000000-0000-4000-8000-000000000006',
-    status, quantity: '2.000000', capacityUnit: 'GPU时', unitCreditMicros: 31_137_725n,
-    totalCreditMicros: 62_275_450n, listingSnapshot: { title: '独享 H100', productCode: 'H100-SXM-80G', region: '华东-上海' },
+    status, quantity: '2.000000', capacityUnit: 'GPU时', unitCreditMicros: 31_140_000n,
+    totalCreditMicros: 62_280_000n, listingSnapshot: { title: '独享 H100', productCode: 'H100-SXM-80G', region: '华东-上海' },
     reservationExpiresAt: new Date('2026-08-12T12:30:00.000Z'), confirmedAt: now,
     confirmedByUserId: providerUserId, deliveryStartedAt: now,
     deliveryReadyAt: status === 'acceptance_pending' ? now : null, acceptedAt: null, acceptedByUserId: null,
@@ -316,7 +316,7 @@ describe('KAI credit order delivery service', () => {
     const store = {
       approveMutualRefund: async () => ({ status: 'refunded' as const, order: refunded }),
       mutualRefundForSubject: async () => ({
-        order: refunded, creditMicros: 62_275_450n, status: 'succeeded' as const,
+        order: refunded, creditMicros: 62_280_000n, status: 'succeeded' as const,
         approvedAt: new Date('2026-08-12T13:00:00.000Z'),
       }),
     } as unknown as CreditOrderStore;
@@ -334,7 +334,7 @@ describe('KAI credit order delivery service', () => {
       requestId: 'request-4', ip: '127.0.0.1',
     })).toMatchObject({ order: { status: 'refunded' } });
     expect(await service.mutualRefund(principal, orderId)).toMatchObject({
-      refund: { status: 'succeeded', creditAmount: '62.275450' },
+      refund: { status: 'succeeded', creditAmount: '62.28' },
     });
   });
 
@@ -345,7 +345,7 @@ describe('KAI credit order delivery service', () => {
     const store = {
       settleSupplier: async () => ({ status: 'settled' as const, order: closed }),
       supplierSettlementForSubject: async () => ({
-        order: closed, creditMicros: 62_275_450n, status: 'succeeded' as const, triggeredBy: 'provider' as const,
+        order: closed, creditMicros: 62_280_000n, status: 'succeeded' as const, triggeredBy: 'provider' as const,
         acceptedAt, availableAt, settledAt: availableAt,
       }),
     } as unknown as CreditOrderStore;
@@ -363,7 +363,7 @@ describe('KAI credit order delivery service', () => {
       requestId: 'request-5', ip: '127.0.0.1',
     })).toMatchObject({ order: { status: 'closed', settlementAvailableAt: availableAt.toISOString() } });
     expect(await service.supplierSettlement(principal, orderId)).toMatchObject({
-      settlement: { status: 'succeeded', creditAmount: '62.275450', triggeredBy: 'provider' },
+      settlement: { status: 'succeeded', creditAmount: '62.28', triggeredBy: 'provider' },
     });
   });
 
@@ -393,7 +393,7 @@ describe('KAI credit order delivery service', () => {
       disputeAdjudicationForSubject: async () => ({
         order: refunded, status: 'resolved' as const, escalatedBySide: 'buyer' as const, escalatedAt,
         outcome: 'full_refund' as const, reasonCiphertext, reasonDigest: 'reason-digest',
-        creditMicros: 62_275_450n, decidedAt,
+        creditMicros: 62_280_000n, decidedAt,
       }),
     } as unknown as CreditOrderStore;
     const subjects = {
@@ -420,7 +420,7 @@ describe('KAI credit order delivery service', () => {
     expect(reasonCiphertext).toMatch(/^v1\./u);
     expect(reasonCiphertext).not.toContain(reason);
     expect(await service.disputeAdjudication(buyer, orderId)).toMatchObject({
-      adjudication: { status: 'resolved', outcome: 'full_refund', reason, creditAmount: '62.275450' },
+      adjudication: { status: 'resolved', outcome: 'full_refund', reason, creditAmount: '62.28' },
     });
     await expect(service.decideDispute(buyer, orderId, { outcome: 'full_refund', reason },
       'buyer-illegal-decision01', { requestId: 'request-8', ip: '127.0.0.1' }))
@@ -445,7 +445,7 @@ describe('KAI credit order delivery service', () => {
       approvePostAcceptanceRefund: async () => ({ status: 'refunded' as const, order: refunded }),
       postAcceptanceRefundForSubject: async () => ({
         order: refunded, status: 'succeeded' as const, descriptionCiphertext: ciphertext,
-        descriptionDigest: 'aftercare-digest', creditMicros: 62_275_450n, requestedAt, resolvedAt,
+        descriptionDigest: 'aftercare-digest', creditMicros: 62_280_000n, requestedAt, resolvedAt,
         escalatedBySide: null, escalatedAt: null, providerResponseCiphertext: null,
         providerResponseDigest: null, outcome: null, decisionReasonCiphertext: null,
         decisionReasonDigest: null, decidedAt: null,
@@ -467,7 +467,7 @@ describe('KAI credit order delivery service', () => {
     const principal: AccountPrincipal = { userId: providerUserId, sessionId: 'session-8', role: 'supplier' };
     const description = '验收后持续运行时发现实际规格与订单不一致。';
     expect(await service.requestPostAcceptanceRefund(principal, orderId, description,
-      '62.275450', 'buyer-aftercare-service01', { requestId: 'request-9', ip: '127.0.0.1' }))
+      '62.28', 'buyer-aftercare-service01', { requestId: 'request-9', ip: '127.0.0.1' }))
       .toMatchObject({ order: { status: 'accepted', side: 'buyer' } });
     expect(ciphertext).toMatch(/^v1\./u);
     expect(ciphertext).not.toContain(description);
@@ -476,7 +476,7 @@ describe('KAI credit order delivery service', () => {
       .toMatchObject({ order: { status: 'refunded', side: 'provider' } });
     expect(requestedPermission).toBe('provider.refund.approve');
     expect(await service.postAcceptanceRefund(principal, orderId)).toMatchObject({
-      aftercareRefund: { status: 'succeeded', description, creditAmount: '62.275450' },
+      aftercareRefund: { status: 'succeeded', description, creditAmount: '62.28' },
     });
   });
 
@@ -494,7 +494,7 @@ describe('KAI credit order delivery service', () => {
       postAcceptanceRefundForSubject: async () => ({
         order: accepted, status: 'escalated' as const,
         descriptionCiphertext: encryptPii(JSON.stringify({ description: '验收后发现实际规格与订单不一致。' }), key),
-        descriptionDigest: 'buyer-description-digest', creditMicros: 62_275_450n, requestedAt, resolvedAt: null,
+        descriptionDigest: 'buyer-description-digest', creditMicros: 62_280_000n, requestedAt, resolvedAt: null,
         escalatedBySide: 'provider' as const, escalatedAt, providerResponseCiphertext: responseCiphertext,
         providerResponseDigest: 'provider-response-digest', outcome: null,
         decisionReasonCiphertext: null, decisionReasonDigest: null, decidedAt: null,

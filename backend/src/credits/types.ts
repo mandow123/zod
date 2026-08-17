@@ -1,3 +1,5 @@
+import { formatCreditCentMicros } from './precision.js';
+
 export const KAI_CREDIT_MICROS = 1_000_000n;
 export const KAI_CREDIT_PLATFORM_ACCOUNTS = Object.freeze({
   issuance: '00000000-0000-4000-8000-000000000101',
@@ -15,9 +17,5 @@ export type CreditAccountBalance = Readonly<{
 }>;
 
 export function formatCreditAmount(value: bigint) {
-  const sign = value < 0n ? '-' : '';
-  const absolute = value < 0n ? -value : value;
-  const whole = absolute / KAI_CREDIT_MICROS;
-  const fraction = (absolute % KAI_CREDIT_MICROS).toString().padStart(6, '0');
-  return `${sign}${whole}.${fraction}`;
+  return formatCreditCentMicros(value);
 }

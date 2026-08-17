@@ -152,6 +152,7 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
   const canRequestAftercare = !isComputeOrder && currentOrder.side === 'buyer' && currentOrder.status === 'accepted' && !aftercare
     && Boolean(currentOrder.settlementAvailableAt && new Date(currentOrder.settlementAvailableAt) > new Date());
   const requestedAftercareMicros = parseCreditMicros(aftercareCredits);
+  const invalidAftercareCredits = aftercareCredits.trim().length > 0 && requestedAftercareMicros === null;
   const totalOrderMicros = parseCreditMicros(currentOrder.totalCredits);
   const aftercareReady = aftercareDescription.trim().length >= 10 && requestedAftercareMicros !== null
     && totalOrderMicros !== null && requestedAftercareMicros <= totalOrderMicros;
@@ -271,6 +272,7 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
               <Text style={styles.sectionTitle}>申请卡时补偿</Text>
               <Text style={styles.help}>按实际受影响的服务量填写，可申请部分或全部卡时。提交后会暂停结算。</Text>
               <Field label="补偿卡时" value={aftercareCredits} onChange={setAftercareCredits} placeholder={`最多 ${creditAmount(currentOrder.totalCredits)}`} keyboardType="decimal-pad" />
+              {invalidAftercareCredits ? <Text style={styles.fieldError}>卡时必须大于 0，且最多保留两位小数</Text> : null}
               {requestedAftercareMicros !== null && totalOrderMicros !== null && requestedAftercareMicros > totalOrderMicros ? <Text style={styles.fieldError}>不能超过本单 {creditAmount(currentOrder.totalCredits)} 卡时</Text> : null}
               <Field label="问题说明" value={aftercareDescription} onChange={setAftercareDescription} placeholder="写清实际问题、发现时间和影响" multiline />
               <PrimaryButton label="提交补偿申请" busy={busy} tone="danger" disabled={!aftercareReady}

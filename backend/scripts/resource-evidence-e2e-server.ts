@@ -42,6 +42,7 @@ import { PostgresCreditPayoutStore } from '../src/payouts/store.js';
 import { DeviceCommerceService } from '../src/device-commerce/service.js';
 import { PostgresDeviceCommerceStore } from '../src/device-commerce/store.js';
 import { SPARK_PRODUCT_ID } from '../src/device-commerce/types.js';
+import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
 import { ComputeProviderError, type ComputeProviderAdapter, type ProvisionRequest,
   type StopResult } from '../src/fulfillment/provider.js';
 import { buildLocalE2EDemoCatalog, localE2EDemoCatalogDigest } from './local-e2e-demo-catalog.js';
@@ -244,6 +245,7 @@ const creditPayoutStore = new PostgresCreditPayoutStore(database);
 const creditPayoutService = new CreditPayoutService(creditPayoutStore, subjects, config);
 const deviceCommerceStore = new PostgresDeviceCommerceStore(database);
 const deviceCommerceService = new DeviceCommerceService(deviceCommerceStore, subjects, config);
+const settlementFeeStore = new PostgresSettlementFeeStore(database);
 const nodeEnrollmentService = new NodeEnrollmentService(new NodeEnrollmentStore(
   database, config.NODE_GPU_FINGERPRINT_PEPPER!, config.NODE_CLAIM_TOKEN_PEPPER!,
   config.NODE_CLAIM_TOKEN_ENCRYPTION_KEY!, 'gpu-dedicated-v1', config.nodeSupportedAgentVersions,
@@ -302,6 +304,24 @@ const priceOperator = await accounts.createUser({
   phoneLookupHash: lookupHash('+8613900139001', config.OTP_PEPPER!), displayName: '验收价格审核员',
 });
 await database.query(`UPDATE users SET role = 'operator' WHERE id = $1`, [priceOperator.id]);
+const feeScheduleId = randomUUID();
+const feeScheduleCreatedAt = new Date();
+await settlementFeeStore.createDraftSchedule({
+  id: feeScheduleId, version: 'e2e-trade-volume-v1', operatorId: operator.id,
+  now: feeScheduleCreatedAt, requestId: 'e2e-fee-schedule-draft-0001',
+  payloadDigest: `sha512:${'c'.repeat(128)}`,
+  tiers: [
+    { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 100_000_000_000n, rateBps: 100 },
+    { ordinal: 1, lowerBoundMicros: 100_000_000_000n, upperBoundMicros: 1_000_000_000_000n, rateBps: 80 },
+    { ordinal: 2, lowerBoundMicros: 1_000_000_000_000n, upperBoundMicros: 10_000_000_000_000n, rateBps: 50 },
+    { ordinal: 3, lowerBoundMicros: 10_000_000_000_000n, upperBoundMicros: null, rateBps: 20 },
+  ],
+});
+await settlementFeeStore.activateSchedule({
+  scheduleId: feeScheduleId, operatorId: priceOperator.id,
+  now: new Date(feeScheduleCreatedAt.getTime() + 1), requestId: 'e2e-fee-schedule-activate-0001',
+  payloadDigest: `sha512:${'d'.repeat(128)}`,
+});
 await marketStore.reviewSupplier({ supplierId: profile.id, reviewerId: operator.id, approved: true });
 
 const app = await buildApp({
@@ -565,7 +585,8 @@ app.post('/__e2e/seed-approved-offer', async (request, reply) => {
     title: 'H100 SXM5 98G 整卡独享', serviceMode: 'dedicated', nativeUnit: resource.capacityUnit, minimumQuantity: '1',
     sla: { availability: '99.9%' }, deliveryTerms: { mode: '平台工作区' },
     acceptanceTerms: { summary: '型号、显存与可用时长' }, refundTerms: { outage: '按分钟退还卡时' },
-    cleanupTerms: { summary: '结束后两小时清理' }, suggestedPriceCnyMicros: 31_200_000n,
+    cleanupTerms: { summary: '结束后两小时清理' }, suggestedUnitCreditMicros: creditMicrosFromCnyMicros(31_200_000n),
+    suggestedPriceCnyMicros: 31_200_000n,
     priceComponents: { included: '设备、电力、网络与运维' },
     priceEvidence: [{ type: 'contract', source: '同地区近期合同', summary: 'H100 SXM5 98G 独享成交依据' }],
   });
@@ -603,7 +624,8 @@ app.post('/__e2e/seed-alternate-approved-offer', async (request, reply) => {
     title: 'H100 SXM5 98G 夜间专享', serviceMode: 'reserved', nativeUnit: resource.capacityUnit, minimumQuantity: '1',
     sla: { availability: '99.9%' }, deliveryTerms: { mode: '平台工作区' },
     acceptanceTerms: { summary: '型号、显存与可用时长' }, refundTerms: { outage: '按分钟退还卡时' },
-    cleanupTerms: { summary: '结束后两小时清理' }, suggestedPriceCnyMicros: 28_000_000n,
+    cleanupTerms: { summary: '结束后两小时清理' }, suggestedUnitCreditMicros: creditMicrosFromCnyMicros(28_000_000n),
+    suggestedPriceCnyMicros: 28_000_000n,
     priceComponents: { included: '设备、电力、网络与夜间运维' },
     priceEvidence: [{ type: 'contract', source: '同地区夜间合同', summary: 'H100 SXM5 98G 夜间专享成交依据' }],
   });
@@ -644,7 +666,7 @@ app.post('/__e2e/seed-offer-changes', async (request, reply) => {
     acceptanceTerms: { summary: '按 H100 SXM5 98G、NVLink 与可用时长验收' },
     refundTerms: { summary: '归责资源方的中断按分钟退还 KAI 卡时' },
     cleanupTerms: { summary: '任务结束后 2 小时内清理工作数据' },
-    suggestedPriceCnyMicros: 31_200_000n,
+    suggestedUnitCreditMicros: creditMicrosFromCnyMicros(31_200_000n), suggestedPriceCnyMicros: 31_200_000n,
     priceComponents: { summary: '包含设备折旧、电力、网络和运维，不含税' },
     priceEvidence: [{ type: 'market_quote', source: '公开报价截图', summary: '上海地区 H100 SXM5 98G 报价截图' }],
   });
@@ -746,18 +768,27 @@ app.post('/__e2e/compute-closed-loop', async (request, reply) => {
   e2eClock = null;
   const firstFinalOrder = await creditOrderStore.getForSubject(buyerPersonal.subjectId, firstPurchase.order.id);
   const firstSupplierAfterSettlement = await balancesForSubject(personal.subjectId);
-  const expectedCaptured = 18_682_635n;
-  const expectedRefunded = 12_455_090n;
-  if (accepted.settlement.capturedCredits !== '18.682635'
-    || accepted.settlement.refundedCredits !== '12.455090'
-    || balanceAmount(firstBuyerAfterAcceptance, 'reserved') !== 0n
+  const expectedCaptured = 18_690_000n;
+  const expectedRefunded = 12_450_000n;
+  const expectedSupplierNet = 18_500_000n;
+  if (accepted.settlement.capturedCredits !== '18.69'
+    || accepted.settlement.refundedCredits !== '12.45') {
+    throw new Error('E2E_STOP_ACCEPT_SETTLEMENT_AMOUNTS_INCORRECT');
+  }
+  if (balanceAmount(firstBuyerAfterAcceptance, 'reserved') !== 0n
     || balanceAmount(firstBuyerAfterAcceptance, 'available')
-      !== balanceAmount(firstFrozenBalances, 'available') + expectedRefunded
-    || balanceAmount(firstSupplierAfterAcceptance, 'supplier_receivable') !== expectedCaptured
-    || settled < 1 || firstFinalOrder?.status !== 'closed'
-    || balanceAmount(firstSupplierAfterSettlement, 'supplier_receivable') !== 0n
-    || balanceAmount(firstSupplierAfterSettlement, 'available') !== expectedCaptured) {
-    throw new Error('E2E_STOP_ACCEPT_SETTLEMENT_TAIL_INCOMPLETE');
+      !== balanceAmount(firstFrozenBalances, 'available') + expectedRefunded) {
+    throw new Error('E2E_STOP_ACCEPT_BUYER_BALANCES_INCORRECT');
+  }
+  if (balanceAmount(firstSupplierAfterAcceptance, 'supplier_receivable') !== expectedCaptured) {
+    throw new Error('E2E_STOP_ACCEPT_SUPPLIER_RECEIVABLE_INCORRECT');
+  }
+  if (settled < 1 || firstFinalOrder?.status !== 'closed') {
+    throw new Error('E2E_STOP_ACCEPT_SETTLEMENT_NOT_CLOSED');
+  }
+  if (balanceAmount(firstSupplierAfterSettlement, 'supplier_receivable') !== 0n
+    || balanceAmount(firstSupplierAfterSettlement, 'supplier_earnings_available') !== expectedSupplierNet) {
+    throw new Error('E2E_STOP_ACCEPT_SUPPLIER_NET_INCORRECT');
   }
 
   const occupiedOrders: string[] = [];
@@ -816,8 +847,8 @@ app.post('/__e2e/compute-closed-loop', async (request, reply) => {
   const beforeHealth = Object.fromEntries(beforeHealthFailureBalances.map((row) => [row.account_kind, BigInt(row.amount_micros)]));
   const afterHealth = Object.fromEntries(afterHealthFailureBalances.map((row) => [row.account_kind, BigInt(row.amount_micros)]));
   if (failedReadyOrder?.status !== 'refunded'
-    || (afterHealth.available ?? 0n) - (beforeHealth.available ?? 0n) !== 31_137_725n
-    || (beforeHealth.reserved ?? 0n) - (afterHealth.reserved ?? 0n) !== 31_137_725n) {
+    || (afterHealth.available ?? 0n) - (beforeHealth.available ?? 0n) !== 31_140_000n
+    || (beforeHealth.reserved ?? 0n) - (afterHealth.reserved ?? 0n) !== 31_140_000n) {
     throw new Error('E2E_READY_HEALTH_FAILURE_DID_NOT_REFUND_EXACTLY');
   }
   const healthReplacement = await buy('health-recovery-001');
@@ -982,7 +1013,7 @@ app.post('/__e2e/seed-partial-aftercare', async (request, reply) => {
   if (!accepted) return reply.status(409).send({ ok: false, reason: 'NO_ACCEPTED_ORDER' });
   const result = await creditOrderService.requestPostAcceptanceRefund(
     { userId: buyer.id, sessionId: 'e2e-buyer', role: 'member' }, accepted.id,
-    '连续运行时出现服务中断，申请按实际受影响时长补偿。', '20.000000',
+    '连续运行时出现服务中断，申请按实际受影响时长补偿。', '20.00',
     `e2e-partial:${randomUUID()}`, { requestId: 'e2e-partial-request', ip: '127.0.0.1' },
   );
   return { ok: true, ...result };

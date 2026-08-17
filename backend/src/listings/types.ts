@@ -1,3 +1,5 @@
+import { formatCreditCentMicros, parseCreditCentMicros, quantizeCreditMicros } from '../credits/precision.js';
+
 export const KAI_CNY_MICROS_PER_CREDIT = 1_002_000n;
 
 export type OfferStatus = 'draft' | 'under_review' | 'changes_requested' | 'approved' | 'rejected' | 'suspended' | 'expired';
@@ -16,7 +18,7 @@ export type OfferWizardPayload = Readonly<{
   acceptanceTerms?: Record<string, unknown> | undefined;
   refundTerms?: Record<string, unknown> | undefined;
   cleanupTerms?: Record<string, unknown> | undefined;
-  suggestedPriceCny?: string | undefined;
+  suggestedUnitCredits?: string | undefined;
   priceComponents?: Record<string, unknown> | undefined;
   priceEvidence?: unknown[] | undefined;
 }>;
@@ -52,6 +54,7 @@ export type OfferTemplate = Readonly<{
   acceptanceTerms: Record<string, unknown>;
   refundTerms: Record<string, unknown>;
   cleanupTerms: Record<string, unknown>;
+  suggestedUnitCreditMicros: bigint;
   suggestedPriceCnyMicros: bigint;
   priceComponents: Record<string, unknown>;
   priceEvidence: unknown[];
@@ -138,13 +141,20 @@ export type PublicCreditListing = CreditListing & Readonly<{
 
 export function creditMicrosFromCnyMicros(cnyMicros: bigint, rate = KAI_CNY_MICROS_PER_CREDIT) {
   if (cnyMicros <= 0n || rate <= 0n) throw new Error('positive price and conversion rate are required');
-  return (cnyMicros * 1_000_000n + rate - 1n) / rate;
+  return quantizeCreditMicros((cnyMicros * 1_000_000n + rate / 2n) / rate, 'half_up');
+}
+
+export function cnyMicrosFromCreditMicros(creditMicros: bigint, rate = KAI_CNY_MICROS_PER_CREDIT) {
+  if (creditMicros <= 0n || rate <= 0n) throw new Error('positive price and conversion rate are required');
+  return (creditMicros * rate + 500_000n) / 1_000_000n;
+}
+
+export function parseCreditMicros(value: string) {
+  return parseCreditCentMicros(value);
 }
 
 export function formatCreditMicros(value: bigint) {
-  const whole = value / 1_000_000n;
-  const fraction = (value % 1_000_000n).toString().padStart(6, '0');
-  return `${whole}.${fraction}`;
+  return formatCreditCentMicros(value);
 }
 
 export function formatCnyMicros(value: bigint) {

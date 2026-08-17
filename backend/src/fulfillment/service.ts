@@ -9,6 +9,7 @@ import type { FulfillmentStore } from './store.js';
 import { ENTER_COMPUTE_STATES, fulfillmentActions, type FulfillmentRecord } from './types.js';
 import { parseCreditOrderQuantity } from '../credit-orders/types.js';
 import type { FulfillmentIssueRecord } from './store.js';
+import { formatCreditDisplayMicros } from '../credits/display.js';
 
 type RequestContext = Readonly<{ requestId: string; ip: string }>;
 
@@ -119,8 +120,8 @@ export class FulfillmentService {
     return {
       ...serialized, fulfillment: { ...serialized.fulfillment, acceptanceMode: result.acceptedActor },
       settlement: {
-        capturedCredits: formatMicros(result.capturedCreditMicros),
-        refundedCredits: formatMicros(result.refundedCreditMicros),
+        capturedCredits: formatCreditDisplayMicros(result.capturedCreditMicros),
+        refundedCredits: formatCreditDisplayMicros(result.refundedCreditMicros),
       },
     };
   }
@@ -422,9 +423,9 @@ export class FulfillmentService {
         billingModel: 'metered_capacity' as const,
         purchasedCapacity: formatMicros(usage.purchasedCapacityMicros), capacityUnit: usage.capacityUnit,
         consumedCapacity: formatMicros(usage.consumedCapacityMicros),
-        purchasedCredits: formatMicros(usage.purchasedCreditMicros),
-        consumedCredits: formatMicros(usage.consumedCreditMicros),
-        remainingCredits: formatMicros(usage.remainingCreditMicros),
+        purchasedCredits: formatCreditDisplayMicros(usage.purchasedCreditMicros),
+        consumedCredits: formatCreditDisplayMicros(usage.consumedCreditMicros),
+        remainingCredits: formatCreditDisplayMicros(usage.remainingCreditMicros),
         measuredAt: usage.measuredAt.toISOString(), evidenceDigest: usage.evidenceDigest,
         acceptedAt: usage.acceptedAt?.toISOString() ?? null,
         issueOpen: usage.issueOpen,
@@ -462,15 +463,15 @@ export class FulfillmentService {
     }
     const settlement = issue.meteredCreditMicros !== null && issue.remedyRefundCreditMicros !== null
       && issue.providerCreditMicros !== null && issue.buyerRefundCreditMicros !== null ? {
-        meteredCredits: formatMicros(issue.meteredCreditMicros),
-        providerCredits: formatMicros(issue.providerCreditMicros),
-        buyerRefundCredits: formatMicros(issue.buyerRefundCreditMicros),
-        unusedCredits: formatMicros(issue.buyerRefundCreditMicros - issue.remedyRefundCreditMicros),
-        remedyRefundCredits: formatMicros(issue.remedyRefundCreditMicros),
+        meteredCredits: formatCreditDisplayMicros(issue.meteredCreditMicros),
+        providerCredits: formatCreditDisplayMicros(issue.providerCreditMicros),
+        buyerRefundCredits: formatCreditDisplayMicros(issue.buyerRefundCreditMicros),
+        unusedCredits: formatCreditDisplayMicros(issue.buyerRefundCreditMicros - issue.remedyRefundCreditMicros),
+        remedyRefundCredits: formatCreditDisplayMicros(issue.remedyRefundCreditMicros),
       } : null;
     return { id: issue.id, orderId: issue.orderId, orderNumber: issue.orderNumber, title: issue.title,
       quantity: issue.quantity, capacityUnit: issue.capacityUnit,
-      meteredCredits: issue.meteredCreditMicros === null ? null : formatMicros(issue.meteredCreditMicros),
+      meteredCredits: issue.meteredCreditMicros === null ? null : formatCreditDisplayMicros(issue.meteredCreditMicros),
       kind: issue.kind, status: issue.status, description,
       descriptionDigest: issue.descriptionDigest, openedAt: issue.openedAt.toISOString(), outcome: issue.outcome,
       reason, reasonDigest: issue.reasonDigest, decidedAt: issue.decidedAt?.toISOString() ?? null, settlement };

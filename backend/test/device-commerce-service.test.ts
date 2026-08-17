@@ -18,7 +18,7 @@ const product: DeviceProduct = {
   title: 'NVIDIA DGX Spark', supplierDisplayName: '白鸽在线', supplierSubjectId: providerId,
   activationStatus: 'active', inventoryTotal: 200, inventoryReserved: 0, inventorySold: 0,
   listPriceCnyMicros: 40_750_000_000n, salePriceCnyMicros: 32_600_000_000n,
-  listUnitCreditMicros: 40_668_662_675n, unitCreditMicros: 32_534_930_140n,
+  listUnitCreditMicros: 40_668_660_000n, unitCreditMicros: 32_534_930_000n,
   discountBasisPoints: 8000, expectedShipDays: 90, specifications: { model: 'DGX Spark' },
 };
 

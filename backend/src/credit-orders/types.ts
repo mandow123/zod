@@ -1,3 +1,5 @@
+import { formatCreditCentMicros, quantizeCreditMicros } from '../credits/precision.js';
+
 export type CreditOrderStatus =
   | 'reserved' | 'confirmed' | 'provisioning' | 'ready' | 'in_service' | 'acceptance_pending' | 'accepted'
   | 'cancelled' | 'expired' | 'release_pending' | 'refund_pending' | 'refunded' | 'disputed' | 'closed';
@@ -38,11 +40,12 @@ export function parseCreditOrderQuantity(value: string) {
 
 export function totalCreditMicros(quantityScaled: bigint, unitCreditMicros: bigint) {
   if (quantityScaled <= 0n || unitCreditMicros <= 0n) throw new Error('positive quantity and unit credits are required');
-  return (quantityScaled * unitCreditMicros + 999_999n) / 1_000_000n;
+  const exactMicrosRoundedUp = (quantityScaled * unitCreditMicros + 999_999n) / 1_000_000n;
+  return quantizeCreditMicros(exactMicrosRoundedUp, 'ceil');
 }
 
 export function formatCreditMicros(value: bigint) {
-  return `${value / 1_000_000n}.${(value % 1_000_000n).toString().padStart(6, '0')}`;
+  return formatCreditCentMicros(value);
 }
 
 export const SUPPLIER_SETTLEMENT_HOLD_MILLISECONDS = 7 * 24 * 60 * 60 * 1_000;

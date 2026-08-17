@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createCreditPayout, type CreditBalance, type CreditPayout, type CreditPayoutProfile } from './api';
 import { ApiError } from './api-client';
-import { creditAmount, creditToCnyEstimate } from './format';
+import { creditAmount } from './format';
 import { isAmbiguousMutationFailure } from './mutation-recovery';
 import { colors } from './theme';
 
@@ -43,11 +43,11 @@ export function CreditPayoutSheet({ visible, balance, profile, onClose, onCreate
 
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><View style={styles.backdrop}><View style={styles.sheet}><View style={styles.handle} />
     <View style={styles.header}><View><Text style={styles.eyebrow}>供应方结算</Text><Text style={styles.title}>申请兑付</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>
-    <View style={styles.content}><View style={styles.balance}><Text style={styles.balanceLabel}>可兑付收益</Text><Text style={styles.balanceValue}>{balance ? creditAmount(balance.redeemableSupplierEarnings, true) : '—'}</Text><Text style={styles.balanceMeta}>冻结中 {balance ? creditAmount(balance.payoutFrozen, true) : '—'} · 1 卡时 = ¥1.002</Text></View>
+    <View style={styles.content}><View style={styles.balance}><Text style={styles.balanceLabel}>可兑付收益</Text><Text style={styles.balanceValue}>{balance ? creditAmount(balance.redeemableSupplierEarnings, true) : '—'}</Text><Text style={styles.balanceMeta}>冻结中 {balance ? creditAmount(balance.payoutFrozen, true) : '—'} KAI 卡时</Text></View>
       {!profileActive ? <View style={styles.warning}><Ionicons name="alert-circle-outline" size={18} color={colors.amber} /><Text style={styles.warningText}>{profile?.status === 'suspended' ? '收款账户已暂停，请联系平台处理。' : '收款主体尚待平台核验，激活前不能提交兑付。'}</Text></View> : null}
       {error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View> : null}
       <Text style={styles.label}>兑付卡时</Text><TextInput value={amount} onChangeText={(value) => { setAmount(value.replace(/[^0-9.]/gu, '')); setError(null); request.current = null; }} keyboardType="decimal-pad" placeholder="至少 1.00" placeholderTextColor={colors.subtle} style={styles.input} />
-      <Text style={styles.estimate}>预计公司付款：{valid ? `¥${creditToCnyEstimate(normalized)}` : '—'}</Text>
+      <Text style={styles.estimate}>{valid ? `本次申请 ${creditAmount(normalized)} KAI 卡时` : '请输入整分卡时'}</Text>
       <Pressable disabled={busy || !profileActive} onPress={() => void submit()} style={[styles.primary, (busy || !profileActive) && styles.disabled]}>{busy ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{profileActive ? '提交兑付申请' : '等待账户核验'}</Text>}</Pressable>
       <Text style={styles.footnote}>提交成功后卡时进入“兑付冻结”，公司付款成功后才完成核销；失败、拒绝或取消会原路退回可用余额。</Text>
     </View>

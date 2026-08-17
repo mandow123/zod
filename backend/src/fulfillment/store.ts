@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { Database } from '../database.js';
 import { PostgresSettlementFeeStore } from '../settlement-fees/store.js';
+import { KAI_CREDIT_CENT_MICROS, isCreditCentAligned } from '../credits/precision.js';
 import type { FulfillmentAttestation, FulfillmentRecord, SafeConnectionDescriptor } from './types.js';
 
 type FulfillmentRow = {
@@ -32,7 +33,7 @@ type IssueRow = {
 const issueColumns = `i.id,i.order_id,i.fulfillment_id,i.buyer_subject_id,i.kind,i.status,
   i.description_ciphertext,i.description_digest,i.opened_at,d.outcome,d.reason_ciphertext,d.reason_digest,
   COALESCE(d.metered_credit_micros,
-    CEIL(m.consumed_capacity_micros*o.unit_credit_micros::numeric/1000000)::bigint)::text AS metered_credit_micros,
+    (CEIL(m.consumed_capacity_micros*o.unit_credit_micros::numeric/10000000000)*10000)::bigint)::text AS metered_credit_micros,
   d.remedy_refund_credit_micros::text,d.provider_credit_micros::text,
   d.buyer_refund_credit_micros::text,d.decided_at,o.order_number,
   COALESCE(o.listing_snapshot->>'title','算力订单') AS title,o.quantity::text,o.capacity_unit`;
@@ -68,6 +69,14 @@ function map(row: FulfillmentRow): FulfillmentRecord {
     stoppedAt: row.stopped_at ? new Date(row.stopped_at) : null,
     failedAt: row.failed_at ? new Date(row.failed_at) : null, updatedAt: new Date(row.updated_at),
   };
+}
+
+function meteredCreditToCent(consumedCapacityMicros: bigint, unitCreditMicros: bigint) {
+  if (consumedCapacityMicros < 0n || unitCreditMicros <= 0n || !isCreditCentAligned(unitCreditMicros)) {
+    throw new Error('FULFILLMENT_CREDIT_INPUT_INVALID');
+  }
+  const denominator = 1_000_000n * KAI_CREDIT_CENT_MICROS;
+  return ((consumedCapacityMicros * unitCreditMicros + denominator - 1n) / denominator) * KAI_CREDIT_CENT_MICROS;
 }
 
 function bindingSnapshot(value: Record<string, unknown>): ComputeBindingSnapshot | null {
@@ -176,7 +185,7 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       LEFT JOIN compute_fulfillment_acceptances a ON a.fulfillment_id = f.id WHERE f.order_id = $1`, [orderId]);
     const meter = usage.rows[0];
     const consumedCreditMicros = meter
-      ? (BigInt(meter.consumed_capacity_micros) * BigInt(meter.unit_credit_micros) + 999_999n) / 1_000_000n : 0n;
+      ? meteredCreditToCent(BigInt(meter.consumed_capacity_micros), BigInt(meter.unit_credit_micros)) : 0n;
     return { orderExists: true, record: result.rows[0] ? map(result.rows[0]) : null, usage: meter ? {
       purchasedCapacityMicros: BigInt(meter.purchased_capacity_micros), capacityUnit: meter.capacity_unit,
       consumedCapacityMicros: BigInt(meter.consumed_capacity_micros),
@@ -509,7 +518,7 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const purchased = BigInt(order.rows[0].quantity_micros);
       if (consumed > purchased) throw new Error('FULFILLMENT_METER_EXCEEDS_PURCHASE');
       const total = BigInt(order.rows[0].total_credit_micros);
-      const captured = (consumed * BigInt(order.rows[0].unit_credit_micros) + 999_999n) / 1_000_000n;
+      const captured = meteredCreditToCent(consumed, BigInt(order.rows[0].unit_credit_micros));
       const refund = total - captured;
       const buyer = await this.buyerAccounts(client, row.buyer_subject_id);
       await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
@@ -769,11 +778,12 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
         status,listing_id,quantity::text FROM kai_credit_order_reservations WHERE order_id=$1 FOR UPDATE`, [input.orderId]);
       if (issue.status !== 'open' || fulfillment.rows[0]?.status !== 'stopped' || order.rows[0]?.status !== 'disputed'
         || held.rows[0]?.status !== 'secured' || !meter.rows[0]) return { status: 'invalid_state' as const };
-      const meteredCredit = (BigInt(meter.rows[0].consumed_capacity_micros) * BigInt(order.rows[0].unit_credit_micros)
-        + 999_999n) / 1_000_000n;
+      const meteredCredit = meteredCreditToCent(
+        BigInt(meter.rows[0].consumed_capacity_micros), BigInt(order.rows[0].unit_credit_micros),
+      );
       const remedy = input.outcome === 'full_refund' ? meteredCredit
         : input.outcome === 'reject_refund' ? 0n : input.remedyRefundCreditMicros;
-      if (remedy === null || remedy < 0n || remedy > meteredCredit
+      if (remedy === null || remedy < 0n || remedy > meteredCredit || !isCreditCentAligned(remedy)
         || (input.outcome === 'partial_refund' && (remedy === 0n || remedy === meteredCredit))) {
         return { status: 'refund_exceeds_metered' as const };
       }

@@ -3,6 +3,7 @@ import type { SubjectAccess } from '../subjects/types.js';
 import type { CreditLedgerStore, PostCreditTransactionInput } from './store.js';
 import { formatCreditAmount } from './types.js';
 import { formatCreditDisplayMicros } from './display.js';
+import { isCreditCentAligned } from './precision.js';
 
 export class CreditLedgerService {
   constructor(private readonly store: CreditLedgerStore, private readonly subjects: SubjectAccess) {}
@@ -19,14 +20,13 @@ export class CreditLedgerService {
     return {
       subjectId: subject.subjectId,
       unit: 'KAI_CREDIT',
-      precision: 6,
+      precision: 2,
       available: formatCreditAmount(available),
       reserved: formatCreditAmount(reserved),
       supplierReceivable: formatCreditAmount(receivable),
       payoutFrozen: formatCreditAmount(payoutFrozen),
       redeemableSupplierEarnings: formatCreditAmount(supplierEarnings),
       total: formatCreditAmount(available + reserved + receivable + supplierEarnings + payoutFrozen),
-      conversion: '1 KAI卡时 = ¥1.002',
     };
   }
 
@@ -45,6 +45,9 @@ export class CreditLedgerService {
   async post(input: PostCreditTransactionInput) {
     if (input.entries.length < 2) throw new Error('KAI_CREDIT_TRANSACTION_REQUIRES_TWO_ENTRIES');
     if (input.entries.some((entry) => entry.amountMicros === 0n)) throw new Error('KAI_CREDIT_ZERO_ENTRY');
+    if (input.entries.some((entry) => !isCreditCentAligned(entry.amountMicros))) {
+      throw new Error('KAI_CREDIT_CENT_ALIGNMENT_REQUIRED');
+    }
     if (new Set(input.entries.map((entry) => entry.accountId)).size !== input.entries.length) {
       throw new Error('KAI_CREDIT_DUPLICATE_ACCOUNT_ENTRY');
     }

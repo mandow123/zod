@@ -3,11 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { formatCreditDisplayMicros } from '../src/credits/display.js';
 
 describe('human-visible KAI credit copy', () => {
-  it('rounds only display copy to two decimals while leaving ledger micros untouched', () => {
-    expect(formatCreditDisplayMicros(26_027_944_112n)).toBe('26027.94');
-    expect(formatCreditDisplayMicros(5_205_588_822_400n)).toBe('5205588.82');
-    expect(formatCreditDisplayMicros(5_000n)).toBe('0.01');
-    expect(formatCreditDisplayMicros(-18_682_635n)).toBe('-18.68');
+  it('formats only cent-aligned card-hours and rejects hidden precision', () => {
+    expect(formatCreditDisplayMicros(26_027_940_000n)).toBe('26027.94');
+    expect(formatCreditDisplayMicros(5_205_588_820_000n)).toBe('5205588.82');
+    expect(formatCreditDisplayMicros(10_000n)).toBe('0.01');
+    expect(formatCreditDisplayMicros(-18_690_000n)).toBe('-18.69');
+    expect(() => formatCreditDisplayMicros(1n)).toThrow('KAI_CREDIT_CENT_ALIGNMENT_REQUIRED');
   });
 
   it('routes top-up, refund notifications and validation errors through the display formatter', async () => {

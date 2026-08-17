@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { creditMicrosFromCnyMicros, formatCnyMicros, formatCreditMicros } from '../src/listings/types.js';
+import { creditMicrosFromCnyMicros, formatCreditMicros } from '../src/listings/types.js';
+import { quantizeCreditMicros } from '../src/credits/precision.js';
 
 const SCALE = 1_000_000n;
 const SPARK_ORIGINAL_CNY_MICROS = 40_750_000_000n;
@@ -24,7 +25,6 @@ export type LocalE2EDemoListing = Readonly<{
   capacityUnit: '台' | 'GPU时';
   minimumQuantity: string;
   unitCredits: string;
-  referenceCny: string;
   status: 'active';
   startsAt: string;
   expiresAt: string;
@@ -34,7 +34,6 @@ export type LocalE2EDemoListing = Readonly<{
   }>;
   promotion: null | Readonly<{
     kind: 'percentage'; label: '限时8折'; discountPercent: 20;
-    originalReferenceCny: '40750.00'; discountedReferenceCny: '32600.00';
     originalUnitCredits: string; discountedUnitCredits: string;
     taxIncluded: true; startsAt: string; endsAt: string;
     priceEvidence: Readonly<{
@@ -53,7 +52,7 @@ function uuid(namespace: number, index: number) {
 }
 
 function creditsForQuantity(unitCreditMicros: bigint, quantity: bigint) {
-  return formatCreditMicros((unitCreditMicros * quantity + SCALE - 1n) / SCALE);
+  return formatCreditMicros(quantizeCreditMicros((unitCreditMicros * quantity + SCALE - 1n) / SCALE, 'ceil'));
 }
 
 export function buildLocalE2EDemoCatalog(
@@ -69,7 +68,7 @@ export function buildLocalE2EDemoCatalog(
   const products = ['H100 SXM5 98G', 'H200 SXM 141G', 'A100 80G', 'L40S 48G', 'RTX 4090 24G'];
   return Array.from({ length: 100 }, (_, index): LocalE2EDemoListing => {
     const spark = index === 0;
-    const unitCreditMicros = spark ? sparkUnit : 20_000_000n + BigInt(index) * 125_000n;
+    const unitCreditMicros = spark ? sparkUnit : 20_000_000n + BigInt(index) * 130_000n;
     const capacity = spark ? 200n : 80n + BigInt(index % 20);
     const capacityText = `${capacity}.000000`;
     const product = spark ? 'NVIDIA Spark' : products[index % products.length]!;
@@ -86,11 +85,10 @@ export function buildLocalE2EDemoCatalog(
       capacityTotal: capacityText, capacityReserved: '0.000000', capacitySold: '0.000000',
       capacityAvailable: capacityText, capacityUnit: spark ? '台' : 'GPU时', minimumQuantity: '1.000000',
       unitCredits: formatCreditMicros(unitCreditMicros),
-      referenceCny: spark ? '32600.000000' : formatCnyMicros((unitCreditMicros * 1_002_000n) / SCALE), status: 'active', startsAt, expiresAt,
+      status: 'active', startsAt, expiresAt,
       demo: { mode: 'local_e2e', label: '演示资源', payment: 'sandbox_only', purchasable: false, simulatedAudit: true },
       promotion: spark ? {
         kind: 'percentage', label: '限时8折', discountPercent: 20,
-        originalReferenceCny: '40750.00', discountedReferenceCny: '32600.00',
         originalUnitCredits: formatCreditMicros(sparkOriginalUnit), discountedUnitCredits: formatCreditMicros(sparkUnit),
         taxIncluded: true, startsAt, endsAt: expiresAt,
         priceEvidence: {

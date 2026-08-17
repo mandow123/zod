@@ -32,7 +32,7 @@ function adapter(pglite: PGlite): Database {
 }
 
 async function migrate(pglite: PGlite) {
-  for (const name of ['0001_cloudpay_ledger.sql', '0003_market_reservations.sql', '0012_mobile_publish.sql', '0015_credit_listing_audits.sql', '0016_trading_subjects.sql', '0017_offer_wizard_drafts.sql', '0039_compute_node_readiness.sql']) {
+  for (const name of ['0001_cloudpay_ledger.sql', '0003_market_reservations.sql', '0012_mobile_publish.sql', '0015_credit_listing_audits.sql', '0016_trading_subjects.sql', '0017_offer_wizard_drafts.sql', '0039_compute_node_readiness.sql', '0054_offer_card_hour_price.sql']) {
     await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   }
 }
@@ -270,7 +270,7 @@ describe('same-account trading subjects', () => {
         native_unit, minimum_quantity, suggested_price_cny_micros, status, approved_reference_cny_micros,
         approved_unit_credit_micros, conversion_cny_micros_per_credit, audit_valid_until, approved_at)
        VALUES ($1, $2, $3, 'workspace-expiry-00001', 'digest', 'H100 独享', 'dedicated', 'GPU时', 1, 31200000,
-        'approved', 31200000, 31137725, 1002000, now() - interval '1 minute', now() - interval '1 day')`,
+        'approved', 31200000, 31140000, 1002000, now() - interval '1 minute', now() - interval '1 day')`,
       [offerId, supplierId, resourceId],
     );
     const accounts = { recordAudit: async () => undefined } as unknown as AccountStore;
@@ -317,7 +317,7 @@ describe('same-account trading subjects', () => {
         native_unit, minimum_quantity, suggested_price_cny_micros, status, submission_version, approved_reference_cny_micros,
         approved_unit_credit_micros, conversion_cny_micros_per_credit, audit_valid_until, submitted_at, approved_at)
        VALUES ($1, $2, $3, 'workspace-listing-0001', 'digest', 'H100 独享', 'dedicated', 'GPU时', 1, 31200000,
-        'approved', 1, 31200000, 31137725, 1002000, now() + interval '30 days', now(), now())`,
+        'approved', 1, 31200000, 31140000, 1002000, now() + interval '30 days', now(), now())`,
       [offerId, supplierId, resourceId],
     );
     await database.query(
@@ -326,7 +326,7 @@ describe('same-account trading subjects', () => {
         conversion_cny_micros_per_credit, approved_unit_credit_micros)
        VALUES
         ($1, $3, 1, 'resource', 'approved', $4, '材料完整', '资源验真通过', 'resource-digest', now() + interval '30 days', now(), NULL, NULL, NULL),
-        ($2, $3, 1, 'price', 'approved', $4, '价格合理', '价格审核通过', 'price-digest', now() + interval '30 days', now(), 31200000, 1002000, 31137725)`,
+        ($2, $3, 1, 'price', 'approved', $4, '价格合理', '价格审核通过', 'price-digest', now() + interval '30 days', now(), 31200000, 1002000, 31140000)`,
       [resourceAuditId, priceAuditId, offerId, userId],
     );
     const service = new SubjectService(
@@ -343,7 +343,7 @@ describe('same-account trading subjects', () => {
         resource_audit_id, price_audit_id, capacity_total, capacity_unit, minimum_quantity, unit_credit_micros,
         reference_cny_micros, conversion_cny_micros_per_credit, status, starts_at, expires_at, audit_snapshot, published_by)
        VALUES ($1, $2, $3, $4, 'workspace-listing-publish-01', 'listing-digest', $5, $6, 8, 'GPU时', 1,
-        31137725, 31200000, 1002000, 'active', now(), now() + interval '7 days', '{}', $7)`,
+        31140000, 31200000, 1002000, 'active', now(), now() + interval '7 days', '{}', $7)`,
       [listingId, offerId, resourceId, supplierId, resourceAuditId, priceAuditId, userId],
     );
     expect(await service.providerBootstrap({ userId, sessionId: 'supplier-session', role: 'supplier' })).toMatchObject({

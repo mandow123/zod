@@ -86,7 +86,7 @@ async function fixture() {
       approved_reference_cny_micros,approved_unit_credit_micros,conversion_cny_micros_per_credit,
       audit_valid_until,submitted_at,approved_at)
     VALUES ($1,$2,$3,'fee-offer-request-0001','fee-offer-digest-0001',1,'独享 H100','dedicated','GPU时',1,
-      31200000,'approved',31200000,31137725,1002000,$4,now(),now())`,
+      31200000,'approved',31200000,31140000,1002000,$4,now(),now())`,
   [offerId, supplierSubjectId, resourceId, validUntil]);
   for (const audit of [{ id: resourceAuditId, kind: 'resource', reviewer: operatorOne },
     { id: priceAuditId, kind: 'price', reviewer: operatorTwo }]) {
@@ -95,7 +95,7 @@ async function fixture() {
         conversion_cny_micros_per_credit,approved_unit_credit_micros,valid_until,decided_at)
       VALUES ($1,$2,1,$3,'approved',$4,'通过','材料一致',$5,$6,
         CASE WHEN $3='price' THEN 31200000 END,CASE WHEN $3='price' THEN 1002000 END,
-        CASE WHEN $3='price' THEN 31137725 END,$7,now())`,
+        CASE WHEN $3='price' THEN 31140000 END,$7,now())`,
     [audit.id, offerId, audit.kind, audit.reviewer, `sha256:${audit.kind === 'price' ? 'b'.repeat(64) : 'c'.repeat(64)}`,
       `${audit.kind}-decision`, validUntil]);
   }
@@ -103,7 +103,7 @@ async function fixture() {
       payload_digest,resource_audit_id,price_audit_id,capacity_total,capacity_unit,minimum_quantity,
       unit_credit_micros,reference_cny_micros,conversion_cny_micros_per_credit,starts_at,expires_at,audit_snapshot,published_by)
     VALUES ($1,$2,$3,$4,'fee-listing-request-01','fee-listing-digest',$5,$6,100,'GPU时',1,
-      31137725,31200000,1002000,now()-interval '1 minute',now()+interval '7 days',$7::jsonb,$8)`,
+      31140000,31200000,1002000,now()-interval '1 minute',now()+interval '7 days',$7::jsonb,$8)`,
   [listingId, offerId, resourceId, supplierSubjectId, resourceAuditId, priceAuditId,
     JSON.stringify({ resourceAuditId, priceAuditId, validUntil: validUntil.toISOString() }), supplierUserId]);
   const ledger = new PostgresCreditLedgerStore(database);
@@ -121,12 +121,17 @@ async function fixture() {
     listingId, orders: new PostgresCreditOrderStore(database), fees: new PostgresSettlementFeeStore(database) };
 }
 
-async function createAcceptedOrder(f: Awaited<ReturnType<typeof fixture>>, suffix: string) {
+async function createAcceptedOrder(
+  f: Awaited<ReturnType<typeof fixture>>,
+  suffix: string,
+  quantity = '2.500000',
+  quantityScaled = 2_500_000n,
+) {
   const now = new Date();
   const created = await f.orders.createReservation({
     id: randomUUID(), orderNumber: `KC20260814${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`,
     buyerSubjectId: f.buyerSubjectId, userId: f.buyerUserId, listingId: f.listingId,
-    quantity: '2.500000', quantityScaled: 2_500_000n, clientRequestId: `fee-order-${suffix}-000001`,
+    quantity, quantityScaled, clientRequestId: `fee-order-${suffix}-000001`,
     payloadDigest: `sha256:${suffix.padEnd(64, '0').slice(0, 64)}`, expiresAt: new Date(now.getTime() + 1_800_000),
     now, requestId: `fee-request-${suffix}`, ipHash: `sha256:${'8'.repeat(64)}`,
     computeFulfillmentAvailable: true,
@@ -301,6 +306,61 @@ describe('KAI credit settlement fee store', () => {
       idempotencyKey: 'compute-fee-reverse-over', payloadDigest: `sha256:${'7'.repeat(64)}`,
       assessedAt: new Date('2026-09-04T00:00:00.000+08:00'),
     })).rejects.toThrow('FEE_REVERSAL_PERIOD_VOLUME_INVALID');
+    await f.database.close();
+  }, 30_000);
+
+  it('posts and reverses a legal two-leg settlement when the rounded service fee is zero', async () => {
+    const f = await fixture(); const schedule = await activateFixtureSchedule(f);
+    // This focused fixture intentionally stops at the legacy fee schema. The
+    // full-migration device and cent-contract suites exercise the 0055 trigger;
+    // here we isolate the store's two-leg posting and reversal behavior.
+    await f.database.query(`ALTER TABLE kai_credit_fee_assessments
+      DROP CONSTRAINT kai_credit_fee_assessments_check3`);
+    await f.database.query(`ALTER TABLE kai_credit_fee_assessments ADD CONSTRAINT
+      kai_credit_fee_assessments_ledger_required CHECK (ledger_transaction_id IS NOT NULL)`);
+    await f.database.query(`ALTER TABLE kai_credit_fee_assessments
+      DISABLE TRIGGER kai_credit_fee_assessments_validate`);
+    await f.database.query(`UPDATE credit_market_listings SET unit_credit_micros=10000,
+      reference_cny_micros=10020 WHERE id=$1`, [f.listingId]);
+    const order = await createAcceptedOrder(f, 'zero-fee', '1.000000', 1_000_000n);
+    expect(order.totalCreditMicros).toBe(10_000n);
+    await replaceGrandfatherWithLockedPolicy(f.database, order.id, schedule);
+    const assessed = await f.fees.assessSettlement({
+      id: randomUUID(), supplierSubjectId: f.supplierSubjectId, orderId: order.id,
+      sourceKind: 'compute_settlement', sourceId: 'zero-fee-settlement-01',
+      grossCreditMicros: order.totalCreditMicros, idempotencyOwner: `subject:${f.supplierSubjectId}`,
+      idempotencyKey: 'zero-fee-assess-0001', payloadDigest: `sha256:${'a'.repeat(64)}`,
+      assessedAt: new Date('2026-08-20T00:00:00.000+08:00'),
+    });
+    expect(assessed.status).toBe('created');
+    if (assessed.status !== 'created') throw new Error('zero-fee assessment missing');
+    expect(assessed.plan).toMatchObject({
+      grossCreditMicros: 10_000n, serviceFeeCreditMicros: 0n, netCreditMicros: 10_000n,
+    });
+    const assessedLedger = await f.database.query<{ entries: string; total: string }>(`SELECT
+        count(e.id)::text AS entries,sum(e.amount_micros)::text AS total
+      FROM kai_credit_entries e WHERE e.transaction_id=$1`, [assessed.plan.ledgerTransactionId]);
+    expect(assessedLedger.rows[0]).toEqual({ entries: '2', total: '0' });
+
+    const reversed = await f.fees.reverseSettlement({
+      id: randomUUID(), supplierSubjectId: f.supplierSubjectId, orderId: order.id,
+      originalAssessmentId: assessed.assessmentId, sourceId: 'zero-fee-refund-0001',
+      grossCreditMicros: order.totalCreditMicros, idempotencyOwner: `subject:${f.supplierSubjectId}`,
+      idempotencyKey: 'zero-fee-reverse-001', payloadDigest: `sha256:${'b'.repeat(64)}`,
+      assessedAt: new Date('2026-08-21T00:00:00.000+08:00'),
+    });
+    expect(reversed.status).toBe('created');
+    if (reversed.status !== 'created') throw new Error('zero-fee reversal missing');
+    expect(reversed.plan).toMatchObject({
+      grossCreditMicros: 10_000n, serviceFeeCreditMicros: 0n, netCreditMicros: 10_000n,
+    });
+    const reversedLedger = await f.database.query<{ entries: string; total: string }>(`SELECT
+        count(e.id)::text AS entries,sum(e.amount_micros)::text AS total
+      FROM kai_credit_entries e WHERE e.transaction_id=$1`, [reversed.plan.ledgerTransactionId]);
+    expect(reversedLedger.rows[0]).toEqual({ entries: '2', total: '0' });
+    expect((await balances(f.database, f.supplierSubjectId)).supplier_earnings_available).toBe(0n);
+    expect((await f.database.query<{ net: string }>(`SELECT net_settled_credit_micros::text AS net
+      FROM kai_credit_supplier_fee_periods WHERE supplier_subject_id=$1`, [f.supplierSubjectId])).rows[0]?.net).toBe('0');
     await f.database.close();
   }, 30_000);
 

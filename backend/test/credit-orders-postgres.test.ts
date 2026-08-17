@@ -85,7 +85,7 @@ async function fixture(capacity = '10') {
       status, approved_reference_cny_micros, approved_unit_credit_micros, conversion_cny_micros_per_credit,
       audit_valid_until, submitted_at, approved_at)
     VALUES ($1, $2, $3, 'order-offer-request-0001', 'order-offer-digest', 1, '独享 H100 80GB', 'dedicated',
-      'GPU时', 1, 31200000, 'approved', 31200000, 31137725, 1002000, $4, now(), now())`,
+      'GPU时', 1, 31200000, 'approved', 31200000, 31140000, 1002000, $4, now(), now())`,
   [offerId, supplierSubjectId, resourceId, validUntil]);
   for (const audit of [
     { id: resourceAuditId, kind: 'resource', reviewer: reviewerOne },
@@ -96,14 +96,14 @@ async function fixture(capacity = '10') {
     VALUES ($1, $2, 1, $3, 'approved', $4, '通过', '材料与实测一致', $5, $6,
       CASE WHEN $3 = 'price' THEN 31200000 ELSE NULL END,
       CASE WHEN $3 = 'price' THEN 1002000 ELSE NULL END,
-      CASE WHEN $3 = 'price' THEN 31137725 ELSE NULL END, $7, now())`,
+      CASE WHEN $3 = 'price' THEN 31140000 ELSE NULL END, $7, now())`,
   [audit.id, offerId, audit.kind, audit.reviewer, `sha256:${audit.kind === 'price' ? 'b'.repeat(64) : 'c'.repeat(64)}`, `${audit.kind}-decision`, validUntil]);
   await database.query(`INSERT INTO credit_market_listings(id, offer_id, resource_id, supplier_id,
       client_request_id, payload_digest, resource_audit_id, price_audit_id, capacity_total, capacity_unit,
       minimum_quantity, unit_credit_micros, reference_cny_micros, conversion_cny_micros_per_credit,
       starts_at, expires_at, audit_snapshot, published_by)
     VALUES ($1, $2, $3, $4, 'order-listing-request-01', 'order-listing-digest', $5, $6, $7, 'GPU时',
-      1, 31137725, 31200000, 1002000, now() - interval '1 minute', now() + interval '7 days', $8::jsonb, $9)`,
+      1, 31140000, 31200000, 1002000, now() - interval '1 minute', now() + interval '7 days', $8::jsonb, $9)`,
   [listingId, offerId, resourceId, supplierSubjectId, resourceAuditId, priceAuditId, capacity,
     JSON.stringify({ resourceAuditId, priceAuditId, validUntil: validUntil.toISOString() }), supplierUserId]);
   return {
@@ -258,12 +258,12 @@ describe('KAI credit order reservations', () => {
     const f = await fixture(); await fund(f.database, f.buyerSubjectId, 200_000_000n);
     const input = orderInput(f, { key: 'credit-order-idempotent-001' });
     const created = await f.store.createReservation(input);
-    expect(created).toMatchObject({ status: 'created', order: { quantity: '2.500000', totalCreditMicros: 77_844_313n } });
+    expect(created).toMatchObject({ status: 'created', order: { quantity: '2.500000', totalCreditMicros: 77_850_000n } });
     const replayed = await f.store.createReservation({ ...input, id: randomUUID(), orderNumber: 'KC20260812REPLAYED000001' });
     expect(replayed).toMatchObject({ status: 'replayed', order: { id: created.status === 'created' ? created.order.id : '' } });
     expect(await f.store.createReservation({ ...input, id: randomUUID(), quantity: '3.000000', quantityScaled: 3_000_000n,
       payloadDigest: 'sha512:different-order-payload' })).toEqual({ status: 'conflict' });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 122_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 122_150_000n, reserved: 77_850_000n });
     const listing = await f.database.query<{ capacity_reserved: string }>(`SELECT capacity_reserved::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
     expect(listing.rows[0]?.capacity_reserved).toBe('2.500000');
     expect(await f.store.listForSubject(f.buyerSubjectId, 20)).toHaveLength(1);
@@ -314,7 +314,7 @@ describe('KAI credit order reservations', () => {
     expect(attempts.filter((result) => result.status === 'created')).toHaveLength(1);
     expect(attempts.filter((result) => ['listing_unavailable', 'insufficient_credits'].includes(result.status))).toHaveLength(1);
     expect(await f.store.listForSubject(f.buyerSubjectId, 20)).toHaveLength(1);
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     const listing = await f.database.query<{ capacity_reserved: string }>(`SELECT capacity_reserved::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
     expect(listing.rows[0]?.capacity_reserved).toBe('2.500000');
     await f.database.close();
@@ -396,7 +396,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.cancel(actionInput(f, created.order.id, { action: 'cancel', key: 'buyer-cancel-after-confirm' })))
       .toEqual({ status: 'invalid_state' });
     expect(await f.store.expireReservations(new Date(Date.now() + 86_400_000), 50)).toBe(0);
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     const reservation = await f.database.query<{ status: string; secured_by_user_id: string | null }>(`SELECT status, secured_by_user_id
       FROM kai_credit_order_reservations WHERE order_id = $1`, [created.order.id]);
     expect(reservation.rows[0]).toEqual({ status: 'secured', secured_by_user_id: f.supplierUserId });
@@ -442,7 +442,7 @@ describe('KAI credit order reservations', () => {
     const balance = await balances(f.database, f.buyerSubjectId);
     const listing = await f.database.query<{ capacity_reserved: string }>(`SELECT capacity_reserved::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
     if (final?.status === 'confirmed') {
-      expect(balance).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+      expect(balance).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
       expect(listing.rows[0]?.capacity_reserved).toBe('2.500000');
     } else {
       expect(balance).toMatchObject({ available: 100_000_000n, reserved: 0n });
@@ -491,7 +491,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.markDeliveryReady(ready)).toMatchObject({
       status: 'replayed', order: { status: 'acceptance_pending' },
     });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     const accepted = {
       ...actionInput(f, created.order.id, { action: 'accept', key: 'buyer-accept-delivery-001' }),
@@ -499,8 +499,8 @@ describe('KAI credit order reservations', () => {
     };
     expect(await f.store.accept(accepted)).toMatchObject({ status: 'accepted', order: { status: 'accepted' } });
     expect(await f.store.accept(accepted)).toMatchObject({ status: 'replayed', order: { status: 'accepted' } });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 0n });
-    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 0n });
+    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_850_000n });
     const listing = await f.database.query<{ capacity_reserved: string; capacity_sold: string }>(`SELECT
       capacity_reserved::text, capacity_sold::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
     expect(listing.rows[0]).toEqual({ capacity_reserved: '0.000000', capacity_sold: '2.500000' });
@@ -561,7 +561,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.accept({
       ...actionInput(f, created.order.id, { action: 'accept', key: 'buyer-accept-after-issue01' }), evidenceDigest: null,
     })).toEqual({ status: 'invalid_state' });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     const listing = await f.database.query<{ capacity_reserved: string; capacity_sold: string }>(`SELECT
       capacity_reserved::text, capacity_sold::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
@@ -602,7 +602,7 @@ describe('KAI credit order reservations', () => {
     const startRework = actionInput(f, created.order.id, { key: 'provider-start-rework002', action: 'start_rework' });
     expect(await f.store.startRework(startRework)).toMatchObject({ status: 'provisioning', order: { status: 'provisioning' } });
     expect(await f.store.startRework(startRework)).toMatchObject({ status: 'replayed', order: { status: 'provisioning' } });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 77_850_000n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     const secondPlaintext = JSON.stringify({ endpoint: '10.0.0.9', password: 'second-secret' });
     await f.store.markDeliveryReady({
@@ -640,7 +640,7 @@ describe('KAI credit order reservations', () => {
       FROM kai_credit_order_acceptances WHERE order_id = $1`, [created.order.id]);
     expect(acceptance.rows[0]?.delivery_attempt_id).toBe(attempts.rows[2]?.id);
     expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 0n });
-    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_844_313n });
+    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_850_000n });
     const issues = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_order_delivery_issues WHERE order_id = $1`, [created.order.id]);
     expect(issues.rows[0]?.count).toBe('2');
     await f.database.close();
@@ -680,7 +680,7 @@ describe('KAI credit order reservations', () => {
       WHERE scope = 'CREDIT_ORDER_MUTUAL_REFUND' AND reference_id = $1`, [created.order.id]);
     expect(transactions.rows[0]?.count).toBe('1');
     const refund = await f.store.mutualRefundForSubject(f.buyerSubjectId, created.order.id);
-    expect(refund).toMatchObject({ status: 'succeeded', creditMicros: 77_844_313n, order: { status: 'refunded' } });
+    expect(refund).toMatchObject({ status: 'succeeded', creditMicros: 77_850_000n, order: { status: 'refunded' } });
     expect(await f.store.mutualRefundForSubject(f.otherSubjectId, created.order.id)).toBeNull();
     const attempts = await f.database.query<{ status: string }>(`SELECT status FROM kai_credit_order_deliveries WHERE order_id = $1`, [created.order.id]);
     expect(attempts.rows[0]?.status).toBe('refunded');
@@ -696,7 +696,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.approveMutualRefund(actionInput(f, created.order.id, {
       action: 'approve_refund', key: 'provider-refund-invalid01',
     }))).toEqual({ status: 'invalid_state' });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     await f.database.close();
   });
 
@@ -729,9 +729,9 @@ describe('KAI credit order reservations', () => {
     ]));
     if (final?.status === 'accepted') {
       expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 0n });
-      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_844_313n });
+      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_850_000n });
     } else {
-      expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 77_844_313n });
+      expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ reserved: 77_850_000n });
       expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     }
     await f.database.close();
@@ -754,18 +754,18 @@ describe('KAI credit order reservations', () => {
     await expect(f.database.query(`UPDATE kai_credit_orders SET status = 'closed' WHERE id = $1`, [orderId]))
       .rejects.toThrow(/requires supplier settlement/u);
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 0n, supplier_receivable: 77_844_313n,
+      available: 0n, supplier_receivable: 77_850_000n,
     });
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'settled', order: { status: 'closed' } });
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'replayed', order: { status: 'closed' } });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
       WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
     expect(transactions.rows[0]?.count).toBe('1');
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, orderId)).toMatchObject({
-      status: 'succeeded', creditMicros: 77_844_313n, triggeredBy: 'provider',
+      status: 'succeeded', creditMicros: 77_850_000n, triggeredBy: 'provider',
       acceptedAt, availableAt: dueAt, settledAt: dueAt, order: { status: 'closed' },
     });
     expect(await f.store.supplierSettlementForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'succeeded' });
@@ -791,7 +791,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.getForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({ status: 'closed' });
     expect(await f.store.getForSubject(f.supplierSubjectId, newerOrderId)).toMatchObject({ status: 'accepted' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_844_313n, supplier_receivable: 77_844_313n,
+      supplier_earnings_available: 77_850_000n, supplier_receivable: 77_850_000n,
     });
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({
       triggeredBy: 'system', settledAt: now,
@@ -819,7 +819,7 @@ describe('KAI credit order reservations', () => {
     expect([0, 1]).toContain(automated);
     expect(await f.store.getForSubject(f.supplierSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
       WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
@@ -844,7 +844,7 @@ describe('KAI credit order reservations', () => {
     const pending = await f.store.listPendingDisputeAdjudications(10);
     expect(pending).toHaveLength(1);
     expect(pending[0]).toMatchObject({
-      order: { id: orderId, totalCreditMicros: 77_844_313n }, requestedResolution: 'refund',
+      order: { id: orderId, totalCreditMicros: 77_850_000n }, requestedResolution: 'refund',
       deliveryAttemptNumber: 1,
     });
     expect(await f.store.disputeAdjudicationForSubject(f.otherSubjectId, orderId)).toBeNull();
@@ -868,7 +868,7 @@ describe('KAI credit order reservations', () => {
       WHERE scope = 'CREDIT_ORDER_ADJUDICATED_REFUND' AND reference_id = $1`, [orderId]);
     expect(transactions.rows[0]?.count).toBe('1');
     expect(await f.store.disputeAdjudicationForSubject(f.buyerSubjectId, orderId)).toMatchObject({
-      status: 'resolved', outcome: 'full_refund', creditMicros: 77_844_313n, decidedAt: now,
+      status: 'resolved', outcome: 'full_refund', creditMicros: 77_850_000n, decidedAt: now,
       order: { status: 'refunded' },
     });
     await expect(f.database.query(`UPDATE kai_credit_order_dispute_decisions SET credit_micros = 1 WHERE order_id = $1`,
@@ -897,7 +897,7 @@ describe('KAI credit order reservations', () => {
     });
     await expect(f.database.query(`UPDATE kai_credit_orders SET status = 'disputed' WHERE id = $1`, [orderId]))
       .rejects.toThrow(/requires active delivery issue/u);
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 77_844_313n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     const listing = await f.database.query<{ capacity_reserved: string; capacity_sold: string }>(`SELECT
       capacity_reserved::text, capacity_sold::text FROM credit_market_listings WHERE id = $1`, [f.listingId]);
@@ -945,7 +945,7 @@ describe('KAI credit order reservations', () => {
         action: 'request_post_acceptance_refund', key: 'buyer-aftercare-request01', now: requestedAt,
       }),
       descriptionCiphertext: encryptPii(JSON.stringify({ description }), Buffer.alloc(32, 7).toString('base64')),
-      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_844_313n,
+      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_850_000n,
     };
     expect(await f.store.requestPostAcceptanceRefund(request)).toMatchObject({
       status: 'aftercare_pending', order: { status: 'accepted' },
@@ -959,7 +959,7 @@ describe('KAI credit order reservations', () => {
       action: 'settle', key: 'provider-settle-aftercare01', now: dueAt,
     }))).toEqual({ status: 'invalid_state' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 0n, supplier_receivable: 77_844_313n,
+      available: 0n, supplier_receivable: 77_850_000n,
     });
     const approvedAt = new Date('2026-08-08T01:00:00.000Z');
     const approval = actionInput(f, orderId, {
@@ -982,7 +982,7 @@ describe('KAI credit order reservations', () => {
       WHERE scope = 'CREDIT_ORDER_POST_ACCEPT_REFUND' AND reference_id = $1`, [orderId]);
     expect(refunds.rows[0]?.count).toBe('1');
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toMatchObject({
-      status: 'succeeded', descriptionDigest: request.descriptionDigest, creditMicros: 77_844_313n,
+      status: 'succeeded', descriptionDigest: request.descriptionDigest, creditMicros: 77_850_000n,
       requestedAt, resolvedAt: approvedAt, order: { status: 'refunded' },
     });
     expect(await f.store.postAcceptanceRefundForSubject(f.otherSubjectId, orderId)).toBeNull();
@@ -1003,10 +1003,10 @@ describe('KAI credit order reservations', () => {
         now: new Date('2026-08-08T00:00:00.000Z'),
       }),
       descriptionCiphertext: encryptPii(JSON.stringify({ description }), Buffer.alloc(32, 7).toString('base64')),
-      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_844_313n,
+      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_850_000n,
     })).toEqual({ status: 'invalid_state' });
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toBeNull();
-    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_844_313n });
+    expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 77_850_000n });
     await f.database.close();
   });
 
@@ -1027,9 +1027,9 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.approvePostAcceptanceRefund(actionInput(f, orderId, {
       action: 'approve_post_acceptance_refund', key: 'provider-partial-remedy01', now: approvedAt,
     }))).toMatchObject({ status: 'refunded', order: { status: 'accepted' } });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 42_155_687n, reserved: 0n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 42_150_000n, reserved: 0n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      available: 0n, supplier_receivable: 57_844_313n,
+      available: 0n, supplier_receivable: 57_850_000n,
     });
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toMatchObject({
       status: 'succeeded', creditMicros, order: { status: 'accepted' },
@@ -1037,10 +1037,10 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleDueSupplierOrders(new Date('2026-08-08T00:00:00.000Z'), 50)).toBe(1);
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 57_844_313n, supplier_receivable: 0n,
+      supplier_earnings_available: 57_850_000n, supplier_receivable: 0n,
     });
     const settlement = await f.store.supplierSettlementForSubject(f.supplierSubjectId, orderId);
-    expect(settlement).toMatchObject({ creditMicros: 57_844_313n, status: 'succeeded' });
+    expect(settlement).toMatchObject({ creditMicros: 57_850_000n, status: 'succeeded' });
     await f.database.close();
   });
 
@@ -1054,7 +1054,7 @@ describe('KAI credit order reservations', () => {
     await f.store.requestPostAcceptanceRefund({
       ...actionInput(f, orderId, { action: 'request_post_acceptance_refund', key: 'aftercare-contest-request1', now: requestedAt }),
       descriptionCiphertext: encryptPii(JSON.stringify({ description }), Buffer.alloc(32, 7).toString('base64')),
-      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_844_313n,
+      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_850_000n,
     });
     const response = '资源交付与审核规格一致，附带运行记录，请平台核对。';
     const contestedAt = new Date('2026-08-02T01:00:00.000Z');
@@ -1110,7 +1110,7 @@ describe('KAI credit order reservations', () => {
     await f.store.requestPostAcceptanceRefund({
       ...actionInput(f, orderId, { action: 'request_post_acceptance_refund', key: 'aftercare-timeout-request1', now: requestedAt }),
       descriptionCiphertext: encryptPii(JSON.stringify({ description }), Buffer.alloc(32, 7).toString('base64')),
-      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_844_313n,
+      descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_850_000n,
     });
     expect(await f.store.escalatePostAcceptanceRefund(actionInput(f, orderId, {
       action: 'escalate_post_acceptance_refund', key: 'buyer-aftercare-too-early1',
@@ -1131,9 +1131,9 @@ describe('KAI credit order reservations', () => {
     })).toMatchObject({ status: 'decided', outcome: 'reject_refund', order: { status: 'accepted' } });
     expect(await f.store.settleDueSupplierOrders(new Date('2026-08-08T00:00:00.000Z'), 50)).toBe(1);
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
-    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_155_687n, reserved: 0n });
+    expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 0n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_844_313n, supplier_receivable: 0n });
+      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n });
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toMatchObject({
       status: 'rejected', escalatedBySide: 'buyer', outcome: 'reject_refund',
     });
@@ -1154,7 +1154,7 @@ describe('KAI credit order reservations', () => {
           now: new Date(boundary.getTime() - 1),
         }),
         descriptionCiphertext: encryptPii(JSON.stringify({ description }), Buffer.alloc(32, 7).toString('base64')),
-        descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_844_313n,
+        descriptionDigest: secretHash(description, 'd'.repeat(32)), creditMicros: 77_850_000n,
       }),
       f.store.settleSupplier(actionInput(f, orderId, {
         action: 'settle', key: 'provider-settle-aftercare-race', now: boundary,
@@ -1165,12 +1165,12 @@ describe('KAI credit order reservations', () => {
     if (final?.status === 'accepted') {
       expect(request.status).toBe('aftercare_pending');
       expect(settlement.status).toBe('invalid_state');
-      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: 0n, supplier_receivable: 77_844_313n });
+      expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ available: 0n, supplier_receivable: 77_850_000n });
     } else {
       expect(request.status).toBe('invalid_state');
       expect(['settled', 'replayed']).toContain(settlement.status);
       expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-        supplier_earnings_available: 77_844_313n, supplier_receivable: 0n });
+        supplier_earnings_available: 77_850_000n, supplier_receivable: 0n });
     }
     const recordCount = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM
       kai_credit_order_post_acceptance_refunds WHERE order_id = $1`, [orderId]);

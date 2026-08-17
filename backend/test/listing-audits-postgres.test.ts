@@ -4,9 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { PGlite, type Results, type Transaction } from '@electric-sql/pglite';
 import type { PoolClient } from 'pg';
 import { describe, expect, it } from 'vitest';
+import type { AccountStore } from '../src/account/store.js';
+import { loadConfig } from '../src/config.js';
 import type { Database } from '../src/database.js';
+import { ListingAuditService } from '../src/listings/service.js';
 import { PostgresListingAuditStore } from '../src/listings/store.js';
 import { creditMicrosFromCnyMicros, KAI_CNY_MICROS_PER_CREDIT } from '../src/listings/types.js';
+import type { SubjectAccess } from '../src/subjects/types.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -26,7 +30,7 @@ function adapter(pglite: PGlite): Database {
 }
 
 async function migrate(pglite: PGlite) {
-  for (const name of ['0001_cloudpay_ledger.sql', '0003_market_reservations.sql', '0012_mobile_publish.sql', '0015_credit_listing_audits.sql', '0016_trading_subjects.sql', '0017_offer_wizard_drafts.sql', '0021_offer_revision_drafts.sql', '0039_compute_node_readiness.sql']) {
+  for (const name of ['0001_cloudpay_ledger.sql', '0003_market_reservations.sql', '0012_mobile_publish.sql', '0015_credit_listing_audits.sql', '0016_trading_subjects.sql', '0017_offer_wizard_drafts.sql', '0021_offer_revision_drafts.sql', '0039_compute_node_readiness.sql', '0054_offer_card_hour_price.sql']) {
     await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   }
 }
@@ -73,7 +77,8 @@ describe('credit listing double-audit workflow', () => {
       payloadDigest: 'offer-digest-a', title: '独享 H100 80GB', serviceMode: 'dedicated' as const,
       nativeUnit: 'GPU时', minimumQuantity: '1', sla: { availability: '99.9%' },
       deliveryTerms: { mode: 'ssh' }, acceptanceTerms: { test: 'nvidia-smi' }, refundTerms: { outage: true },
-      cleanupTerms: { wipe: true }, suggestedPriceCnyMicros: 31_200_000n,
+      cleanupTerms: { wipe: true }, suggestedUnitCreditMicros: creditMicrosFromCnyMicros(31_200_000n),
+      suggestedPriceCnyMicros: 31_200_000n,
       priceComponents: { compute: 'included' }, priceEvidence: [{ type: 'contract', digest: `sha256:${'b'.repeat(64)}` }],
     };
     const created = await store.createOffer(offerInput);
@@ -109,7 +114,7 @@ describe('credit listing double-audit workflow', () => {
       approvedUnitCreditMicros: creditMicrosFromCnyMicros(31_200_000n),
     });
     expect(priceDecision && typeof priceDecision !== 'string' ? priceDecision.offer.status : null).toBe('approved');
-    expect(priceDecision && typeof priceDecision !== 'string' ? priceDecision.offer.approvedUnitCreditMicros : null).toBe(31_137_725n);
+    expect(priceDecision && typeof priceDecision !== 'string' ? priceDecision.offer.approvedUnitCreditMicros : null).toBe(31_140_000n);
     const auditNotifications = await database.query<{ data: Record<string, unknown> }>(
       `SELECT data FROM notifications WHERE user_id = $1 AND category = 'market' ORDER BY created_at`, [supplierUserId],
     );
@@ -124,12 +129,12 @@ describe('credit listing double-audit workflow', () => {
       payloadDigest: 'listing-digest', capacityTotal: '50', startsAt, expiresAt,
     });
     expect(published.status).toBe('created');
-    if (published.status === 'created') expect(published.listing.unitCreditMicros).toBe(31_137_725n);
+    if (published.status === 'created') expect(published.listing.unitCreditMicros).toBe(31_140_000n);
     const publicListings = await store.listPublicListings(20);
     expect(publicListings).toHaveLength(1);
     expect(publicListings[0]).toMatchObject({
       offerId: created.offer.id, title: '独享 H100 80GB', productCode: 'H100-SXM-80G', kind: 'gpu', region: '华东-上海',
-      specifications: { memory: '80GB' }, capacityAvailable: '50.000000', unitCreditMicros: 31_137_725n, status: 'active',
+      specifications: { memory: '80GB' }, capacityAvailable: '50.000000', unitCreditMicros: 31_140_000n, status: 'active',
     });
 
     const alternate = await store.createOffer({
@@ -301,8 +306,10 @@ describe('credit listing double-audit workflow', () => {
     const created = await store.createOffer({
       id: randomUUID(), subjectId: supplierId, userId: supplierUserId, resourceId, clientRequestId: 'offer-request-changes01', payloadDigest: 'a',
       title: 'H100 独享', serviceMode: 'dedicated', nativeUnit: 'GPU时', minimumQuantity: '1', sla: {}, deliveryTerms: {},
-      acceptanceTerms: {}, refundTerms: {}, cleanupTerms: {}, suggestedPriceCnyMicros: 31_200_000n,
-      priceComponents: {}, priceEvidence: [{ evidence: true }],
+      acceptanceTerms: {}, refundTerms: {}, cleanupTerms: {}, suggestedUnitCreditMicros: 10_000n,
+      suggestedPriceCnyMicros: 251n,
+      priceComponents: { summary: '设备、电力与运维', authoritativeUnitCreditMicros: '999' },
+      priceEvidence: [{ evidence: true }],
     });
     if (!created || created.status === 'conflict') throw new Error('offer was not created');
     await store.submitOffer(supplierId, supplierUserId, created.offer.id, 1);
@@ -323,7 +330,20 @@ describe('credit listing double-audit workflow', () => {
     });
     expect(revision).toMatchObject({ status: 'created', draft: { currentStep: 'price', status: 'active' } });
     if (!revision || revision.status === 'conflict') throw new Error('revision was not created');
-    expect(revision.draft.payload).toMatchObject({ title: 'H100 独享', suggestedPriceCny: '31.200000' });
+    expect(revision.draft.payload).toMatchObject({ title: 'H100 独享', suggestedUnitCredits: '0.01' });
+    expect(revision.draft.payload.priceComponents).toEqual({ summary: '设备、电力与运维' });
+    const service = new ListingAuditService(
+      store, { recordAudit: async () => undefined } as unknown as AccountStore,
+      loadConfig({ NODE_ENV: 'test', AUDIT_PEPPER: 'd'.repeat(32) }),
+      { current: async () => ({ subjectId: supplierId, userId: supplierUserId, kind: 'personal', displayName: '供应方',
+        subjectStatus: 'active', role: 'owner', permissions: ['provider.offer.manage'] }) } as SubjectAccess,
+    );
+    const appRevision = await service.createOfferRevision(
+      { userId: supplierUserId, sessionId: randomUUID(), role: 'supplier' }, created.offer.id,
+      'offer-revision-app-read01', { requestId: 'app-revision-read', ip: '127.0.0.1' },
+    );
+    expect(appRevision.draft.payload).toMatchObject({ suggestedUnitCredits: '0.01' });
+    expect(appRevision.draft.payload.priceComponents).toEqual({ summary: '设备、电力与运维' });
     expect((await store.getSupplierOffer(supplierId, created.offer.id))?.offer).toMatchObject({
       status: 'changes_requested', title: 'H100 独享', submissionVersion: 1,
     });
@@ -342,7 +362,8 @@ describe('credit listing double-audit workflow', () => {
       subjectId: supplierId, userId: supplierUserId, offerId: created.offer.id, expectedVersion: saved.version,
       submitRequestId: 'offer-revision-submit01', submitPayloadDigest: 'revised-offer-a', title: 'H100 独享',
       serviceMode: 'dedicated' as const, nativeUnit: 'GPU时', minimumQuantity: '1', sla: {}, deliveryTerms: {},
-      acceptanceTerms: {}, refundTerms: {}, cleanupTerms: {}, suggestedPriceCnyMicros: 31_200_000n,
+      acceptanceTerms: {}, refundTerms: {}, cleanupTerms: {}, suggestedUnitCreditMicros: 10_000n,
+      suggestedPriceCnyMicros: 251n,
       priceComponents: {}, priceEvidence: [{ type: 'contract', source: '三月合同', summary: '同地区同型号成交合同' }],
     };
     const resubmitted = await store.submitOfferRevision(submitInput);

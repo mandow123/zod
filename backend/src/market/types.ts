@@ -158,8 +158,6 @@ export type ComputeDemand = Readonly<{
   region: string;
   quantity: string;
   capacityUnit: string;
-  budgetMaxCents: number | null;
-  currency: 'CNY';
   desiredStartAt: Date;
   deadlineAt: Date;
   description: string;

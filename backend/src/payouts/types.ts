@@ -1,3 +1,5 @@
+import { parseCreditCentMicros } from '../credits/precision.js';
+
 export type CreditPayoutStatus =
   | 'submitted' | 'reviewing' | 'paying' | 'succeeded' | 'failed' | 'rejected' | 'cancelled';
 
@@ -43,9 +45,5 @@ export type CreditPayoutProfile = Readonly<{
 }>;
 
 export function parseCreditMicros(value: string) {
-  const normalized = value.trim().replace(/^0+(?=\d)/u, '');
-  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/u.test(normalized)) return null;
-  const [whole = '0', fraction = ''] = normalized.split('.');
-  const micros = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0'));
-  return micros > 0n ? micros : null;
+  return parseCreditCentMicros(value);
 }

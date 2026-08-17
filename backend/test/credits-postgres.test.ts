@@ -72,7 +72,7 @@ describe('KAI credit double-entry ledger', () => {
     } as unknown as SubjectAccess;
     const service = new CreditLedgerService(store, subjects);
     const principal: AccountPrincipal = { userId, sessionId: 'credit-session', role: 'member' };
-    expect(await service.balance(principal)).toMatchObject({ available: '0.000000', reserved: '0.000000', total: '0.000000' });
+    expect(await service.balance(principal)).toMatchObject({ available: '0.00', reserved: '0.00', total: '0.00' });
 
     const mint = transaction({
       idempotencyKey: 'credit-topup-test-000001', payloadDigest: `sha256:${'1'.repeat(64)}`, referenceType: 'topup',
@@ -84,21 +84,21 @@ describe('KAI credit double-entry ledger', () => {
     expect(await service.post(mint)).toMatchObject({ status: 'created' });
     expect(await service.post({ ...mint, id: randomUUID() })).toMatchObject({ status: 'replayed', transactionId: mint.id });
     expect(await service.post({ ...mint, id: randomUUID(), payloadDigest: `sha256:${'2'.repeat(64)}` })).toMatchObject({ status: 'conflict' });
-    expect(await service.balance(principal)).toMatchObject({ available: '10.000000', reserved: '0.000000', total: '10.000000' });
+    expect(await service.balance(principal)).toMatchObject({ available: '10.00', reserved: '0.00', total: '10.00' });
 
     const reserve = transaction({ entries: [
       { accountId: availableId, amountMicros: -4_000_000n, memo: '订单预留' },
       { accountId: reservedId, amountMicros: 4_000_000n, memo: '订单预留' },
     ] });
     expect(await service.post(reserve)).toMatchObject({ status: 'created' });
-    expect(await service.balance(principal)).toMatchObject({ available: '6.000000', reserved: '4.000000', total: '10.000000' });
+    expect(await service.balance(principal)).toMatchObject({ available: '6.00', reserved: '4.00', total: '10.00' });
     expect((await store.ensureSubjectAccounts(otherSubjectId)).every((account) => account.amountMicros === 0n)).toBe(true);
 
     await expect(service.post(transaction({ entries: [
       { accountId: availableId, amountMicros: -7_000_000n, memo: '超额预留' },
       { accountId: reservedId, amountMicros: 7_000_000n, memo: '超额预留' },
     ] }))).rejects.toThrow(/cannot become negative/u);
-    expect(await service.balance(principal)).toMatchObject({ available: '6.000000', reserved: '4.000000' });
+    expect(await service.balance(principal)).toMatchObject({ available: '6.00', reserved: '4.00' });
 
     await expect(service.post(transaction({ entries: [
       { accountId: availableId, amountMicros: 1_000_000n, memo: '不平分录' },
@@ -147,4 +147,3 @@ describe('KAI credit double-entry ledger', () => {
     await database.close();
   });
 });
-

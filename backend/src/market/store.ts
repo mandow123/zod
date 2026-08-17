@@ -52,7 +52,7 @@ export interface MarketStore {
   }>): Promise<MarketListing | null>;
   createDemand(input: Readonly<{
     id: string; buyerId: string; kind: ResourceKind; title: string; productHint: string; region: string;
-    quantity: string; capacityUnit: string; budgetMaxCents: number | null;
+    quantity: string; capacityUnit: string;
     desiredStartAt: Date; deadlineAt: Date; description: string;
   }>): Promise<ComputeDemand>;
   listDemands(userId: string): Promise<ComputeDemand[]>;
@@ -124,7 +124,7 @@ type SupplierListingRow = QueryResultRow & {
 
 type DemandRow = QueryResultRow & {
   id: string; buyer_id: string; kind: ResourceKind; title: string; product_hint: string; region: string;
-  quantity: string; capacity_unit: string; budget_max_cents: string | null; currency: 'CNY';
+  quantity: string; capacity_unit: string;
   desired_start_at: Date; deadline_at: Date; description: string; status: ComputeDemand['status']; created_at: Date; updated_at: Date;
 };
 
@@ -151,7 +151,6 @@ function mapDemand(row: DemandRow): ComputeDemand {
   return {
     id: row.id, buyerId: row.buyer_id, kind: row.kind, title: row.title, productHint: row.product_hint,
     region: row.region, quantity: row.quantity, capacityUnit: row.capacity_unit,
-    budgetMaxCents: row.budget_max_cents === null ? null : Number(row.budget_max_cents), currency: row.currency,
     desiredStartAt: new Date(row.desired_start_at), deadlineAt: new Date(row.deadline_at), description: row.description,
     status: row.status, createdAt: new Date(row.created_at), updatedAt: new Date(row.updated_at),
   };
@@ -729,17 +728,17 @@ export class PostgresMarketStore implements MarketStore {
 
   async createDemand(input: {
     id: string; buyerId: string; kind: ResourceKind; title: string; productHint: string; region: string;
-    quantity: string; capacityUnit: string; budgetMaxCents: number | null;
+    quantity: string; capacityUnit: string;
     desiredStartAt: Date; deadlineAt: Date; description: string;
   }) {
     const result = await this.database.query<DemandRow>(
       `INSERT INTO compute_demands(id, buyer_id, kind, title, product_hint, region, quantity, capacity_unit,
-        budget_max_cents, desired_start_at, deadline_at, description)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        desired_start_at, deadline_at, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, buyer_id, kind, title, product_hint, region, quantity::text, capacity_unit,
-        budget_max_cents::text, currency, desired_start_at, deadline_at, description, status, created_at, updated_at`,
+        desired_start_at, deadline_at, description, status, created_at, updated_at`,
       [input.id, input.buyerId, input.kind, input.title, input.productHint, input.region, input.quantity,
-        input.capacityUnit, input.budgetMaxCents, input.desiredStartAt, input.deadlineAt, input.description],
+        input.capacityUnit, input.desiredStartAt, input.deadlineAt, input.description],
     );
     return mapDemand(result.rows[0]!);
   }
@@ -747,7 +746,7 @@ export class PostgresMarketStore implements MarketStore {
   async listDemands(userId: string) {
     const result = await this.database.query<DemandRow>(
       `SELECT id, buyer_id, kind, title, product_hint, region, quantity::text, capacity_unit,
-        budget_max_cents::text, currency, desired_start_at, deadline_at, description, status, created_at, updated_at
+        desired_start_at, deadline_at, description, status, created_at, updated_at
        FROM compute_demands WHERE buyer_id = $1 ORDER BY created_at DESC LIMIT 100`, [userId],
     );
     return result.rows.map(mapDemand);
@@ -758,7 +757,7 @@ export class PostgresMarketStore implements MarketStore {
       `UPDATE compute_demands SET status = 'cancelled', updated_at = now()
        WHERE id = $1 AND buyer_id = $2 AND status = 'open'
        RETURNING id, buyer_id, kind, title, product_hint, region, quantity::text, capacity_unit,
-        budget_max_cents::text, currency, desired_start_at, deadline_at, description, status, created_at, updated_at`,
+        desired_start_at, deadline_at, description, status, created_at, updated_at`,
       [demandId, userId],
     );
     return result.rows[0] ? mapDemand(result.rows[0]) : null;

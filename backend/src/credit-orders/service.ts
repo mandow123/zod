@@ -9,6 +9,7 @@ import {
   formatCreditMicros, parseCreditOrderQuantity, SUPPLIER_SETTLEMENT_HOLD_MILLISECONDS, type CreditOrderRecord,
 } from './types.js';
 import { formatCreditDisplayMicros } from '../credits/display.js';
+import { parseCreditCentMicros } from '../credits/precision.js';
 
 type RequestContext = Readonly<{ requestId: string; ip: string }>;
 type FulfillmentStarter = Readonly<{ onOrderConfirmed(orderId: string): Promise<unknown> }>;
@@ -457,20 +458,20 @@ export class CreditOrderService {
       throw new AppError('COMPUTE_AFTERCARE_WINDOW_CLOSED', 409,
         '算力订单请在停止后的 24 小时计量验收期内提交异议；完成验收后不再开放通用交付售后入口。');
     }
-    const creditAmount = parseCreditOrderQuantity(creditAmountInput);
-    if (!creditAmount || creditAmount.scaled > order.totalCreditMicros) {
+    const creditMicros = parseCreditCentMicros(creditAmountInput);
+    if (!creditMicros || creditMicros > order.totalCreditMicros) {
       throw new AppError('AFTERCARE_CREDIT_AMOUNT_INVALID', 400,
         `补偿卡时必须大于 0，且不能超过本单 ${formatCreditDisplayMicros(order.totalCreditMicros)} 卡时。`);
     }
     const descriptionDigest = secretHash(description, this.auditPepper);
     const payloadDigest = secretHash(JSON.stringify({
       action: 'request_post_acceptance_refund', subjectId: subject.subjectId, orderId, descriptionDigest,
-      creditMicros: creditAmount.scaled.toString(),
+      creditMicros: creditMicros.toString(),
     }), this.auditPepper);
     const result = await this.store.requestPostAcceptanceRefund({
       subjectId: subject.subjectId, userId: principal.userId, orderId, clientRequestId: idempotencyKey,
       payloadDigest, descriptionCiphertext: encryptPii(JSON.stringify({ description }), this.piiKey),
-      descriptionDigest, creditMicros: creditAmount.scaled, requestId: context.requestId,
+      descriptionDigest, creditMicros, requestId: context.requestId,
       ipHash: secretHash(context.ip || 'unknown', this.auditPepper), now: this.now(),
     });
     return this.actionResult(result, subject.subjectId, subject.permissions, 'AFTERCARE_REFUND_NOT_REQUESTABLE',

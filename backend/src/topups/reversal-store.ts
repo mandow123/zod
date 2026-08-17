@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../credits/types.js';
+import { quantizeCreditMicros } from '../credits/precision.js';
 
 export type TopupReversalStatus = 'submitted' | 'credit_recovered_external_unverified' | 'rejected' | 'cancelled';
 export type TopupReversalRecord = Readonly<{
@@ -65,9 +66,11 @@ export class PostgresTopupReversalStore {
       const totalCents = BigInt(current.amount_cents); const requestedCents = BigInt(input.amountCents);
       if (requestedCents <= 0n || allocatedCents + requestedCents > totalCents) return { status: 'amount_exceeds_remaining' };
       const totalCredits = BigInt(current.credit_micros);
-      const creditMicros = allocatedCents + requestedCents === totalCents
-        ? totalCredits - allocatedCredits
-        : totalCredits * requestedCents / totalCents;
+      const cumulativeCents = allocatedCents + requestedCents;
+      const cumulativeCredits = cumulativeCents === totalCents
+        ? totalCredits
+        : quantizeCreditMicros(totalCredits * cumulativeCents / totalCents, 'floor');
+      const creditMicros = cumulativeCredits - allocatedCredits;
       if (creditMicros <= 0n) return { status: 'amount_exceeds_remaining' };
       const inserted = await client.query<Row>(`INSERT INTO kai_credit_topup_reversals(id,topup_id,subject_id,
         provider,kind,provider_event_reference,evidence_digest,amount_cents,credit_micros,status,

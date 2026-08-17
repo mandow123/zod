@@ -90,15 +90,15 @@ describe('verified RMB to KAI credit topups', () => {
     expect(await available(database, subjectId)).toBe(0n);
     const event = verified({ providerReference: topup.providerReference, providerTransactionId: 'ALI-RECEIPT-001' });
     expect(await store.applyVerifiedEvent(event, new Date())).toBe('succeeded');
-    expect(await available(database, subjectId)).toBe(99_800_399n);
+    expect(await available(database, subjectId)).toBe(99_800_000n);
     expect(await available(database, otherSubjectId)).toBe(0n);
     expect(await store.applyVerifiedEvent(event, new Date())).toBe('duplicate');
     expect(await store.applyVerifiedEvent({ ...event, eventId: 'ALI-SECOND-NOTIFY-001' }, new Date())).toBe('duplicate');
-    expect(await available(database, subjectId)).toBe(99_800_399n);
+    expect(await available(database, subjectId)).toBe(99_800_000n);
     const issuance = await database.query<{ amount: string }>(`SELECT COALESCE(sum(e.amount_micros), 0)::text AS amount
       FROM kai_credit_entries e JOIN kai_credit_transactions t ON t.id = e.transaction_id
       WHERE e.account_id = '00000000-0000-4000-8000-000000000101' AND t.status = 'posted'`);
-    expect(BigInt(issuance.rows[0]!.amount)).toBe(-99_800_399n);
+    expect(BigInt(issuance.rows[0]!.amount)).toBe(-99_800_000n);
     await database.close();
   });
 
@@ -114,7 +114,7 @@ describe('verified RMB to KAI credit topups', () => {
     expect(await store.applyVerifiedEvent(verified({ providerReference: first.providerReference, providerTransactionId: 'ALI-REUSED-RECEIPT', amountCents: 1000 }), new Date())).toBe('succeeded');
     expect(await store.applyVerifiedEvent(verified({ providerReference: second.providerReference, providerTransactionId: 'ALI-REUSED-RECEIPT', amountCents: 1000 }), new Date())).toBe('provider_transaction_conflict');
     expect((await store.get(subjectId, second.id))?.status).toBe('manual_review');
-    expect(await available(database, subjectId)).toBe(9_980_039n);
+    expect(await available(database, subjectId)).toBe(9_980_000n);
     await database.close();
   });
 
@@ -122,7 +122,7 @@ describe('verified RMB to KAI credit topups', () => {
     const { database, userId, subjectId } = await fixture(); const store = new PostgresCreditTopupStore(database);
     const topup = await prepare(store, subjectId, userId, { expiresAt: new Date(Date.now() - 60_000), amountCents: 100 });
     expect(await store.applyVerifiedEvent(verified({ providerReference: topup.providerReference, amountCents: 100 }), new Date())).toBe('succeeded');
-    expect(await available(database, subjectId)).toBe(998_003n);
+    expect(await available(database, subjectId)).toBe(990_000n);
     await database.close();
   });
 
@@ -152,7 +152,7 @@ describe('verified RMB to KAI credit topups', () => {
     const replayed = await service.create(principal, request, { requestId: 'request-3', ip: '203.0.113.8' });
     expect(calls).toHaveLength(2);
     expect(calls[1]).toMatchObject({ amountCents: 10_000, channel: 'app', notifyUrl: config.TOPUP_ALIPAY_NOTIFY_URL });
-    expect(recovered.topup).toMatchObject({ status: 'pending', amountCny: '100.00', creditAmount: '99.800399' });
+    expect(recovered.topup).toMatchObject({ status: 'pending', amountCny: '100.00', creditAmount: '99.80' });
     expect(recovered.topup).toMatchObject({ checkoutPayload: 'signed-app-order' });
     expect(replayed).toMatchObject({ replayed: true, topup: { status: 'pending' } });
     expect((await service.get(principal, recovered.topup.id))).toMatchObject({ checkoutPayload: 'signed-app-order' });
@@ -180,7 +180,7 @@ describe('verified RMB to KAI credit topups', () => {
     await worker.tick();
     expect(errors).toEqual([]);
     expect((await store.get(subjectId, topup.id))?.status).toBe('succeeded');
-    expect(await available(database, subjectId)).toBe(24_950_099n);
+    expect(await available(database, subjectId)).toBe(24_950_000n);
     await database.close();
   });
 
@@ -198,7 +198,7 @@ describe('verified RMB to KAI credit topups', () => {
       kind: 'refund', amountCents: 10_000, providerEventReference: 'ALI-REFUND-EVIDENCE-001',
       evidenceDigest: `sha256:${'c'.repeat(64)}`, clientRequestId: 'topup-reversal-request-0001',
       payloadDigest: `sha256:${'d'.repeat(64)}`, now: new Date() });
-    expect(requested).toMatchObject({ status: 'created', reversal: { status: 'submitted', creditMicros: 99_800_399n } });
+    expect(requested).toMatchObject({ status: 'created', reversal: { status: 'submitted', creditMicros: 99_800_000n } });
     if (!('reversal' in requested)) throw new Error('missing reversal');
     expect(await reversals.recoverCredits({ reversalId: requested.reversal.id, operatorId: firstOperator, now: new Date() }))
       .toEqual({ status: 'same_operator' });
@@ -209,7 +209,7 @@ describe('verified RMB to KAI credit topups', () => {
     expect(await available(database, subjectId)).toBe(0n);
     const updated = await database.query<{ reversed_amount_cents: string; reversed_credit_micros: string }>(
       `SELECT reversed_amount_cents::text,reversed_credit_micros::text FROM kai_credit_topups WHERE id=$1`, [topup.id]);
-    expect(updated.rows[0]).toEqual({ reversed_amount_cents: '10000', reversed_credit_micros: '99800399' });
+    expect(updated.rows[0]).toEqual({ reversed_amount_cents: '10000', reversed_credit_micros: '99800000' });
     await database.close();
   });
 

@@ -21,7 +21,7 @@ const routeTestMarket = {
 
 const routeTestListings = {
   publicListings: async (_limit?: number, principal?: { userId: string }) => [{
-    id: 'listing-1', unitCredits: '31.137725', referenceCny: '31.200000', audits: { resource: true, price: true },
+    id: 'listing-1', unitCredits: '31.14', audits: { resource: true, price: true },
     ownedByCurrentSubject: principal?.userId === 'route-user',
   }],
   supplierOffers: async () => [],
@@ -32,9 +32,8 @@ const routeTestListings = {
 
 const routeTestCredits = {
   balance: async () => ({
-    subjectId: '10000000-0000-4000-8000-000000000001', unit: 'KAI_CREDIT', precision: 6,
-    available: '12.500000', reserved: '2.000000', supplierReceivable: '1.000000', total: '15.500000',
-    conversion: '1 KAI卡时 = ¥1.002',
+    subjectId: '10000000-0000-4000-8000-000000000001', unit: 'KAI_CREDIT', precision: 2,
+    available: '12.50', reserved: '2.00', supplierReceivable: '1.00', total: '15.50',
   }),
 } as unknown as CreditLedgerService;
 
@@ -42,7 +41,7 @@ const topupCalls: Array<Record<string, unknown>> = [];
 const routeTestTopups = {
   create: async (_principal: unknown, input: Record<string, unknown>) => {
     topupCalls.push(input);
-    return { replayed: false, topup: { id: '30000000-0000-4000-8000-000000000001', status: 'pending', amountCny: '100.00', creditAmount: '99.800399' } };
+    return { replayed: false, topup: { id: '30000000-0000-4000-8000-000000000001', status: 'pending', amountCny: '100.00', creditAmount: '99.80' } };
   },
   list: async () => [],
   get: async () => ({ id: '30000000-0000-4000-8000-000000000001', status: 'pending', checkoutPayload: 'signed-app-order' }),
@@ -54,7 +53,7 @@ const routeTestOrders = {
   create: async (_principal: unknown, input: Record<string, unknown>) => ({
     replayed: false, order: {
       id: '40000000-0000-4000-8000-000000000001', status: 'reserved', side: 'buyer',
-      listingId: input.listingId, quantity: input.quantity, unitCredits: '31.137725', totalCredits: '62.275450',
+      listingId: input.listingId, quantity: input.quantity, unitCredits: '31.14', totalCredits: '62.28',
     },
   }),
   list: async () => [],
@@ -79,7 +78,7 @@ const routeTestOrders = {
   approveMutualRefund: async () => ({ replayed: false, order: { id: '40000000-0000-4000-8000-000000000001', status: 'refunded', side: 'provider' } }),
   mutualRefund: async () => ({
     order: { id: '40000000-0000-4000-8000-000000000001', status: 'refunded', side: 'buyer' },
-    refund: { status: 'succeeded', creditAmount: '62.275450', approvedAt: '2026-08-12T13:00:00.000Z' },
+    refund: { status: 'succeeded', creditAmount: '62.28', approvedAt: '2026-08-12T13:00:00.000Z' },
   }),
   escalateDispute: async () => ({
     replayed: false,
@@ -89,7 +88,7 @@ const routeTestOrders = {
     order: { id: '40000000-0000-4000-8000-000000000001', status: 'refunded', side: 'buyer' },
     adjudication: {
       status: 'resolved', outcome: 'full_refund', reason: '交付与挂牌不一致，支持全额退款。',
-      creditAmount: '62.275450', decidedAt: '2026-08-12T13:00:00.000Z',
+      creditAmount: '62.28', decidedAt: '2026-08-12T13:00:00.000Z',
     },
   }),
   pendingDisputeAdjudications: async () => [{
@@ -107,7 +106,7 @@ const routeTestOrders = {
   supplierSettlement: async () => ({
     order: { id: '40000000-0000-4000-8000-000000000001', status: 'closed', side: 'provider' },
     settlement: {
-      status: 'succeeded', creditAmount: '62.275450', triggeredBy: 'provider',
+      status: 'succeeded', creditAmount: '62.28', triggeredBy: 'provider',
       acceptedAt: '2026-08-05T13:00:00.000Z', availableAt: '2026-08-12T13:00:00.000Z',
       settledAt: '2026-08-12T13:00:00.000Z',
     },
@@ -131,7 +130,7 @@ const routeTestOrders = {
   pendingPostAcceptanceRefundAdjudications: async () => [{
     order: { id: '40000000-0000-4000-8000-000000000001', status: 'accepted' },
     description: '验收后发现实际规格不符。', providerResponse: '资源规格与审核材料一致。',
-    creditAmount: '62.275450',
+    creditAmount: '62.28',
     delivery: { attemptNumber: 1, details: { endpoint: '10.0.0.8' } },
   }],
   decidePostAcceptanceRefund: async (_principal: unknown, _orderId: string, input: Record<string, unknown>) => {
@@ -142,7 +141,7 @@ const routeTestOrders = {
   postAcceptanceRefund: async () => ({
     order: { id: '40000000-0000-4000-8000-000000000001', status: 'refunded', side: 'buyer' },
     aftercareRefund: {
-      status: 'succeeded', description: '验收后发现实际规格不符。', creditAmount: '62.275450',
+      status: 'succeeded', description: '验收后发现实际规格不符。', creditAmount: '62.28',
       requestedAt: '2026-08-06T00:00:00.000Z', resolvedAt: '2026-08-07T00:00:00.000Z',
     },
   }),
@@ -232,7 +231,7 @@ describe('system routes', () => {
     const response = await app.inject({ method: 'GET', url: '/mobile/v1/market/listings' });
     expect(response.statusCode).toBe(200);
     expect(response.json().listings[0]).toMatchObject({
-      unitCredits: '31.137725', referenceCny: '31.200000', audits: { resource: true, price: true },
+      unitCredits: '31.14', audits: { resource: true, price: true },
       ownedByCurrentSubject: false,
     });
     expect(response.json().listings[0]).not.toHaveProperty('supplierId');
@@ -284,8 +283,8 @@ describe('system routes', () => {
     expect(response.json()).toMatchObject({
       ok: true,
       balance: {
-        unit: 'KAI_CREDIT', precision: 6, available: '12.500000', reserved: '2.000000',
-        supplierReceivable: '1.000000', total: '15.500000', conversion: '1 KAI卡时 = ¥1.002',
+        unit: 'KAI_CREDIT', precision: 2, available: '12.50', reserved: '2.00',
+        supplierReceivable: '1.00', total: '15.50',
       },
     });
     expect(response.json().balance).not.toHaveProperty('amountCny');
@@ -305,7 +304,7 @@ describe('system routes', () => {
       payload: { amountCents: 10_000, provider: 'alipay', channel: 'app' },
     });
     expect(created.statusCode).toBe(201);
-    expect(created.json()).toMatchObject({ topup: { status: 'pending', amountCny: '100.00', creditAmount: '99.800399' } });
+    expect(created.json()).toMatchObject({ topup: { status: 'pending', amountCny: '100.00', creditAmount: '99.80' } });
     const storeTopup = await app.inject({
       method: 'POST', url: '/mobile/v1/credits/topups',
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'topup-route-store-0001', 'x-kai-distribution-channel': 'google-play' },
@@ -343,7 +342,7 @@ describe('system routes', () => {
       payload: { listingId: '20000000-0000-4000-8000-000000000001', quantity: '2' },
     });
     expect(created.statusCode).toBe(201);
-    expect(created.json()).toMatchObject({ order: { status: 'reserved', totalCredits: '62.275450' } });
+    expect(created.json()).toMatchObject({ order: { status: 'reserved', totalCredits: '62.28' } });
     const rmb = await app.inject({
       method: 'POST', url: '/mobile/v1/orders',
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'credit-order-route-0002' },
@@ -462,14 +461,14 @@ describe('system routes', () => {
     const rejectedAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/provider/orders/${orderId}/refund/approve`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'provider-refund-route-002' },
-      payload: { creditAmount: '1.000000' },
+      payload: { creditAmount: '1.00' },
     });
     expect(rejectedAmount.statusCode).toBe(400);
     const detail = await app.inject({
       method: 'GET', url: `/mobile/v1/orders/${orderId}/refund`, headers: { authorization: 'Bearer route-test' },
     });
     expect(detail.statusCode).toBe(200);
-    expect(detail.json()).toMatchObject({ refund: { status: 'succeeded', creditAmount: '62.275450' } });
+    expect(detail.json()).toMatchObject({ refund: { status: 'succeeded', creditAmount: '62.28' } });
     await app.close();
   });
 
@@ -500,7 +499,7 @@ describe('system routes', () => {
     const suppliedAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/operator/order-disputes/${orderId}/decision`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'operator-decision-route02' },
-      payload: { outcome: 'full_refund', reason: '交付内容与审核挂牌不一致，支持全额退款。', creditAmount: '1.000000' },
+      payload: { outcome: 'full_refund', reason: '交付内容与审核挂牌不一致，支持全额退款。', creditAmount: '1.00' },
     });
     expect(suppliedAmount.statusCode).toBe(400);
     const receipt = await app.inject({
@@ -509,7 +508,7 @@ describe('system routes', () => {
     });
     expect(receipt.statusCode).toBe(200);
     expect(receipt.json()).toMatchObject({
-      adjudication: { status: 'resolved', outcome: 'full_refund', creditAmount: '62.275450' },
+      adjudication: { status: 'resolved', outcome: 'full_refund', creditAmount: '62.28' },
     });
     await app.close();
   });
@@ -530,7 +529,7 @@ describe('system routes', () => {
     const suppliedAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/provider/orders/${orderId}/settle`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'provider-settle-route-002' },
-      payload: { creditAmount: '1.000000' },
+      payload: { creditAmount: '1.00' },
     });
     expect(suppliedAmount.statusCode).toBe(400);
     const receipt = await app.inject({
@@ -539,7 +538,7 @@ describe('system routes', () => {
     });
     expect(receipt.statusCode).toBe(200);
     expect(receipt.json()).toMatchObject({
-      settlement: { status: 'succeeded', creditAmount: '62.275450', triggeredBy: 'provider' },
+      settlement: { status: 'succeeded', creditAmount: '62.28', triggeredBy: 'provider' },
     });
     await app.close();
   });
@@ -553,7 +552,7 @@ describe('system routes', () => {
     const requested = await app.inject({
       method: 'POST', url: `/mobile/v1/orders/${orderId}/aftercare/refund`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'buyer-aftercare-route-001' },
-      payload: { description: '验收后发现实际规格与订单不一致。', creditAmount: '31.000000' },
+      payload: { description: '验收后发现实际规格与订单不一致。', creditAmount: '31.00' },
     });
     expect(requested.statusCode).toBe(200);
     expect(requested.json()).toMatchObject({ order: { status: 'accepted', side: 'buyer' } });
@@ -573,7 +572,7 @@ describe('system routes', () => {
     const approvalWithAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/provider/orders/${orderId}/aftercare/refund/approve`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'provider-aftercare-route-002' },
-      payload: { creditAmount: '1.000000' },
+      payload: { creditAmount: '1.00' },
     });
     expect(approvalWithAmount.statusCode).toBe(400);
     const receipt = await app.inject({
@@ -582,7 +581,7 @@ describe('system routes', () => {
     });
     expect(receipt.statusCode).toBe(200);
     expect(receipt.json()).toMatchObject({
-      aftercareRefund: { status: 'succeeded', creditAmount: '62.275450' },
+      aftercareRefund: { status: 'succeeded', creditAmount: '62.28' },
     });
     await app.close();
   });
@@ -603,7 +602,7 @@ describe('system routes', () => {
     const contestWithAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/provider/orders/${orderId}/aftercare/refund/contest`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'provider-aftercare-contest-route2' },
-      payload: { response: '资源规格与审核材料一致，请平台核对运行记录。', creditAmount: '1.000000' },
+      payload: { response: '资源规格与审核材料一致，请平台核对运行记录。', creditAmount: '1.00' },
     });
     expect(contestWithAmount.statusCode).toBe(400);
     const escalated = await app.inject({
@@ -626,7 +625,7 @@ describe('system routes', () => {
     const decisionWithAmount = await app.inject({
       method: 'POST', url: `/mobile/v1/operator/aftercare-refunds/${orderId}/decision`,
       headers: { authorization: 'Bearer route-test', 'idempotency-key': 'operator-aftercare-decision-route2' },
-      payload: { outcome: 'approve_refund', reason: '实际运行记录显示资源规格与审核挂牌不一致。', creditAmount: '1.000000' },
+      payload: { outcome: 'approve_refund', reason: '实际运行记录显示资源规格与审核挂牌不一致。', creditAmount: '1.00' },
     });
     expect(decisionWithAmount.statusCode).toBe(400);
     await app.close();

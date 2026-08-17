@@ -5,13 +5,14 @@ import type {
   AuditKind, CreditListing, OfferAudit, OfferRevisionDraft, OfferStatus, OfferTemplate, OfferWizardDraft, OfferWizardPayload, PublicCreditListing,
   OfferWizardStep, ServiceMode,
 } from './types.js';
-import { formatCnyMicros } from './types.js';
+import { formatCreditMicros } from './types.js';
 
 type OfferRow = QueryResultRow & {
   id: string; supplier_id: string; resource_id: string; version: number; submission_version: number;
   title: string; service_mode: ServiceMode; native_unit: string; minimum_quantity: string;
   sla: Record<string, unknown>; delivery_terms: Record<string, unknown>; acceptance_terms: Record<string, unknown>;
-  refund_terms: Record<string, unknown>; cleanup_terms: Record<string, unknown>; suggested_price_cny_micros: string;
+  refund_terms: Record<string, unknown>; cleanup_terms: Record<string, unknown>; suggested_unit_credit_micros: string;
+  suggested_price_cny_micros: string;
   price_components: Record<string, unknown>; price_evidence: unknown[]; status: OfferStatus;
   approved_reference_cny_micros: string | null; approved_unit_credit_micros: string | null;
   conversion_cny_micros_per_credit: string | null; audit_valid_until: Date | null; submitted_at: Date | null;
@@ -55,7 +56,7 @@ type RevisionDraftRow = QueryResultRow & {
 
 const offerColumns = `id, supplier_id, resource_id, version, submission_version, title, service_mode, native_unit,
   minimum_quantity::text, sla, delivery_terms, acceptance_terms, refund_terms, cleanup_terms,
-  suggested_price_cny_micros::text, price_components, price_evidence, status,
+  suggested_unit_credit_micros::text, suggested_price_cny_micros::text, price_components, price_evidence, status,
   approved_reference_cny_micros::text, approved_unit_credit_micros::text,
   conversion_cny_micros_per_credit::text, audit_valid_until, submitted_at, approved_at, created_at, updated_at`;
 const auditColumns = `id, offer_id, submission_version, kind, status, reviewer_id, decision_reason,
@@ -82,7 +83,8 @@ function mapOffer(row: OfferRow): OfferTemplate {
     submissionVersion: row.submission_version, title: row.title, serviceMode: row.service_mode,
     nativeUnit: row.native_unit, minimumQuantity: row.minimum_quantity, sla: row.sla,
     deliveryTerms: row.delivery_terms, acceptanceTerms: row.acceptance_terms, refundTerms: row.refund_terms,
-    cleanupTerms: row.cleanup_terms, suggestedPriceCnyMicros: BigInt(row.suggested_price_cny_micros),
+    cleanupTerms: row.cleanup_terms, suggestedUnitCreditMicros: BigInt(row.suggested_unit_credit_micros),
+    suggestedPriceCnyMicros: BigInt(row.suggested_price_cny_micros),
     priceComponents: row.price_components, priceEvidence: row.price_evidence, status: row.status,
     approvedReferenceCnyMicros: row.approved_reference_cny_micros === null ? null : BigInt(row.approved_reference_cny_micros),
     approvedUnitCreditMicros: row.approved_unit_credit_micros === null ? null : BigInt(row.approved_unit_credit_micros),
@@ -153,6 +155,11 @@ function mapRevisionDraft(row: RevisionDraftRow): OfferRevisionDraft {
   };
 }
 
+function publicPriceComponents(value: Record<string, unknown>) {
+  const { authoritativeUnitCreditMicros: _legacyInternalPrice, ...publicValue } = value;
+  return publicValue;
+}
+
 export type CreateOfferResult = Readonly<{ status: 'created' | 'replayed'; offer: OfferTemplate }> | Readonly<{ status: 'conflict' }>;
 export type CreateWizardDraftResult = Readonly<{ status: 'created' | 'replayed'; draft: OfferWizardDraft }>
   | Readonly<{ status: 'conflict' }>
@@ -203,7 +210,8 @@ export interface ListingAuditStore {
     subjectId: string; userId: string; offerId: string; expectedVersion: number; submitRequestId: string;
     submitPayloadDigest: string; title: string; serviceMode: ServiceMode; nativeUnit: string; minimumQuantity: string;
     sla: Record<string, unknown>; deliveryTerms: Record<string, unknown>; acceptanceTerms: Record<string, unknown>;
-    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedPriceCnyMicros: bigint;
+    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedUnitCreditMicros: bigint;
+    suggestedPriceCnyMicros: bigint;
     priceComponents: Record<string, unknown>; priceEvidence: unknown[];
   }>): Promise<SubmitOfferRevisionResult>;
   createWizardDraft(input: Readonly<{
@@ -221,20 +229,23 @@ export interface ListingAuditStore {
     subjectId: string; userId: string; draftId: string; expectedVersion: number; submitRequestId: string;
     submitPayloadDigest: string; title: string; serviceMode: ServiceMode; nativeUnit: string; minimumQuantity: string;
     sla: Record<string, unknown>; deliveryTerms: Record<string, unknown>; acceptanceTerms: Record<string, unknown>;
-    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedPriceCnyMicros: bigint;
+    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedUnitCreditMicros: bigint;
+    suggestedPriceCnyMicros: bigint;
     priceComponents: Record<string, unknown>; priceEvidence: unknown[];
   }>): Promise<SubmitWizardDraftResult>;
   createOffer(input: Readonly<{
     id: string; subjectId: string; userId: string; resourceId: string; clientRequestId: string; payloadDigest: string;
     title: string; serviceMode: ServiceMode; nativeUnit: string; minimumQuantity: string;
     sla: Record<string, unknown>; deliveryTerms: Record<string, unknown>; acceptanceTerms: Record<string, unknown>;
-    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedPriceCnyMicros: bigint;
+    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedUnitCreditMicros: bigint;
+    suggestedPriceCnyMicros: bigint;
     priceComponents: Record<string, unknown>; priceEvidence: unknown[];
   }>): Promise<CreateOfferResult | null>;
   updateOffer(input: Readonly<{
     subjectId: string; userId: string; offerId: string; expectedVersion: number; title: string; serviceMode: ServiceMode; nativeUnit: string; minimumQuantity: string;
     sla: Record<string, unknown>; deliveryTerms: Record<string, unknown>; acceptanceTerms: Record<string, unknown>;
-    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedPriceCnyMicros: bigint;
+    refundTerms: Record<string, unknown>; cleanupTerms: Record<string, unknown>; suggestedUnitCreditMicros: bigint;
+    suggestedPriceCnyMicros: bigint;
     priceComponents: Record<string, unknown>; priceEvidence: unknown[];
   }>): Promise<OfferTemplate | null>;
   submitOffer(subjectId: string, userId: string, offerId: string, expectedVersion: number): Promise<SubmitOfferResult | null>;
@@ -314,8 +325,8 @@ export class PostgresListingAuditStore implements ListingAuditStore {
         title: offer.title, serviceMode: offer.service_mode, nativeUnit: offer.native_unit,
         minimumQuantity: offer.minimum_quantity, sla: offer.sla, deliveryTerms: offer.delivery_terms,
         acceptanceTerms: offer.acceptance_terms, refundTerms: offer.refund_terms, cleanupTerms: offer.cleanup_terms,
-        suggestedPriceCny: formatCnyMicros(BigInt(offer.suggested_price_cny_micros)),
-        priceComponents: offer.price_components, priceEvidence: offer.price_evidence,
+        suggestedUnitCredits: formatCreditMicros(BigInt(offer.suggested_unit_credit_micros)),
+        priceComponents: publicPriceComponents(offer.price_components), priceEvidence: offer.price_evidence,
       };
       await client.query(
         `INSERT INTO offer_revision_drafts(id, offer_id, supplier_id, resource_id, created_by,
@@ -391,15 +402,17 @@ export class PostgresListingAuditStore implements ListingAuditStore {
       const updated = await client.query<OfferRow>(
         `UPDATE offer_templates SET title = $2, service_mode = $3, native_unit = $4, minimum_quantity = $5,
           sla = $6::jsonb, delivery_terms = $7::jsonb, acceptance_terms = $8::jsonb, refund_terms = $9::jsonb,
-          cleanup_terms = $10::jsonb, suggested_price_cny_micros = $11, price_components = $12::jsonb,
-          price_evidence = $13::jsonb, submission_version = $14, status = 'under_review', submitted_at = now(),
+          cleanup_terms = $10::jsonb, suggested_unit_credit_micros = $11, suggested_price_cny_micros = $12,
+          price_components = $13::jsonb, price_evidence = $14::jsonb, submission_version = $15,
+          status = 'under_review', submitted_at = now(),
           approved_reference_cny_micros = NULL, approved_unit_credit_micros = NULL,
           conversion_cny_micros_per_credit = NULL, audit_valid_until = NULL, approved_at = NULL, version = version + 1
          WHERE id = $1 RETURNING ${offerColumns}`,
         [input.offerId, input.title, input.serviceMode, input.nativeUnit, input.minimumQuantity,
           JSON.stringify(input.sla), JSON.stringify(input.deliveryTerms), JSON.stringify(input.acceptanceTerms),
-          JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms), input.suggestedPriceCnyMicros.toString(),
-          JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence), submissionVersion],
+          JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms), input.suggestedUnitCreditMicros.toString(),
+          input.suggestedPriceCnyMicros.toString(), JSON.stringify(input.priceComponents),
+          JSON.stringify(input.priceEvidence), submissionVersion],
       );
       await client.query(
         `INSERT INTO offer_audit_versions(id, offer_id, submission_version, kind, status)
@@ -536,15 +549,16 @@ export class PostgresListingAuditStore implements ListingAuditStore {
       const created = await client.query<OfferRow>(
         `INSERT INTO offer_templates(id, supplier_id, resource_id, client_request_id, payload_digest, title,
           service_mode, native_unit, minimum_quantity, sla, delivery_terms, acceptance_terms, refund_terms,
-          cleanup_terms, suggested_price_cny_micros, price_components, price_evidence, version,
+          cleanup_terms, suggested_unit_credit_micros, suggested_price_cny_micros, price_components, price_evidence, version,
           submission_version, status, submitted_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb,
-          $13::jsonb, $14::jsonb, $15, $16::jsonb, $17::jsonb, 2, 1, 'under_review', now())
+          $13::jsonb, $14::jsonb, $15, $16, $17::jsonb, $18::jsonb, 2, 1, 'under_review', now())
          RETURNING ${offerColumns}`,
         [offerId, draft.supplier_id, draft.resource_id, input.submitRequestId, input.submitPayloadDigest, input.title,
           input.serviceMode, input.nativeUnit, input.minimumQuantity, JSON.stringify(input.sla), JSON.stringify(input.deliveryTerms),
           JSON.stringify(input.acceptanceTerms), JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms),
-          input.suggestedPriceCnyMicros.toString(), JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence)],
+          input.suggestedUnitCreditMicros.toString(), input.suggestedPriceCnyMicros.toString(),
+          JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence)],
       );
       await client.query(
         `INSERT INTO offer_audit_versions(id, offer_id, submission_version, kind, status)
@@ -582,13 +596,14 @@ export class PostgresListingAuditStore implements ListingAuditStore {
       const result = await client.query<OfferRow>(
         `INSERT INTO offer_templates(id, supplier_id, resource_id, client_request_id, payload_digest, title,
           service_mode, native_unit, minimum_quantity, sla, delivery_terms, acceptance_terms, refund_terms,
-          cleanup_terms, suggested_price_cny_micros, price_components, price_evidence)
+          cleanup_terms, suggested_unit_credit_micros, suggested_price_cny_micros, price_components, price_evidence)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb,
-          $13::jsonb, $14::jsonb, $15, $16::jsonb, $17::jsonb) RETURNING ${offerColumns}`,
+          $13::jsonb, $14::jsonb, $15, $16, $17::jsonb, $18::jsonb) RETURNING ${offerColumns}`,
         [input.id, row.supplier_id, input.resourceId, input.clientRequestId, input.payloadDigest, input.title,
           input.serviceMode, input.nativeUnit, input.minimumQuantity, JSON.stringify(input.sla), JSON.stringify(input.deliveryTerms),
           JSON.stringify(input.acceptanceTerms), JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms),
-          input.suggestedPriceCnyMicros.toString(), JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence)],
+          input.suggestedUnitCreditMicros.toString(), input.suggestedPriceCnyMicros.toString(),
+          JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence)],
       );
       return { status: 'created' as const, offer: mapOffer(result.rows[0]!) };
     });
@@ -598,18 +613,19 @@ export class PostgresListingAuditStore implements ListingAuditStore {
     const result = await this.database.query<OfferRow>(
       `UPDATE offer_templates o SET title = $3, service_mode = $4, native_unit = $5, minimum_quantity = $6,
         sla = $7::jsonb, delivery_terms = $8::jsonb, acceptance_terms = $9::jsonb, refund_terms = $10::jsonb,
-        cleanup_terms = $11::jsonb, suggested_price_cny_micros = $12, price_components = $13::jsonb,
-        price_evidence = $14::jsonb, status = 'draft', approved_reference_cny_micros = NULL,
+        cleanup_terms = $11::jsonb, suggested_unit_credit_micros = $12, suggested_price_cny_micros = $13,
+        price_components = $14::jsonb, price_evidence = $15::jsonb, status = 'draft', approved_reference_cny_micros = NULL,
         approved_unit_credit_micros = NULL, conversion_cny_micros_per_credit = NULL,
         audit_valid_until = NULL, approved_at = NULL, version = o.version + 1
        FROM supplier_profiles s, compute_resources r
        WHERE o.id = $1 AND s.subject_id = $2 AND s.id = o.supplier_id AND r.id = o.resource_id
-         AND o.status IN ('draft', 'changes_requested', 'rejected') AND o.version = $15 AND r.status = 'verified'
+         AND o.status IN ('draft', 'changes_requested', 'rejected') AND o.version = $16 AND r.status = 'verified'
          AND r.capacity_unit = $5 RETURNING o.${offerColumns.replaceAll(', ', ', o.')}`,
       [input.offerId, input.subjectId, input.title, input.serviceMode, input.nativeUnit, input.minimumQuantity,
         JSON.stringify(input.sla), JSON.stringify(input.deliveryTerms), JSON.stringify(input.acceptanceTerms),
-        JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms), input.suggestedPriceCnyMicros.toString(),
-        JSON.stringify(input.priceComponents), JSON.stringify(input.priceEvidence), input.expectedVersion],
+        JSON.stringify(input.refundTerms), JSON.stringify(input.cleanupTerms), input.suggestedUnitCreditMicros.toString(),
+        input.suggestedPriceCnyMicros.toString(), JSON.stringify(input.priceComponents),
+        JSON.stringify(input.priceEvidence), input.expectedVersion],
     );
     return result.rows[0] ? mapOffer(result.rows[0]) : null;
   }

@@ -2,18 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cnyPrice, creditAmount, creditUnitPrice } from '../src/format.ts';
 
-test('卡时单价用两位小数展示但不改变服务端原值', () => {
-  assert.equal(creditUnitPrice('31.137725'), '31.14');
-  assert.equal(creditUnitPrice('31.134999'), '31.13');
+test('卡时单价只接受整分，不在前端修改服务端原值', () => {
+  assert.equal(creditUnitPrice('31.14'), '31.14');
+  assert.equal(creditUnitPrice('31.134999'), '—');
   assert.equal(creditUnitPrice('9'), '9.00');
-  assert.equal(creditUnitPrice('99.999999'), '100.00');
+  assert.equal(creditUnitPrice('99.999999'), '—');
 });
 
 test('所有用户可见卡时都经同一个两位小数格式器', () => {
-  assert.equal(creditAmount('26027.944112'), '26027.94');
-  assert.equal(creditAmount('8133732.535000'), '8133732.54');
-  assert.equal(creditAmount('8133732.535000', true), '8,133,732.54');
-  assert.equal(creditAmount('0.005000'), '0.01');
+  assert.equal(creditAmount('26027.94'), '26027.94');
+  assert.equal(creditAmount('8133732.530000'), '8133732.53');
+  assert.equal(creditAmount('8133732.530000', true), '8,133,732.53');
+  assert.equal(creditAmount('0.000250'), '—');
   assert.equal(creditAmount('0'), '0.00');
 });
 

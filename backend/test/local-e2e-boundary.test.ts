@@ -13,4 +13,13 @@ describe('local E2E control boundary', () => {
     expect(source).toMatch(/E2E_REAL_PAYMENT_DISABLED/u);
     expect(source).toMatch(/new Map\(\)/u);
   });
+
+  it('keeps closed-loop settlement and aftercare fixtures on the two-decimal card-hour contract', async () => {
+    const source = await readFile(scriptPath, 'utf8');
+    expect(source).toContain("accepted.settlement.capturedCredits !== '18.69'");
+    expect(source).toContain("accepted.settlement.refundedCredits !== '12.45'");
+    expect(source).toContain("'20.00',");
+    expect(source).not.toMatch(/accepted\.settlement\.(?:captured|refunded)Credits !== '\d+\.\d{3,}'/u);
+    expect(source).not.toContain("'20.000000'");
+  });
 });

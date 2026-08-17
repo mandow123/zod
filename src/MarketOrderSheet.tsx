@@ -29,7 +29,8 @@ function decimal(value: bigint) {
 }
 
 function totalMicros(quantity: bigint, unitCredits: bigint) {
-  return (quantity * unitCredits + SCALE - 1n) / SCALE;
+  const exactMicros = (quantity * unitCredits + SCALE - 1n) / SCALE;
+  return ((exactMicros + 9_999n) / 10_000n) * 10_000n;
 }
 
 export function MarketOrderSheet({ listing, balance, authenticated, onClose, onLogin, onNeedCredits, onCreated }: Readonly<{

@@ -4,6 +4,8 @@ import type { AccountStore } from '../account/store.js';
 import { secretHash } from '../account/crypto.js';
 import type { AccountPrincipal } from '../account/types.js';
 import type { RuntimeConfig } from '../config.js';
+import { formatCreditDisplayMicros } from '../credits/display.js';
+import { quantizeCreditMicros } from '../credits/precision.js';
 import { AppError } from '../errors.js';
 import { KAI_CNY_MICROS_PER_CREDIT } from '../listings/types.js';
 import type { PaymentProvider } from '../payment/providers.js';
@@ -23,7 +25,7 @@ function clientIp(value: string) {
 export function creditMicrosForTopup(amountCents: number) {
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error('positive safe integer cents are required');
   const cnyMicros = BigInt(amountCents) * 10_000n;
-  return cnyMicros * 1_000_000n / KAI_CNY_MICROS_PER_CREDIT;
+  return quantizeCreditMicros(cnyMicros * 1_000_000n / KAI_CNY_MICROS_PER_CREDIT, 'floor');
 }
 
 export class CreditTopupService {
@@ -136,7 +138,7 @@ export class CreditTopupService {
   private serialize(topup: CreditTopupRecord, includeCheckout: boolean) {
     return {
       id: topup.id, subjectId: topup.subjectId, provider: topup.provider, channel: topup.channel, status: topup.status,
-      amountCny: (topup.amountCents / 100).toFixed(2), creditAmount: this.formatCredits(topup.creditMicros),
+      amountCny: (topup.amountCents / 100).toFixed(2), creditAmount: formatCreditDisplayMicros(topup.creditMicros),
       conversion: '1 KAI卡时 = ¥1.002', expiresAt: topup.expiresAt.toISOString(),
       createdAt: topup.createdAt.toISOString(), succeededAt: topup.succeededAt?.toISOString() ?? null,
       recovery: topup.status === 'pending' ? {
@@ -149,8 +151,4 @@ export class CreditTopupService {
     };
   }
 
-  private formatCredits(value: bigint) {
-    const whole = value / 1_000_000n; const fraction = (value % 1_000_000n).toString().padStart(6, '0');
-    return `${whole}.${fraction}`;
-  }
 }

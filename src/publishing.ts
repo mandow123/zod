@@ -70,13 +70,11 @@ export type OfferTemplate = Readonly<{
   acceptanceTerms: Record<string, unknown>;
   refundTerms: Record<string, unknown>;
   cleanupTerms: Record<string, unknown>;
-  suggestedPriceCny: string;
+  suggestedUnitCredits: string;
   priceComponents: Record<string, unknown>;
   priceEvidence: unknown[];
   status: 'draft' | 'under_review' | 'changes_requested' | 'approved' | 'rejected' | 'suspended' | 'expired';
-  approvedReferenceCny: string | null;
   approvedUnitCredits: string | null;
-  conversion: string | null;
   auditValidUntil: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
@@ -96,8 +94,6 @@ export type CreditListing = Readonly<{
   capacityUnit: string;
   minimumQuantity: string;
   unitCredits: string;
-  referenceCny: string;
-  conversion: '1 KAI卡时 = ¥1.002';
   status: 'active' | 'paused' | 'sold_out' | 'expired' | 'withdrawn' | 'suspended';
   sellingStage: 'scheduled' | 'scheduled_paused' | 'selling' | 'paused' | 'sold_out' | 'expired' | 'withdrawn' | 'suspended';
   startsAt: string;
@@ -140,7 +136,7 @@ export type OfferWizardPayload = Readonly<{
   acceptanceTerms?: Record<string, unknown>;
   refundTerms?: Record<string, unknown>;
   cleanupTerms?: Record<string, unknown>;
-  suggestedPriceCny?: string;
+  suggestedUnitCredits?: string;
   priceComponents?: Record<string, unknown>;
   priceEvidence?: Array<Readonly<{
     type: 'contract' | 'invoice' | 'market_quote' | 'cost_breakdown';
@@ -162,9 +158,7 @@ export type OfferWizardDraft = Readonly<{
   createdAt: string;
   updatedAt: string;
   pricePreview: null | Readonly<{
-    referenceCny: string;
     unitCredits: string;
-    conversion: '1 KAI卡时 = ¥1.002';
     auditStatus: 'pending_price_audit';
   }>;
 }>;
@@ -322,16 +316,6 @@ export async function submitOfferRevision(offerId: string, expectedVersion: numb
     },
   );
   return response.offer;
-}
-
-export function previewKaiCredits(cny: string) {
-  const normalized = cny.trim().replace(/^0+(?=\d)/u, '');
-  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/u.test(normalized)) return null;
-  const [whole = '0', fraction = ''] = normalized.split('.');
-  const cnyMicros = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0'));
-  if (cnyMicros <= 0n) return null;
-  const creditMicros = (cnyMicros * 1_000_000n + 1_002_000n - 1n) / 1_002_000n;
-  return `${creditMicros / 1_000_000n}.${(creditMicros % 1_000_000n).toString().padStart(6, '0')}`;
 }
 
 export async function createDemand(input: Readonly<{

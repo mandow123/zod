@@ -225,9 +225,12 @@ export class PostgresDeviceCommerceStore {
     await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,payload_digest,reference_type,reference_id,description,status)
       VALUES($1,$2,'DEVICE_ORDER_CAPTURE',$3,$4,'order_capture',$5,$6,'pending')`,[tx,`subject:${o.buyerSubjectId}`,`device-order-capture:${o.id}`,input.payloadDigest,o.id,`设备订单 ${o.orderNumber} 签收结算`]);
     await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
-      ($1,$2,$3,$4,'设备订单签收扣款'),($5,$2,$6,$7,'设备销售待结算'),($8,$2,$9,$10,'设备销售平台手续费')`,
-    [randomUUID(),tx,acc.buyerReserved,(-o.grossCreditMicros).toString(),randomUUID(),acc.supplierReceivable,plan.netCreditMicros.toString(),
-      randomUUID(),KAI_CREDIT_PLATFORM_ACCOUNTS.revenue,plan.serviceFeeCreditMicros.toString()]);
+      ($1,$2,$3,$4,'设备订单签收扣款'),($5,$2,$6,$7,'设备销售待结算')`,
+    [randomUUID(),tx,acc.buyerReserved,(-o.grossCreditMicros).toString(),randomUUID(),acc.supplierReceivable,
+      plan.netCreditMicros.toString()]);
+    if(plan.serviceFeeCreditMicros>0n)await client.query(`INSERT INTO kai_credit_entries(
+      id,transaction_id,account_id,amount_micros,memo) VALUES($1,$2,$3,$4,'设备销售平台手续费')`,
+    [randomUUID(),tx,KAI_CREDIT_PLATFORM_ACCOUNTS.revenue,plan.serviceFeeCreditMicros.toString()]);
     await client.query(`UPDATE kai_credit_transactions SET status='posted',posted_at=$2 WHERE id=$1`,[tx,input.now]);
     await client.query(`INSERT INTO physical_device_supplier_settlements(id,order_id,supplier_subject_id,
       gross_credit_micros,service_fee_credit_micros,net_credit_micros,status,available_at)
@@ -270,7 +273,7 @@ export class PostgresDeviceCommerceStore {
       AND fee_category='compute_trade' AND period_start=$2 FOR UPDATE`,[supplierSubjectId,periodStart]);
     if(!period.rows[0])throw new Error('TRADE_FEE_PERIOD_LOCK_FAILED');
     const plan=planSettlementFee(mapped,BigInt(period.rows[0].net_settled_credit_micros),grossCreditMicros);
-    if(plan.serviceFeeCreditMicros<=0n||plan.netCreditMicros<=0n)throw new Error('TRADE_FEE_THREE_LEGS_REQUIRED');
+    if(plan.serviceFeeCreditMicros<0n||plan.netCreditMicros<=0n)throw new Error('TRADE_FEE_AMOUNT_INVALID');
     return{persist:true as const,scheduleId:schedule.rows[0].id,scheduleVersion:schedule.rows[0].version,periodId:period.rows[0].id,
       periodStart,plan};
   }

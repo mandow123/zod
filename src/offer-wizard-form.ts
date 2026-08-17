@@ -44,31 +44,9 @@ export function normalizeCreditInput(input: string) {
   const dot = clean.indexOf('.');
   if (dot < 0) return clean.slice(0, 9);
   const integer = (clean.slice(0, dot) || '0').slice(0, 9);
-  const decimals = clean.slice(dot + 1).replace(/\./gu, '').slice(0, 6);
+  // Keep one extra digit so validation can reject it instead of silently truncating money.
+  const decimals = clean.slice(dot + 1).replace(/\./gu, '').slice(0, 3);
   return `${integer}.${decimals}`;
-}
-
-function micros(input: string) {
-  if (!/^\d+(?:\.\d{1,6})?$/u.test(input.trim())) return null;
-  const [whole = '0', fraction = ''] = input.trim().split('.');
-  return BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, '0'));
-}
-
-function decimal(value: bigint) {
-  return `${value / 1_000_000n}.${(value % 1_000_000n).toString().padStart(6, '0')}`;
-}
-
-/** Keeps the legacy server audit field compatible while the App accepts only card-hour prices. */
-export function creditInputToContractPrice(input: string) {
-  const value = micros(input);
-  if (value === null) return input;
-  return decimal((value * 1_002n + 500n) / 1_000n);
-}
-
-export function contractPriceToCreditInput(input: string) {
-  const value = micros(input);
-  if (value === null) return input;
-  return decimal((value * 1_000n + 1_001n) / 1_002n);
 }
 
 export function validateOfferWizardStep(step: OfferWizardStep, form: OfferWizardFormValues) {
@@ -79,11 +57,11 @@ export function validateOfferWizardStep(step: OfferWizardStep, form: OfferWizard
     .some((value) => value.trim().length < 2)) {
     return '请完整定义保障、交付、验收、退款和数据清理边界。';
   }
-  const validCredits = /^(?:0|[1-9]\d{0,8})(?:\.\d{1,6})?$/u.test(form.suggestedUnitCredits)
+  const validCredits = /^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/u.test(form.suggestedUnitCredits)
     && Number(form.suggestedUnitCredits) > 0;
   if (step === 'price' && (!validCredits || form.priceComponents.trim().length < 4
     || form.evidenceSource.trim().length < 2 || form.evidenceSummary.trim().length < 4)) {
-    return '请填写卡时单价、价格构成和一条可核验凭证。';
+    return '请填写卡时单价（最多两位小数）、价格构成和一条可核验凭证。';
   }
   return null;
 }

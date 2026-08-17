@@ -73,7 +73,8 @@ export function DeviceOrderSheet({ product, balance, authenticated, purchaseAllo
   const unitMicros = product ? micros(product.pricing.unitCredit) : null;
   const walletMicros = balance ? micros(balance.available) : null;
   const totalMicros = unitMicros !== null && Number.isInteger(units) ? unitMicros * BigInt(Math.max(0, units)) : null;
-  const totalCredit = totalMicros === null ? null : `${totalMicros / 1_000_000n}.${(totalMicros % 1_000_000n).toString().padStart(6, '0')}`;
+  const totalCredit = totalMicros === null ? null
+    : `${totalMicros / 1_000_000n}.${((totalMicros % 1_000_000n) / 10_000n).toString().padStart(2, '0')}`;
   const invalidQuantity = !product || !Number.isInteger(units) || units < 1 || units > Math.min(20, product.inventory.available);
   const insufficient = Boolean(totalMicros !== null && walletMicros !== null && totalMicros > walletMicros);
   const selectedAddress = useMemo(() => addresses.find((item) => item.id === selectedAddressId) ?? null, [addresses, selectedAddressId]);

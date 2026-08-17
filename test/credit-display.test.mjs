@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseCreditMicros, remainingCreditAmount } from '../src/credit-display.ts';
 
-test('credit input keeps at most six decimal places and must be positive', () => {
-  assert.equal(parseCreditMicros('20.27545'), 20_275_450n);
+test('credit input accepts at most two decimal places and must be positive', () => {
+  assert.equal(parseCreditMicros('20.27'), 20_270_000n);
   assert.equal(parseCreditMicros('0'), null);
-  assert.equal(parseCreditMicros('1.0000001'), null);
+  assert.equal(parseCreditMicros('1.001'), null);
 });
 
 test('settlement remainder shows partial, full, and defensive over-refund correctly', () => {
-  assert.equal(remainingCreditAmount('62.275450', '20.000000'), '42.275450');
-  assert.equal(remainingCreditAmount('62.275450', '62.275450'), '0');
-  assert.equal(remainingCreditAmount('62.275450', '70.000000'), '0');
+  assert.equal(remainingCreditAmount('62.28', '20.00'), '42.28');
+  assert.equal(remainingCreditAmount('62.28', '62.28'), '0');
+  assert.equal(remainingCreditAmount('62.28', '70.00'), '0');
 });

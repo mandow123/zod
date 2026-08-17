@@ -19,7 +19,7 @@ import {
 import { colors } from './theme';
 import { compactDecimal, creditAmount } from './format';
 import {
-  commonDeliveryTerms, contractPriceToCreditInput, creditInputToContractPrice, draftPriceEvidence, normalizeCreditInput, shouldClearFormErrorOnEdit,
+  commonDeliveryTerms, draftPriceEvidence, normalizeCreditInput, shouldClearFormErrorOnEdit,
   validateOfferWizardStep,
 } from './offer-wizard-form';
 import { dedicatedGpuServiceTitle, gpuNodeSummary, nodeGpuCount } from './compute-product';
@@ -70,8 +70,7 @@ function formFromDraft(draft: EditableOfferDraft): Form {
     title: payload.title ? dedicatedGpuServiceTitle(payload.title) : '', serviceMode: 'dedicated', minimumQuantity: payload.minimumQuantity ?? '1',
     availability: value(payload.sla, 'availability'), delivery: value(payload.deliveryTerms, 'summary'),
     acceptance: value(payload.acceptanceTerms, 'summary'), refund: value(payload.refundTerms, 'summary'),
-    cleanup: value(payload.cleanupTerms, 'summary'), suggestedUnitCredits: value(payload.priceComponents, 'proposedUnitCredits')
-      || contractPriceToCreditInput(payload.suggestedPriceCny ?? ''),
+    cleanup: value(payload.cleanupTerms, 'summary'), suggestedUnitCredits: payload.suggestedUnitCredits ?? '',
     priceComponents: value(payload.priceComponents, 'summary'), evidenceType: evidence?.type ?? 'contract',
     evidenceSource: evidence?.source ?? '', evidenceSummary: evidence?.summary ?? '',
   };
@@ -91,7 +90,7 @@ function payloadFromForm(form: Form, capacityUnit: string, previous: OfferWizard
     acceptanceTerms: record(previous.acceptanceTerms, 'summary', form.acceptance),
     refundTerms: record(previous.refundTerms, 'summary', form.refund),
     cleanupTerms: record(previous.cleanupTerms, 'summary', form.cleanup),
-    suggestedPriceCny: creditInputToContractPrice(form.suggestedUnitCredits),
+    suggestedUnitCredits: form.suggestedUnitCredits,
     priceComponents: record(record(previous.priceComponents, 'summary', form.priceComponents), 'proposedUnitCredits', form.suggestedUnitCredits),
     priceEvidence: [
       ...draftPriceEvidence(form.evidenceType, form.evidenceSource, form.evidenceSummary, firstEvidence),

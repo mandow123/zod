@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
 import type { CreditAccountBalance, SubjectCreditAccountKind } from './types.js';
+import { isCreditCentAligned } from './precision.js';
 
 type AccountRow = QueryResultRow & { id: string; account_kind: SubjectCreditAccountKind; amount_micros: string };
 type TransactionRow = QueryResultRow & { id: string; payload_digest: string; status: 'pending' | 'posted' };
@@ -73,7 +74,8 @@ export class PostgresCreditLedgerStore implements CreditLedgerStore {
         t.reference_id,t.description,t.posted_at
        FROM kai_credit_entries e JOIN kai_credit_accounts a ON a.id=e.account_id
        JOIN kai_credit_transactions t ON t.id=e.transaction_id AND t.status='posted'
-       WHERE a.subject_id=$1 ORDER BY t.posted_at DESC,e.id DESC LIMIT $2`, [subjectId, limit]);
+       WHERE a.subject_id=$1 AND e.amount_micros % 10000 = 0
+       ORDER BY t.posted_at DESC,e.id DESC LIMIT $2`, [subjectId, limit]);
     return result.rows.map((row) => ({ id: row.id, transactionId: row.transaction_id,
       accountKind: row.account_kind, amountMicros: BigInt(row.amount_micros), memo: row.memo,
       scope: row.scope, referenceType: row.reference_type, referenceId: row.reference_id,
@@ -81,6 +83,11 @@ export class PostgresCreditLedgerStore implements CreditLedgerStore {
   }
 
   async post(input: PostCreditTransactionInput): Promise<PostCreditTransactionResult> {
+    if (input.entries.length < 2
+      || input.entries.some((entry) => entry.amountMicros === 0n || !isCreditCentAligned(entry.amountMicros))
+      || input.entries.reduce((sum, entry) => sum + entry.amountMicros, 0n) !== 0n) {
+      throw new Error('KAI_CREDIT_LEDGER_CENT_BALANCE_REQUIRED');
+    }
     return this.database.transaction(async (client) => {
       const existing = await client.query<TransactionRow>(
         `SELECT id, payload_digest, status FROM kai_credit_transactions

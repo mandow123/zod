@@ -56,8 +56,8 @@ test('commerce surfaces show card-hours only and consume server-authored Spark p
   assert.match(detail, /product\.pricing\.unitCredit/u);
   assert.match(detail, /product\.pricing\.listUnitCredit/u);
   assert.doesNotMatch(detail, /(?:0\.8|80\s*\/\s*100|discountPercent\s*\/)/u);
-  assert.equal(creditAmount('40668.662675'), '40668.66');
-  assert.equal(creditAmount('32534.930140'), '32534.93');
+  assert.equal(creditAmount('40668.66'), '40668.66');
+  assert.equal(creditAmount('32534.93'), '32534.93');
 });
 
 test('device fulfillment submits the TLS tracking number and exposes no manual settlement action', async () => {
@@ -69,4 +69,24 @@ test('device fulfillment submits the TLS tracking number and exposes no manual s
   assert.match(commerce, /body: \{ logisticsProvider: input\.logisticsProvider, trackingNumber: input\.trackingNumber \}/u);
   assert.match(detail, /trackingNumber: tracking/u);
   for (const text of [commerce, detail, actions]) assert.doesNotMatch(text, /trackingDigest|settleDeviceOrder|'settle'/u);
+});
+
+test('供应方 App 兑付只公开卡时，旧需求人民币预算已删除', async () => {
+  const [sheet, creditScreen, api, payoutService, marketRoutes, marketService, marketStore, marketTypes] = await Promise.all([
+    source('../src/CreditPayoutSheet.tsx'),
+    source('../src/screens/CreditScreen.tsx'),
+    source('../src/api.ts'),
+    source('../backend/src/payouts/service.ts'),
+    source('../backend/src/market/routes.ts'),
+    source('../backend/src/market/service.ts'),
+    source('../backend/src/market/store.ts'),
+    source('../backend/src/market/types.ts'),
+  ]);
+  for (const visible of [sheet, creditScreen]) assert.doesNotMatch(visible, /¥|amountCny|creditToCnyEstimate/u);
+  const payoutContract = api.slice(api.indexOf('export type CreditPayout ='), api.indexOf('export type CreditTopup ='));
+  assert.doesNotMatch(payoutContract, /amountCny|conversion|¥/u);
+  assert.match(payoutService, /operator \? \{ subjectId: record\.subjectId, amountCny:/u);
+  for (const demandSource of [marketRoutes, marketService, marketStore, marketTypes]) {
+    assert.doesNotMatch(demandSource, /budgetMaxCents|budgetMaxCny|budget_max_cents/u);
+  }
 });

@@ -357,7 +357,7 @@ export class MarketService {
     principal: AccountPrincipal,
     input: {
       kind: ResourceKind; title: string; productHint: string; region: string; quantity: string; capacityUnit: string;
-      budgetMaxCents?: number; desiredStartAt: string; deadlineAt: string; description: string;
+      desiredStartAt: string; deadlineAt: string; description: string;
     },
     context: RequestContext,
   ) {
@@ -372,7 +372,7 @@ export class MarketService {
       id: randomUUID(), buyerId: principal.userId, kind: input.kind,
       title: input.title.trim(), productHint: input.productHint.trim(), region: input.region.trim(),
       quantity: decimalQuantity(input.quantity), capacityUnit: input.capacityUnit.trim(),
-      budgetMaxCents: input.budgetMaxCents ?? null, desiredStartAt, deadlineAt, description: input.description.trim(),
+      desiredStartAt, deadlineAt, description: input.description.trim(),
     });
     await this.audit(principal, 'DEMAND_PUBLISHED', 'COMPUTE_DEMAND', demand.id, context, { kind: demand.kind, region: demand.region });
     return this.serializeDemand(demand);
@@ -514,7 +514,6 @@ export class MarketService {
   private serializeDemand(demand: Awaited<ReturnType<MarketStore['createDemand']>>) {
     return {
       ...demand,
-      budgetMaxCny: demand.budgetMaxCents === null ? null : (demand.budgetMaxCents / 100).toFixed(2),
       desiredStartAt: demand.desiredStartAt.toISOString(), deadlineAt: demand.deadlineAt.toISOString(),
       createdAt: demand.createdAt.toISOString(), updatedAt: demand.updatedAt.toISOString(),
     };

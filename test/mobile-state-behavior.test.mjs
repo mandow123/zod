@@ -58,5 +58,9 @@ test('market fails closed for outages, backend blockers, build policy and unsupp
 test('card-hour previews use decimal integer rounding instead of binary floating point', () => {
   assert.equal(creditToCnyEstimate('2.50'), '2.51');
   assert.equal(creditToCnyEstimate('100000.00'), '100200.00');
+  assert.equal(cnyYuanToCreditEstimate(1), '0.99');
   assert.equal(cnyYuanToCreditEstimate(100), '99.80');
+  assert.equal(cnyYuanToCreditEstimate(500), '499.00');
+  assert.equal(cnyYuanToCreditEstimate(1000), '998.00');
+  assert.equal(cnyYuanToCreditEstimate(5000), '4990.01');
 });
