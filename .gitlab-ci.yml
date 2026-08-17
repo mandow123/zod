@@ -1,0 +1,8 @@
+stages:
+  - product-audit
+
+product-manager-audit:
+  stage: product-audit
+  image: node:24-alpine
+  script:
+    - npm run audit:product -- --commit HEAD
