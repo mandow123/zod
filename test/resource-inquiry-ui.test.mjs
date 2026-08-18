@@ -115,6 +115,11 @@ test('我的询期呈现服务端状态，操作严格由 allowedActions 控制'
   assert.match(sheet, /dateTime\(item\.endsAt, item\.timeZone\)/u);
   assert.match(sheet, /dateTime\(inquiry\.confirmBy, inquiry\.timeZone\)/u);
   assert.doesNotMatch(sheet, /parsed\.getHours\(\)|parsed\.getMinutes\(\)/u);
+  assert.match(sheet, /<View style=\{styles\.filtersRail\}><ScrollView horizontal/u);
+  assert.match(sheet, /filtersRail: \{ height: 56, flexGrow: 0, flexShrink: 0 \}/u);
+  assert.match(sheet, /filtersScroll: \{ flexGrow: 0, height: 56 \}/u);
+  assert.match(sheet, /filter: \{ height: 36,/u);
+  assert.match(sheet, /filterText: \{[^}]*textAlign: 'center'/u);
 });
 
 test('普通市场与询期新增代码不引入人民币参考价', async () => {

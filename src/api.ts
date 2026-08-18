@@ -497,6 +497,9 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
     createdAt: listing.startsAt,
     audits: { resource: true, price: true },
     ownedByCurrentSubject: false,
+    purchasable: listing.demo.simulatedAudit ? false : listing.demo.purchasable,
+    blockedReason: listing.demo.simulatedAudit || !listing.demo.purchasable ? '本地验收资源，不进入真实交易' : null,
+    demo: { ...listing.demo },
   })) };
 }
 type ReadinessResponse = {

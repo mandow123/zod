@@ -108,6 +108,22 @@ export function localE2EDemoCatalogDigest(listings: readonly LocalE2EDemoListing
   return `sha256:${createHash('sha256').update(JSON.stringify(listings)).digest('hex')}`;
 }
 
+export function buildLocalE2EDeviceProducts() {
+  return [{
+    id: '02672000-0000-4000-8000-000000000200', sku: 'NVIDIA-DGX-SPARK-200-BAIGE', title: 'NVIDIA DGX Spark',
+    productType: 'physical_delivery', campaignKey: 'nvidia-dgx-spark-200-baige-20off', catalogSource: 'bundled_campaign',
+    template: { key: 'nvidia-dgx-spark-preorder-v1' }, supplier: { displayName: '白鸽在线', verified: false },
+    activationStatus: 'pending_activation', purchasable: false,
+    blockedReason: '本地验收仅展示活动入口，不创建真实设备订单',
+    capabilities: { creditOnly: true, requiresShippingAddress: true, physicalDelivery: true, maxQuantityPerOrder: 20 },
+    inventory: { total: 200, reserved: 0, sold: 0, available: 200 },
+    pricing: { listUnitCredit: '40668.66', unitCredit: '32534.93', discountPercent: 20 },
+    expectedDelivery: { days: 90, label: '预计3个月发货' },
+    specifications: { brand: 'NVIDIA', model: 'DGX Spark', fulfillment: 'preorder', region: '华东-上海' },
+    localAcceptance: { mode: 'local_e2e', inventoryCommitment: false, orderCreation: false },
+  }] as const;
+}
+
 export function validWholeUnitDemoQuantity(value: string) {
   return /^(?:[1-9]\d{0,2})$/u.test(value) && Number(value) <= 200;
 }

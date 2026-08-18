@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildLocalE2EDemoCatalog, localE2EDemoCatalogDigest, validWholeUnitDemoQuantity } from '../scripts/local-e2e-demo-catalog.js';
+import { buildLocalE2EDemoCatalog, buildLocalE2EDeviceProducts, localE2EDemoCatalogDigest, validWholeUnitDemoQuantity } from '../scripts/local-e2e-demo-catalog.js';
 
 describe('local E2E demo catalog', () => {
   it('creates exactly 100 explicitly sandboxed demo resources and fails closed outside local E2E', () => {
@@ -33,5 +33,18 @@ describe('local E2E demo catalog', () => {
     expect(['0', '1.5', '201', '500', '-1'].some(validWholeUnitDemoQuantity)).toBe(false);
     expect(catalog.every((item) => !('referenceCny' in item))).toBe(true);
     expect(catalog.every((item) => !item.promotion || !('originalReferenceCny' in item.promotion))).toBe(true);
+  });
+
+  it('exposes the Spark device entry as a non-purchasable local acceptance product', () => {
+    const products = buildLocalE2EDeviceProducts();
+    expect(products).toHaveLength(1);
+    expect(products[0]).toMatchObject({
+      title: 'NVIDIA DGX Spark', campaignKey: 'nvidia-dgx-spark-200-baige-20off',
+      activationStatus: 'pending_activation', purchasable: false,
+      inventory: { total: 200, reserved: 0, sold: 0, available: 200 },
+      pricing: { listUnitCredit: '40668.66', unitCredit: '32534.93', discountPercent: 20 },
+      localAcceptance: { mode: 'local_e2e', inventoryCommitment: false, orderCreation: false },
+    });
+    expect(JSON.stringify(products)).not.toMatch(/referenceCny|人民币|currency/iu);
   });
 });

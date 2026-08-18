@@ -25,6 +25,7 @@
     "deployment:verify": "node scripts/verify-deployment-contract.mjs",
     "catalog:import": "tsx scripts/import-supplier-catalog.ts",
     "inquiry:acceptance": "tsx scripts/inquiry-acceptance-server.ts",
+    "inquiry:acceptance:verify": "node scripts/verify-inquiry-acceptance.mjs",
     "production:routing:capture": "node deploy/aws-ubuntu/verify-routing.mjs capture",
     "production:routing:verify": "node deploy/aws-ubuntu/verify-routing.mjs verify",
     "production:host:preflight": "node deploy/aws-ubuntu/preflight-host.mjs",
