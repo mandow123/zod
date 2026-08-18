@@ -49,6 +49,9 @@ import { registerCreatorCommissionRoutes } from './creator-commissions/routes.js
 import type { CreatorCommissionService } from './creator-commissions/service.js';
 import { registerResourceInquiryRoutes } from './resource-inquiries/routes.js';
 import type { ResourceInquiryService } from './resource-inquiries/service.js';
+import {
+  KAI_AUTH_ISSUER, KAI_AUTH_PUBLIC_CLIENT_ID, KAI_AUTH_REDIRECT_URI,
+} from './account/kai-access.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -82,7 +85,8 @@ export async function buildApp({ config, database, accountService, subjectServic
     logger: logger ? {
       redact: {
         paths: [
-          'req.headers.authorization', 'req.headers.cookie', 'req.headers.wechatpay-signature',
+          'req.headers.authorization', 'req.headers.x-kai-id-token', 'req.raw.rawHeaders',
+          'req.headers.cookie', 'req.headers.wechatpay-signature',
           'req.headers.wechatpay-nonce', 'req.headers.wechatpay-serial', 'res.headers.set-cookie',
           'req.body.trackingNumber',
         ],
@@ -102,7 +106,7 @@ export async function buildApp({ config, database, accountService, subjectServic
     origin: config.NODE_ENV === 'production' ? [config.PUBLIC_ORIGIN] : true,
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['authorization', 'content-type', 'idempotency-key', 'x-request-id'],
+    allowedHeaders: ['authorization', 'x-kai-id-token', 'content-type', 'idempotency-key', 'x-request-id'],
   });
   await app.register(rateLimit, {
     // Dense device acceptance runs intentionally exercise many read-after-write
@@ -134,8 +138,8 @@ export async function buildApp({ config, database, accountService, subjectServic
     const deploymentBlockers = [
       ...(databaseConnected ? [] : ['DATABASE_CONNECTION']),
       ...(databaseConnected && !schema.ready ? ['DATABASE_SCHEMA'] : []),
-      ...(config.readiness.capabilities.tokenSecurity.available ? [] : ['AUTHENTICATION']),
-      ...(config.NODE_ENV !== 'production' || config.readiness.capabilities.kaiOidc.available ? [] : ['UNIFIED_IDENTITY']),
+      ...(config.readiness.capabilities.accountSecurity.available ? [] : ['AUTHENTICATION']),
+      ...(config.NODE_ENV !== 'production' || config.readiness.capabilities.kaiResourceAccess.available ? [] : ['UNIFIED_IDENTITY']),
       ...(config.readiness.capabilities.sms.available ? [] : ['SMS']),
       ...(config.readiness.capabilities.push.available ? [] : ['PUSH']),
       ...(config.readiness.capabilities.objectStorage.available ? [] : ['OBJECT_STORAGE']),
@@ -161,8 +165,8 @@ export async function buildApp({ config, database, accountService, subjectServic
       },
       capabilities: {
         database: databaseReady,
-        authentication: config.readiness.capabilities.tokenSecurity.available,
-        unifiedIdentity: config.readiness.capabilities.kaiOidc.available,
+        authentication: config.readiness.capabilities.accountSecurity.available,
+        unifiedIdentity: config.readiness.capabilities.kaiResourceAccess.available,
         sms: config.readiness.capabilities.sms.available,
         alipay: config.readiness.capabilities.alipay.available,
         wechat: config.readiness.capabilities.wechat.available,
@@ -180,6 +184,22 @@ export async function buildApp({ config, database, accountService, subjectServic
         creatorCommissions: config.readiness.capabilities.creatorCommissions.available,
       },
       database: { connected: databaseConnected, schema },
+      authentication: {
+        mode: 'auth-kai-native',
+        issuer: KAI_AUTH_ISSUER,
+        clientId: KAI_AUTH_PUBLIC_CLIENT_ID,
+        redirectUri: KAI_AUTH_REDIRECT_URI,
+        resourceAccess: {
+          ready: config.readiness.capabilities.kaiResourceAccess.available,
+          tokenFormat: config.KAI_RESOURCE_ACCESS_TOKEN_FORMAT ?? null,
+          audience: config.KAI_RESOURCE_ACCESS_TOKEN_AUDIENCE ?? null,
+          requiredScope: config.KAI_RESOURCE_ACCESS_TOKEN_REQUIRED_SCOPE ?? null,
+          binding: config.KAI_RESOURCE_ACCESS_TOKEN_FORMAT === 'opaque'
+            ? 'id-token-at_hash+userinfo'
+            : config.KAI_RESOURCE_ACCESS_TOKEN_FORMAT === 'jwt' ? 'jwt-audience' : null,
+          blockers: config.readiness.capabilities.kaiResourceAccess.missing,
+        },
+      },
       deployment: { ready: deploymentReady, blockers: deploymentBlockers },
       commerce: {
         model: 'kai-credit-only',

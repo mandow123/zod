@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { ResourceEvidenceService } from './service.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
@@ -21,13 +22,13 @@ export async function registerResourceEvidenceRoutes(
   app: FastifyInstance, accounts: AccountService, evidence: ResourceEvidenceService,
 ) {
   app.get('/mobile/v1/provider/resources/:resourceId/evidence', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(resourceParams, request.params);
     return { ok: true, checklist: await evidence.checklist(principal, parameters.resourceId) };
   });
 
   app.post('/mobile/v1/provider/resources/:resourceId/evidence/uploads', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(resourceParams, request.params);
     const body = parse(z.object({
       category: z.enum(['ownership', 'configuration', 'availability']),
@@ -44,7 +45,7 @@ export async function registerResourceEvidenceRoutes(
   });
 
   app.post('/mobile/v1/provider/resources/:resourceId/evidence/:evidenceId/upload-grant', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(evidenceParams, request.params);
     const body = parse(z.object({ sha256Digest: z.string().regex(/^sha256:[a-f0-9]{64}$/u) }), request.body);
     return {
@@ -54,7 +55,7 @@ export async function registerResourceEvidenceRoutes(
   });
 
   app.post('/mobile/v1/provider/resources/:resourceId/evidence/:evidenceId/complete', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(evidenceParams, request.params);
     return {
       ok: true,
@@ -63,7 +64,7 @@ export async function registerResourceEvidenceRoutes(
   });
 
   app.post('/mobile/v1/provider/resources/:resourceId/evidence/:evidenceId/discard', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(evidenceParams, request.params);
     return {
       ok: true,
@@ -72,7 +73,7 @@ export async function registerResourceEvidenceRoutes(
   });
 
   app.post('/mobile/v1/provider/resources/:resourceId/evidence/submit', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(resourceParams, request.params);
     const result = await evidence.submit(
       principal, parameters.resourceId, String(request.headers['idempotency-key'] ?? ''), context(request),
@@ -81,13 +82,13 @@ export async function registerResourceEvidenceRoutes(
   });
 
   app.get('/mobile/v1/operator/resources/:resourceId/evidence', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(resourceParams, request.params);
     return { ok: true, bundle: await evidence.operatorBundle(principal, parameters.resourceId) };
   });
 
   app.get('/mobile/v1/operator/resources/:resourceId/evidence/:evidenceId/download', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(evidenceParams, request.params);
     return {
       ok: true,

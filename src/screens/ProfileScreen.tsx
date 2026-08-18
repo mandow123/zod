@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { logoutCloudPay, type CloudPaySnapshot, type TradingSubject } from '../api';
+import { SessionLogoutError, logoutCloudPay, type CloudPaySnapshot, type TradingSubject } from '../api';
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
 import { brand, colors } from '../theme';
 
@@ -62,7 +62,14 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
     : snapshot.payoutProfile?.status === 'suspended' ? '收款账户已暂停，请联系客服' : '兑付资格尚未激活';
   const accountAction = () => {
     if (!snapshot.authenticated) { onLogin(); return; }
-    Alert.alert('退出当前设备？', '其他已登录设备不会受影响。', [{ text: '取消', style: 'cancel' }, { text: '安全退出', style: 'destructive', onPress: () => { void logoutCloudPay().then(onSessionChanged).catch(() => onSessionChanged()); } }]);
+    Alert.alert('退出当前设备？', '其他已登录设备不会受影响。', [{ text: '取消', style: 'cancel' }, {
+      text: '安全退出', style: 'destructive', onPress: () => {
+        void logoutCloudPay().catch((reason: unknown) => {
+          Alert.alert(reason instanceof SessionLogoutError && !reason.localSessionCleared ? '退出未完成' : '本机已退出', reason instanceof Error
+            ? reason.message : '统一身份凭证的远程撤销状态暂时无法确认。');
+        }).finally(() => onSessionChanged());
+      },
+    }]);
   };
   const openSubjects = () => snapshot.authenticated ? setSubjectsVisible(true) : onLogin();
 
@@ -96,7 +103,7 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
     <MenuGroup title="服务与安全" caption="账号、主体与隐私" icon="shield-checkmark-outline">
       <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta={`通过消息联系 ${brand.name}`} onPress={onOpenMessages} />
       <Menu icon="business-outline" label="主体与认证" meta={currentSubject ? `${currentSubject.displayName} · ${subjectStatusLabel[currentSubject.status]}` : '查看真实主体状态'} onPress={openSubjects} />
-      <Menu icon="settings-outline" label="账号设置" meta="登录安全与设备管理" onPress={() => snapshot.authenticated ? setSecurityVisible(true) : onLogin()} />
+      <Menu icon="settings-outline" label="账号设置" meta="本机安全、通知与账户状态" onPress={() => snapshot.authenticated ? setSecurityVisible(true) : onLogin()} />
       <Menu icon="document-text-outline" label="隐私与数据" meta="数据使用与交易边界" onPress={() => setPrivacyVisible(true)} last />
     </MenuGroup>
     <Text style={styles.version}>{brand.name} · 1.0.0</Text>

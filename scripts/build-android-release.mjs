@@ -148,9 +148,9 @@ const requiredFrontendMarkers = [
   '/delivery/start',
   '/delivery/ready',
   '/refund/approve',
-  '/mobile/v1/auth/kai/start',
-  '/mobile/v1/auth/kai/exchange',
-  'kaicloudpay://auth/kai/callback',
+  'https://auth.kai.com/api/auth',
+  'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
+  'https://cloud.kai.com/zod/oauth2redirect/kai',
   '/mobile/v1/device-products',
   '/mobile/v1/device-orders',
   '/mobile/v1/device-assets',
@@ -164,13 +164,23 @@ if (missingFrontendMarkers.length > 0) {
   process.exit(1);
 }
 if (!localE2e) {
-  if (!embeddedBundle.stdout.includes(Buffer.from('KAI_CLOUD_UNIFIED_IDENTITY_V1'))) {
-    process.stderr.write('Production artifact is missing the KAI unified identity login.\n');
+  const productionIdentityMarkers = [
+    'KAI_CLOUD_UNIFIED_IDENTITY_V1', 'X-KAI-ID-Token',
+    '/mobile/v1/auth/kai/consents', 'kai.zod.auth.pending-revocations.v1',
+  ];
+  const missingIdentityMarkers = productionIdentityMarkers.filter(
+    (marker) => !embeddedBundle.stdout.includes(Buffer.from(marker)),
+  );
+  if (missingIdentityMarkers.length > 0) {
+    process.stderr.write(`Production artifact is missing the KAI unified identity protocol: ${missingIdentityMarkers.join(', ')}\n`);
     process.exit(1);
   }
   const forbiddenMarkers = [
     '10.0.2.2', '/__e2e/', 'CLOUDPAY_LOCAL_E2E',
     '/mobile/v1/auth/otp/request', '/mobile/v1/auth/otp/verify',
+    '/mobile/v1/auth/kai/start', '/mobile/v1/auth/kai/exchange',
+    '/mobile/v1/auth/refresh', '/mobile/v1/auth/logout', '/mobile/v1/auth/sessions',
+    'kaicloudpay://auth/kai/callback',
   ];
   const found = forbiddenMarkers.filter((marker) => embeddedBundle.stdout.includes(Buffer.from(marker)));
   if (found.length > 0) {

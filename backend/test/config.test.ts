@@ -43,6 +43,7 @@ const secureEnvironment = {
   KAI_OIDC_SUBJECT_PEPPER: 'i'.repeat(40),
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: Buffer.alloc(32, 13).toString('base64'),
   KAI_OIDC_APP_REDIRECT_URIS: 'kaicloudpay://auth/kai/callback',
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'opaque',
 } as const;
 
 describe('runtime configuration', () => {
@@ -52,7 +53,7 @@ describe('runtime configuration', () => {
     expect(config.readiness.releaseReady).toBe(false);
     expect(config.readiness.coreBlockers).toContain('DATABASE_URL');
     expect(config.readiness.coreBlockers).toContain('PUBLIC_ORIGIN(HTTPS)');
-    expect(config.readiness.coreBlockers).toContain('KAI_OIDC_CLIENT_ID');
+    expect(config.readiness.coreBlockers).toContain('KAI_RESOURCE_ACCESS_TOKEN_FORMAT');
     expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
     expect(config.readiness.releaseBlockers).toContain('COMPUTE_PROVIDER_NOT_CONFIGURED');
   });
@@ -70,6 +71,45 @@ describe('runtime configuration', () => {
     expect(config.readiness.capabilities.nodeEnrollment.available).toBe(true);
     expect(config.readiness.capabilities.computeFulfillment.available).toBe(true);
     expect(config.readiness.capabilities.kaiOidc.available).toBe(true);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+  });
+
+  it('does not require the retired CloudPay broker secret for production resource access', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      KAI_OIDC_CLIENT_ID: undefined,
+      KAI_OIDC_CLIENT_SECRET: undefined,
+      KAI_OIDC_FLOW_PEPPER: undefined,
+      KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: undefined,
+      KAI_OIDC_APP_REDIRECT_URIS: undefined,
+    });
+    expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+    expect(config.readiness.coreReady).toBe(true);
+  });
+
+  it('does not read or require retired local HS256, refresh or OTP secrets in production', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      ACCESS_TOKEN_SECRET: undefined,
+      REFRESH_TOKEN_PEPPER: undefined,
+      OTP_PEPPER: undefined,
+    });
+    expect(config.readiness.capabilities.accountSecurity.available).toBe(true);
+    expect(config.readiness.capabilities.legacyLocalAuth.available).toBe(false);
+    expect(config.readiness.coreReady).toBe(true);
+    expect(config.readiness.coreBlockers).not.toEqual(expect.arrayContaining([
+      expect.stringContaining('ACCESS_TOKEN_SECRET'),
+      expect.stringContaining('REFRESH_TOKEN_PEPPER'),
+      expect.stringContaining('OTP_PEPPER'),
+    ]));
+  });
+
+  it('fails closed if production attempts to enable the isolated legacy local-auth harness', () => {
+    const config = loadConfig({ ...secureEnvironment, LOCAL_E2E: 'true' });
+    expect(config.readiness.coreReady).toBe(false);
+    expect(config.readiness.coreBlockers).toContain('LOCAL_E2E(production forbidden)');
+    expect(config.readiness.capabilities.legacyLocalAuth.available).toBe(false);
   });
 
   it('reports commerce ready when every implementation invariant is present', () => {
@@ -91,7 +131,25 @@ describe('runtime configuration', () => {
       KAI_OIDC_SUBJECT_PEPPER: secureEnvironment.KAI_OIDC_FLOW_PEPPER,
     });
     expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(false);
     expect(config.readiness.coreBlockers).toContain('KAI_OIDC_SUBJECT_PEPPER(independent from flow pepper)');
+  });
+
+  it('opens opaque resource access only through the approved at_hash paired-token verifier', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'opaque',
+      KAI_RESOURCE_ACCESS_TOKEN_AUDIENCE: undefined,
+    });
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+    expect(config.readiness.coreBlockers)
+      .not.toContain('KAI_RESOURCE_ACCESS_TOKEN_CLIENT_BINDING(PROVIDER_EVIDENCE_REQUIRED)');
+  });
+
+  it('rejects unobserved access-token formats instead of guessing a JWT resource audience', () => {
+    const unsupported = loadConfig({ ...secureEnvironment, KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'jwt' });
+    expect(unsupported.readiness.capabilities.kaiResourceAccess.missing)
+      .toContain('KAI_RESOURCE_ACCESS_TOKEN_FORMAT(opaque paired-token contract)');
   });
 
   it('does not open verified topups without one exact public provider callback', () => {

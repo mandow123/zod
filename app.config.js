@@ -33,7 +33,6 @@ module.exports = {
     extra: {
       ...source.expo.extra,
       cloudPayBaseUrl: localE2eBaseUrl || source.expo.extra.cloudPayBaseUrl,
-      kaiAuthAppRedirect: 'kaicloudpay://auth/kai/callback',
       allowInsecureApiForLocalE2e: Boolean(localE2eBaseUrl),
       ...(localE2eBaseUrl ? { localE2eSessionToken } : {}),
       distributionChannel,

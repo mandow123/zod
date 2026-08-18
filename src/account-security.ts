@@ -1,4 +1,14 @@
-export * from './account-security-common';
+import type { AccountSession } from './account-security-core';
+export * from './account-security-core';
+
+export const REMOTE_ACCOUNT_SESSIONS_AVAILABLE = false;
+export const PUSH_INSTALLATION_AVAILABLE = false;
+
+export async function listAccountSessions(): Promise<AccountSession[]> { return []; }
+
+export async function revokeAccountSession(_sessionId: string): Promise<never> {
+  throw new Error('KAI 统一身份暂未提供可核验的远程设备列表。');
+}
 
 export const PHONE_REAUTHENTICATION_ENABLED = false;
 

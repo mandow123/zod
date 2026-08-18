@@ -11,9 +11,9 @@
 5. 每次轮换密钥同时更新 `BACKUP_KEY_ID`，旧密钥至少保留到对应备份全部超过保留期。
 6. `BACKUP_LOCAL_DIRECTORY` 必须为绝对路径，权限仅限运行账户；成功上传后本地副本会删除。
 7. 生产发布前执行 `npm run db:migrate`，确认 readiness 的 `backup` 与 `observability` 均为 `true`。
-8. 在 `auth.kai.com` 登记独立 confidential client，固定回调为 `https://cloudpay.kai.com/mobile/v1/auth/kai/callback`，scope 仅为 `openid profile email`；不得复用 `cloud.kai.com` 主站 client。
-9. 密钥系统必须注入 `KAI_OIDC_CLIENT_ID`、`KAI_OIDC_CLIENT_SECRET`、独立的 `KAI_OIDC_FLOW_PEPPER`、`KAI_OIDC_SUBJECT_PEPPER`、32 字节 Base64 `KAI_OIDC_TRANSACTION_ENCRYPTION_KEY`，以及精确白名单 `KAI_OIDC_APP_REDIRECT_URIS=kaicloudpay://auth/kai/callback`。
-10. `KAI_OIDC_SUBJECT_PEPPER` 用于长期 issuer+sub 身份键，不得直接轮换。需要轮换时先在隔离库演练 subject 哈希迁移，再双读/回填并核对身份数量；禁止只换环境变量。flow pepper 和事务密钥轮换会使在途登录失效，需在低峰执行并确认 App 可重新发起。
+8. Zod App 使用 `auth.kai.com` 公共 client `xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K` 和 PKCE，固定回调为 `https://cloud.kai.com/zod/oauth2redirect/kai`；APK 不得包含 secret。旧 CloudPay confidential broker 不得作为生产登录入口。
+9. 实测 access token 为 opaque，初次 exchange 与 refresh 的新 ID token 均包含 `at_hash=base64url(SHA-512(access_token) 左半32字节)`。设置 `KAI_RESOURCE_ACCESS_TOKEN_FORMAT=opaque`；每个资源 API 请求必须同时携带 opaque Bearer 与 `X-KAI-ID-Token`。上线前验证后端严格校验 ID token 的 EdDSA、issuer、Zod audience、期限、`at_hash`，并以当前 Bearer 实时调用 userinfo 且 `sub` 一致。两头缺一、重复、错配、撤销、非 JSON 或超时均应在业务事务前返回 401。刷新必须原子替换 access/refresh/id 三件套，缺新 ID token 即失败关闭。
+10. 密钥系统还必须注入 `KAI_OIDC_SUBJECT_PEPPER`。它用于长期 issuer+sub 身份键且兼容既有映射，不得直接轮换；需要轮换时先在隔离库演练 subject 哈希迁移，再双读/回填并核对身份数量，禁止只换环境变量。
 11. 实物商品唯一主数据为 `02672000-0000-4000-8000-000000000200`：`NVIDIA DGX Spark`、200 台、供应商展示名仅该 SKU 使用“白鸽在线”、含税原价 ¥40,750、售价 ¥32,600（8 折）、预计 90 天发货。生产可展示但必须保持 `pending_activation`；只有绑定真实供应商交易主体、完成法律资料摘要核验并激活公司收款档案后，才能切换为 `active` 并被用户购买。本地演示数据不得覆盖这一状态、价格、库存或主数据 ID。
 
 ## 自动备份

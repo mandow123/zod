@@ -7,9 +7,8 @@
 `cloudpay-backend-secrets` 必须由云密钥管理服务或 External Secrets 创建，不要提交 YAML 明文。至少提供：
 
 - `DATABASE_URL`
-- `ACCESS_TOKEN_SECRET`、`REFRESH_TOKEN_PEPPER`、`OTP_PEPPER`、`PII_ENCRYPTION_KEY`、`AUDIT_PEPPER`、`CURSOR_SECRET`
-- `KAI_OIDC_CLIENT_ID`、`KAI_OIDC_CLIENT_SECRET`、`KAI_OIDC_FLOW_PEPPER`、`KAI_OIDC_SUBJECT_PEPPER`
-- `KAI_OIDC_TRANSACTION_ENCRYPTION_KEY`、`KAI_OIDC_APP_REDIRECT_URIS`
+- `PII_ENCRYPTION_KEY`、`AUDIT_PEPPER`、`CURSOR_SECRET`（生产不得配置已退役的本地 HS256/refresh/OTP 凭据）
+- `KAI_OIDC_SUBJECT_PEPPER`
 - `SMS_ACCESS_KEY_ID`、`SMS_ACCESS_KEY_SECRET`、`SMS_SIGN_NAME`、`SMS_TEMPLATE_CODE`
 - `ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`、`ALIPAY_PUBLIC_KEY`、`ALIPAY_SELLER_ID`、`TOPUP_ALIPAY_NOTIFY_URL`
 - `WECHAT_APP_ID`、`WECHAT_MCH_ID`、`WECHAT_API_V3_KEY`、`WECHAT_PRIVATE_KEY`
@@ -28,7 +27,7 @@
 
 TLS 证书使用独立的 `cloudpay-kai-com-tls` Secret。监控应从集群内访问 `cloudpay-backend.cloudpay.svc/internal/metrics`，该路径没有暴露在 Ingress。
 
-统一身份必须在 `auth.kai.com` 登记独立的 CloudPay mobile broker confidential client，回调精确为 `https://cloudpay.kai.com/mobile/v1/auth/kai/callback`；不得复用主站 client。`KAI_OIDC_APP_REDIRECT_URIS` 当前只允许 `kaicloudpay://auth/kai/callback`。`KAI_OIDC_SUBJECT_PEPPER` 是 issuer+sub 的长期稳定映射键，不能按普通轮换节奏直接替换；如需轮换，先部署同时重算现有 `subject_hash` 的迁移。`KAI_OIDC_FLOW_PEPPER` 与事务加密密钥可按短期凭据轮换流程更换，但必须彼此独立。任何这些配置缺失时生产进程和 readiness 均失败关闭。
+Zod App 以公共 client `xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K` 直接连接 `https://auth.kai.com/api/auth`，固定回调为 `https://cloud.kai.com/zod/oauth2redirect/kai`，APK 不包含 secret。资源 API 要求 `Authorization` 中的 opaque access token 与 `X-KAI-ID-Token` 成对出现：后端以 JWKS 验 ID token 的 EdDSA、issuer、Zod audience、期限及 `at_hash`，再用当前 access token 实时调用 userinfo 并强制两者 `sub` 相同。任何一步失败均在业务事务前返回 401；ID token 不能单独授权或作为 Bearer。`KAI_OIDC_SUBJECT_PEPPER` 是 issuer+sub 的长期稳定映射键，不能按普通轮换节奏直接替换；如需轮换，必须先完成数据库哈希迁移。旧 `KAI_OIDC_CLIENT_SECRET` broker 只为非生产兼容保留，不属于正式登录依赖。
 
 算力履约的非敏感配置由 `cloudpay-backend-config` 提供：`COMPUTE_PROVIDER=sidecar-v1`、`COMPUTE_PROVIDER_URL`、`COMPUTE_ALLOCATED_ACCELERATOR_COUNT=1`、`COMPUTE_NODE_ACCELERATOR_COUNT=8` 和 `NODE_SUPPORTED_AGENT_VERSIONS=1.0.0`。每项资源优先使用验真通过的 `specifications.gpuCount` 作为槽位上限；该变量只为缺少结构化字段的旧实机提供受控回退，本节点固定为 8 张 H100，不得按挂牌数量或产品名称扩大。示例 URL 是集群私有 DNS 契约，部署时可以替换为实际的私网 HTTPS 地址，但禁止填写公网地址或降级为 HTTP。`COMPUTE_PROVIDER_TOKEN` 只能由 Secret 注入，必须与 H100 sidecar 使用的 bearer token 一致且至少 32 个字符；`NODE_GPU_FINGERPRINT_PEPPER`、`NODE_CLAIM_TOKEN_PEPPER` 与 `NODE_CLAIM_TOKEN_ENCRYPTION_KEY` 必须分别生成独立的生产密钥并由 Secret 注入。以上令牌和密钥不得写入 ConfigMap、镜像或仓库。
 

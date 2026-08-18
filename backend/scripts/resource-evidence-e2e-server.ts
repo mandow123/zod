@@ -205,7 +205,7 @@ const pglite = new PGlite();
 for (const migration of await migrationManifest()) await pglite.exec(migration.sql);
 const database = adapter(pglite);
 const config = loadConfig({
-  NODE_ENV: 'test', PUBLIC_ORIGIN: `http://127.0.0.1:${apiPort}`,
+  NODE_ENV: 'test', LOCAL_E2E: 'true', PUBLIC_ORIGIN: `http://127.0.0.1:${apiPort}`,
   ACCESS_TOKEN_SECRET: 'e2e-access-'.padEnd(64, 'a'), REFRESH_TOKEN_PEPPER: 'e2e-refresh-'.padEnd(32, 'b'),
   OTP_PEPPER: 'e2e-otp-'.padEnd(32, 'c'), AUDIT_PEPPER: 'e2e-audit-'.padEnd(32, 'd'),
   CURSOR_SECRET: 'e2e-cursor-'.padEnd(32, 'e'), PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),

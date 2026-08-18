@@ -44,6 +44,7 @@ import { NodeEnrollmentStore } from './node-enrollment/store.js';
 import { NodeEnrollmentService } from './node-enrollment/service.js';
 import { PostgresKaiIdentityStore } from './account/kai-identity-store.js';
 import { KaiOidcBroker } from './account/kai-oidc.js';
+import { createKaiResourceAccessAuthenticator } from './account/kai-access.js';
 import { PostgresCreditPayoutStore } from './payouts/store.js';
 import { CreditPayoutService } from './payouts/service.js';
 import { PostgresDeviceCommerceStore } from './device-commerce/store.js';
@@ -79,76 +80,82 @@ const paymentProviders = createPaymentProviders(config);
 const accountStore = database ? new PostgresAccountStore(database) : undefined;
 const marketStore = database ? new PostgresMarketStore(database) : undefined;
 const listingStore = database ? new PostgresListingAuditStore(database) : undefined;
-const accountService = accountStore && config.readiness.capabilities.tokenSecurity.available
-  ? new AccountService(accountStore, createSmsProvider(config) ?? new UnavailableSmsProvider(), config)
+const kaiIdentityStore = database ? new PostgresKaiIdentityStore(database) : undefined;
+const resourceAccessAuthenticator = kaiIdentityStore
+  ? createKaiResourceAccessAuthenticator(config, kaiIdentityStore)
   : undefined;
-const kaiOidc = database && accountService && config.readiness.capabilities.kaiOidc.available
-  ? new KaiOidcBroker(new PostgresKaiIdentityStore(database), accountService, config)
+const accountService = accountStore && config.readiness.capabilities.accountSecurity.available
+  ? new AccountService(accountStore, createSmsProvider(config) ?? new UnavailableSmsProvider(), config,
+    () => new Date(), resourceAccessAuthenticator ?? undefined)
   : undefined;
-const subjectService = database && accountStore && config.readiness.capabilities.tokenSecurity.available
+const kaiOidc = config.NODE_ENV !== 'production' && kaiIdentityStore && accountService
+  && config.readiness.capabilities.kaiOidc.available
+  ? new KaiOidcBroker(kaiIdentityStore, accountService, config)
+  : undefined;
+const subjectService = database && accountStore && config.readiness.capabilities.accountSecurity.available
   ? new SubjectService(new PostgresSubjectStore(database), accountStore, config, listingStore)
   : undefined;
-const marketService = marketStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const marketService = marketStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new MarketService(marketStore, accountStore, config, subjectService)
   : undefined;
-const listingAuditService = listingStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const listingAuditService = listingStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new ListingAuditService(listingStore, accountStore, config, subjectService)
   : undefined;
-const notificationService = database && accountStore && config.readiness.capabilities.tokenSecurity.available
+const notificationService = database && accountStore && config.readiness.capabilities.accountSecurity.available
   ? new NotificationService(new PostgresNotificationStore(database), accountStore, config)
   : undefined;
 const pushProvider = createPushProvider(config);
 const operationsService = database && config.readiness.capabilities.observability.available
   ? new OperationsService(new PostgresOperationsStore(database), config)
   : undefined;
-const resourceEvidenceService = database && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const resourceEvidenceService = database && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new ResourceEvidenceService(new ResourceEvidenceStore(database), accountStore, subjectService, privateObjects, config)
   : undefined;
-const creditLedgerService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditLedgerService = database && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditLedgerService(new PostgresCreditLedgerStore(database), subjectService)
   : undefined;
 const creditTopupStore = database ? new PostgresCreditTopupStore(database) : undefined;
-const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditTopupService(creditTopupStore, accountStore, subjectService, paymentProviders, config)
   : undefined;
-const topupReversalService = database && config.readiness.capabilities.tokenSecurity.available
+const topupReversalService = database && config.readiness.capabilities.accountSecurity.available
   ? new TopupReversalService(new PostgresTopupReversalStore(database), config)
   : undefined;
-const creditPayoutService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditPayoutService = database && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditPayoutService(new PostgresCreditPayoutStore(database), subjectService, config)
   : undefined;
 const deviceCommerceStore = database ? new PostgresDeviceCommerceStore(database) : undefined;
-const deviceCommerceService = deviceCommerceStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const deviceCommerceService = deviceCommerceStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new DeviceCommerceService(deviceCommerceStore, subjectService, config)
   : undefined;
-const shippingAddressService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const shippingAddressService = database && subjectService && config.readiness.capabilities.accountSecurity.available
   && config.PII_ENCRYPTION_KEY && config.AUDIT_PEPPER
   ? new ShippingAddressService(new PostgresShippingAddressStore(database), subjectService, config)
   : undefined;
 const creditOrderStore = database ? new PostgresCreditOrderStore(database) : undefined;
 const fulfillmentStore = database ? new PostgresFulfillmentStore(database) : undefined;
 const computeProvider = createComputeProvider(config);
-const fulfillmentService = fulfillmentStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const fulfillmentService = fulfillmentStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new FulfillmentService(fulfillmentStore, subjectService, computeProvider, config)
   : undefined;
-const creditOrderService = creditOrderStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditOrderService = creditOrderStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditOrderService(creditOrderStore, subjectService, config, undefined, fulfillmentService)
   : undefined;
 const assetPortfolioService = marketStore && deviceCommerceStore && creditOrderStore && subjectService
-  && config.readiness.capabilities.tokenSecurity.available
+  && config.readiness.capabilities.accountSecurity.available
   ? new AssetPortfolioService(marketStore, deviceCommerceStore, creditOrderStore, subjectService)
   : undefined;
 const vastProvider = createVastAiProvider(config);
-const vastMarketService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const vastMarketService = database && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new VastMarketService(new PostgresVastMarketStore(database),subjectService,vastProvider,config.vastPricingPolicy)
   : undefined;
 const creatorCommissionStore=database?new PostgresCreatorCommissionStore(database):undefined;
-const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.accountSecurity.available
   &&config.readiness.capabilities.creatorCommissions.available&&config.CREATOR_REFERRAL_SIGNING_SECRET
   ?new CreatorCommissionService(creatorCommissionStore,subjectService,
     new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,config.PUBLIC_ORIGIN)
   :undefined;
-const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.accountSecurity.available
   ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
@@ -217,13 +224,13 @@ const deviceSettlementWorker = deviceCommerceStore
 const resourceEvidenceWorker = database && privateObjects && malwareScanner
   ? new EvidenceScanWorker(new ResourceEvidenceScanStore(database), privateObjects, malwareScanner, app.log as WorkerLogger)
   : undefined;
-const pushWorker = database && pushProvider && config.readiness.capabilities.tokenSecurity.available
+const pushWorker = database && pushProvider && config.readiness.capabilities.accountSecurity.available
   ? (() => {
       const store = new PostgresPushOutboxStore(database);
       return new PushOutboxWorker(store, new PushProcessor(store, pushProvider, config), app.log as WorkerLogger);
     })()
   : undefined;
-const accountDeletionWorker = database && config.readiness.capabilities.tokenSecurity.available
+const accountDeletionWorker = database && config.readiness.capabilities.accountSecurity.available
   ? new AccountDeletionWorker(new PostgresAccountDeletionStore(database, config), app.log as WorkerLogger)
   : undefined;
 pushWorker?.start();

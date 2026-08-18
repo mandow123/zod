@@ -23,7 +23,7 @@ function adapter(pglite:PGlite):Database{return{health:async()=>true,schemaReadi
   close:()=>pglite.close()}as unknown as Database;}
 
 const file=input(process.argv.slice(2)),port=Number(process.env.INQUIRY_ACCEPTANCE_PORT??4156),origin=`http://127.0.0.1:${port}`;
-const config=loadConfig({NODE_ENV:'test',PUBLIC_ORIGIN:origin,ACCESS_TOKEN_SECRET:'a'.repeat(64),REFRESH_TOKEN_PEPPER:'b'.repeat(32),
+const config=loadConfig({NODE_ENV:'test',LOCAL_E2E:'true',PUBLIC_ORIGIN:origin,ACCESS_TOKEN_SECRET:'a'.repeat(64),REFRESH_TOKEN_PEPPER:'b'.repeat(32),
   OTP_PEPPER:'c'.repeat(32),AUDIT_PEPPER:'d'.repeat(32),CURSOR_SECRET:'e'.repeat(32),PII_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),
   DATABASE_URL:'postgresql://acceptance/local',SMS_PROVIDER:'aliyun',SMS_ACCESS_KEY_ID:'local',SMS_ACCESS_KEY_SECRET:'local',
   SMS_SIGN_NAME:'KAI',SMS_TEMPLATE_CODE:'SMS_LOCAL',PUSH_PROVIDER:'expo',PUSH_CREDENTIALS_JSON:`{"accessToken":"${'p'.repeat(40)}"}`,

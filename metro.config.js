@@ -12,6 +12,33 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/AuthSheet.local-e2e.tsx') };
     }
   }
+  if (moduleName.endsWith('/kai-auth') || moduleName === './src/kai-auth') {
+    const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
+    if (localE2e) {
+      return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/kai-auth.local-e2e.ts') };
+    }
+  }
+  if ((moduleName.endsWith('/session') || moduleName === './src/session')
+    && !moduleName.endsWith('/session.local-e2e')) {
+    const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
+    if (localE2e) {
+      return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/session.local-e2e.ts') };
+    }
+  }
+  if ((moduleName.endsWith('/api-client') || moduleName === './src/api-client')
+    && !moduleName.endsWith('/api-client.local-e2e')) {
+    const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
+    if (localE2e) {
+      return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/api-client.local-e2e.ts') };
+    }
+  }
+  if ((moduleName.endsWith('/session-logout') || moduleName === './src/session-logout')
+    && !moduleName.endsWith('/session-logout.local-e2e')) {
+    const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
+    if (localE2e) {
+      return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/session-logout.local-e2e.ts') };
+    }
+  }
   if (moduleName.endsWith('/account-security') || moduleName === './account-security') {
     const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim());
     return {

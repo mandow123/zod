@@ -4,6 +4,7 @@ import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { RefundService } from './service.js';
 import type { RefundProcessor } from './processor.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 const refundStatus = z.enum(['requested', 'reviewing', 'approved', 'provider_pending', 'succeeded', 'rejected', 'cancelled', 'failed']);
 
@@ -31,7 +32,7 @@ export async function registerRefundRoutes(
   app.post('/mobile/v1/orders/:orderId/refunds', {
     config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
   }, async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ orderId: z.string().uuid() }), request.params);
     const body = parse(z.object({
       amountCents: z.number().int().positive().max(100_000_000_000).optional(),
@@ -46,24 +47,24 @@ export async function registerRefundRoutes(
   });
 
   app.get('/mobile/v1/refunds', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, refunds: await refunds.list(principal) };
   });
 
   app.get('/mobile/v1/refunds/:refundId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ refundId: z.string().uuid() }), request.params);
     return { ok: true, refund: await refunds.get(principal, parameters.refundId) };
   });
 
   app.post('/mobile/v1/refunds/:refundId/cancel', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ refundId: z.string().uuid() }), request.params);
     return { ok: true, refund: await refunds.cancel(principal, parameters.refundId, context(request)) };
   });
 
   app.post('/mobile/v1/operator/refunds/:refundId/review', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ refundId: z.string().uuid() }), request.params);
     const body = parse(z.object({ approved: z.boolean(), reason: z.string().trim().max(1_000).optional() }), request.body);
     return {
@@ -76,7 +77,7 @@ export async function registerRefundRoutes(
   });
 
   app.get('/mobile/v1/operator/refunds', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const query = parse(z.object({
       status: refundStatus.optional(), limit: z.coerce.number().int().min(1).max(100).optional(),
     }), request.query);

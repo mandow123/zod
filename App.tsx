@@ -62,6 +62,7 @@ import {
 import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
+import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 
@@ -173,6 +174,10 @@ function CloudPayApp() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => startKaiOidcRevocationRetry((message) => {
+    Alert.alert('登录安全提醒', message);
+  }), []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -484,10 +489,15 @@ function CloudPayApp() {
         kaiAuthError={kaiAuthError}
         onKaiAuthStart={async (documents) => {
           setKaiAuthError(null);
-          try { await startKaiAuth({
-            termsVersion: documents.terms.version,
-            privacyVersion: documents.privacy.version,
-          }); }
+          try {
+            if (await startKaiAuth({
+              termsVersion: documents.terms.version,
+              privacyVersion: documents.privacy.version,
+            })) {
+              await refreshAfterAuthentication();
+              setAuthVisible(false);
+            }
+          }
           catch (reason) {
             setKaiAuthError(reason instanceof Error ? reason.message : '无法打开统一身份登录。');
           }

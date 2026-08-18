@@ -22,6 +22,8 @@ import {
   loadAccountDeletion,
   loadPushStatus,
   PHONE_REAUTHENTICATION_ENABLED,
+  PUSH_INSTALLATION_AVAILABLE,
+  REMOTE_ACCOUNT_SESSIONS_AVAILABLE,
   pushProjectId,
   requestAccountDeletion,
   requestDeletionCode,
@@ -78,7 +80,11 @@ export function AccountSecuritySheet({
     setLoading(true);
     setError(null);
     const [sessionResult, deletionResult, pushResult] = await Promise.allSettled([
-      listAccountSessions(), loadAccountDeletion(), loadPushStatus(),
+      REMOTE_ACCOUNT_SESSIONS_AVAILABLE ? listAccountSessions() : Promise.resolve([]),
+      loadAccountDeletion(),
+      PUSH_INSTALLATION_AVAILABLE
+        ? loadPushStatus()
+        : Promise.resolve({ providerAvailable: false, pushEnabled: false, installation: null }),
     ]);
     if (sessionResult.status === 'fulfilled') setSessions(sessionResult.value);
     if (deletionResult.status === 'fulfilled') setDeletion(deletionResult.value);
@@ -219,9 +225,19 @@ export function AccountSecuritySheet({
               </Pressable>
             ) : null}
 
-            <Text style={styles.sectionTitle}>登录设备</Text>
+            <Text style={styles.sectionTitle}>{REMOTE_ACCOUNT_SESSIONS_AVAILABLE ? '登录设备' : '登录安全'}</Text>
             <View style={styles.group}>
-              {sessions.length ? sessions.map((session, index) => (
+              {!REMOTE_ACCOUNT_SESSIONS_AVAILABLE ? (
+                <View style={[styles.row, styles.rowLast]}>
+                  <View style={styles.rowIcon}>
+                    <Ionicons name="shield-checkmark-outline" size={20} color={colors.primaryDark} />
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={styles.rowTitle}>本机使用 KAI 统一身份登录</Text>
+                    <Text style={styles.rowCaption}>当前没有可核验的远程设备列表。本机退出请返回“我的”操作；不会调用旧登录系统。</Text>
+                  </View>
+                </View>
+              ) : sessions.length ? sessions.map((session, index) => (
                 <View key={session.id} style={[styles.row, index === sessions.length - 1 && styles.rowLast]}>
                   <View style={styles.rowIcon}>
                     <Ionicons name={session.device.platform === 'android' ? 'logo-android' : 'phone-portrait-outline'} size={20} color={colors.primaryDark} />
@@ -244,7 +260,7 @@ export function AccountSecuritySheet({
 
             <Text style={styles.sectionTitle}>消息通知</Text>
             <View style={styles.group}>
-              <View style={styles.row}>
+              {PUSH_INSTALLATION_AVAILABLE ? <View style={styles.row}>
                 <View style={[styles.rowIcon, styles.notificationIcon]}>
                   <Ionicons name="notifications-outline" size={20} color={colors.blue} />
                 </View>
@@ -261,7 +277,7 @@ export function AccountSecuritySheet({
                     thumbColor={pushEnabled ? colors.green : '#F8FAF9'}
                   />
                 )}
-              </View>
+              </View> : null}
               <View style={[styles.row, styles.rowLast]}>
                 <View style={styles.rowIcon}>
                   <Ionicons name="mail-unread-outline" size={20} color={colors.primaryDark} />

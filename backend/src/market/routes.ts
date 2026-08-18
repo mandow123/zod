@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { MarketService } from './service.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 const resourceKind = z.enum(['gpu', 'token_capacity', 'token_usage', 'rack', 'storage', 'apple_silicon']);
 const uuid = z.string().uuid();
@@ -45,28 +46,28 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   });
 
   app.get('/mobile/v1/provider/profile', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, profile: await market.supplierProfile(principal) };
   });
 
   app.get('/mobile/v1/provider/resources', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, resources: await market.supplierResources(principal) };
   });
 
   app.get('/mobile/v1/provider/assets', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, ...(await market.providerAssets(principal)) };
   });
 
   app.get('/mobile/v1/provider/assets/:assetId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ assetId: uuid }), request.params);
     return { ok: true, asset: await market.providerAsset(principal, parameters.assetId) };
   });
 
   app.post('/mobile/v1/provider/profile', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const body = parse(z.object({
       legalName: z.string().trim().min(2).max(200),
       creditCode: z.string().trim().length(18),
@@ -76,7 +77,7 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   });
 
   app.post('/mobile/v1/operator/suppliers/:supplierId/review', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ supplierId: uuid }), request.params);
     const body = parse(z.object({ approved: z.boolean(), reason: z.string().trim().max(1_000).optional() }), request.body);
     const review = { supplierId: parameters.supplierId, approved: body.approved, ...(body.reason === undefined ? {} : { reason: body.reason }) };
@@ -84,7 +85,7 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   });
 
   app.post('/mobile/v1/provider/resources', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const body = parse(z.object({
       kind: resourceKind,
       productCode: z.string().trim().min(2).max(80),
@@ -102,7 +103,7 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   app.post('/mobile/v1/provider/resources/:resourceId/resubmit', {
     config: { rateLimit: { max: 20, timeWindow: '1 hour' } },
   }, async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ resourceId: uuid }), request.params);
     const result = await market.resubmitResourceVerification(
       principal, parameters.resourceId, requestKey(request), context(request),
@@ -111,7 +112,7 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   });
 
   app.post('/mobile/v1/operator/resources/:resourceId/verification', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ resourceId: uuid }), request.params);
     const body = parse(z.object({
       passed: z.boolean(),
@@ -129,7 +130,7 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   app.post('/mobile/v1/demands', {
     config: { rateLimit: { max: 20, timeWindow: '1 hour' } },
   }, async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const body = parse(z.object({
       kind: resourceKind,
       title: z.string().trim().min(2).max(120),
@@ -150,12 +151,12 @@ export async function registerMarketRoutes(app: FastifyInstance, accounts: Accou
   });
 
   app.get('/mobile/v1/demands', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, demands: await market.demands(principal) };
   });
 
   app.post('/mobile/v1/demands/:demandId/cancel', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ demandId: uuid }), request.params);
     return { ok: true, demand: await market.cancelDemand(principal, parameters.demandId, context(request)) };
   });

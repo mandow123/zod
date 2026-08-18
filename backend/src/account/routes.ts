@@ -4,6 +4,7 @@ import type { RuntimeConfig } from '../config.js';
 import { AppError } from '../errors.js';
 import type { AccountService } from './service.js';
 import type { KaiOidcBroker } from './kai-oidc.js';
+import { authenticateMobileBootstrapRequest, authenticateMobileRequest } from './request-auth.js';
 
 const phone = z.string().trim().min(11).max(20);
 const purpose = z.enum(['register', 'login', 'delete_account']);
@@ -40,10 +41,21 @@ export async function registerAccountRoutes(
 ) {
   app.get('/mobile/v1/legal', async () => ({ ok: true, documents: service.legalDocuments(config) }));
 
+  app.post('/mobile/v1/auth/kai/consents', async (request, reply) => {
+    const { principal } = await authenticateMobileBootstrapRequest(service, request);
+    const body = parse(z.object({
+      termsVersion: z.string().trim().min(1).max(40),
+      privacyVersion: z.string().trim().min(1).max(40),
+      attemptId: z.string().uuid(),
+    }).strict(), request.body);
+    const result = await service.acceptKaiConsents(principal, body, context(request));
+    return reply.status(result.replayed ? 200 : 201).send({ ok: true, ...result });
+  });
+
+  if (kaiOidc) {
   app.get('/mobile/v1/auth/kai/start', {
     config: { rateLimit: { max: 20, timeWindow: '10 minutes' } },
   }, async (request, reply) => {
-    if (!kaiOidc) throw new AppError('AUTH_KAI_NOT_CONFIGURED', 503, '统一身份登录尚未配置。');
     const query = parse(z.object({
       appRedirect: z.string().trim().min(1).max(300),
       appChallenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
@@ -65,7 +77,6 @@ export async function registerAccountRoutes(
   app.get('/mobile/v1/auth/kai/callback', {
     config: { rateLimit: { max: 60, timeWindow: '10 minutes' } },
   }, async (request, reply) => {
-    if (!kaiOidc) throw new AppError('AUTH_KAI_NOT_CONFIGURED', 503, '统一身份登录尚未配置。');
     const query = parse(z.object({
       state: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/u),
       iss: z.string().url().max(300),
@@ -89,7 +100,6 @@ export async function registerAccountRoutes(
   app.post('/mobile/v1/auth/kai/exchange', {
     config: { rateLimit: { max: 20, timeWindow: '10 minutes' } },
   }, async (request) => {
-    if (!kaiOidc) throw new AppError('AUTH_KAI_NOT_CONFIGURED', 503, '统一身份登录尚未配置。');
     const body = parse(z.object({
       code: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/u),
       codeVerifier: z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/u),
@@ -100,12 +110,13 @@ export async function registerAccountRoutes(
       result: await kaiOidc.exchangeAppLoginCode(body.code, body.codeVerifier, body.device, context(request)),
     };
   });
+  }
 
   app.post('/mobile/v1/auth/otp/request', {
     config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
   }, async (request, reply) => {
     const body = parse(z.object({ phone, purpose }), request.body);
-    if (config.NODE_ENV === 'production' && body.purpose !== 'delete_account') {
+    if (config.NODE_ENV === 'production') {
       throw new AppError('AUTH_OTP_LOGIN_RETIRED', 410, '请使用 KAI 统一身份登录。');
     }
     const result = await service.requestOtp(body, context(request));
@@ -124,7 +135,7 @@ export async function registerAccountRoutes(
       consents: z.array(consent).max(4).optional(),
       device: device.optional(),
     }), request.body);
-    if (config.NODE_ENV === 'production' && body.purpose !== 'delete_account') {
+    if (config.NODE_ENV === 'production') {
       throw new AppError('AUTH_OTP_LOGIN_RETIRED', 410, '请使用 KAI 统一身份登录。');
     }
     const verification = {
@@ -139,6 +150,15 @@ export async function registerAccountRoutes(
     return { ok: true, result: await service.verifyOtp(verification, context(request)) };
   });
 
+  app.get('/mobile/v1/me', async (request) => {
+    // Identity bootstrap is intentionally non-transactional and cannot perform
+    // commerce. It remains available before legal acceptance so the App can
+    // present the mapped local profile; every business route uses the gated guard.
+    const { principal } = await authenticateMobileBootstrapRequest(service, request);
+    return { ok: true, user: await service.profile(principal) };
+  });
+
+  if (config.NODE_ENV === 'test' && config.localE2E) {
   app.post('/mobile/v1/auth/refresh', {
     config: { rateLimit: { max: 30, timeWindow: '10 minutes' } },
   }, async (request) => {
@@ -149,36 +169,41 @@ export async function registerAccountRoutes(
     return { ok: true, session: await service.refresh(body.refreshToken, body.deviceId, context(request)) };
   });
 
-  app.get('/mobile/v1/me', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
-    return { ok: true, user: await service.profile(principal) };
-  });
-
   app.get('/mobile/v1/auth/sessions', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
     return { ok: true, sessions: await service.sessions(principal) };
   });
 
   app.delete('/mobile/v1/auth/sessions/:sessionId', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
     const parameters = parse(z.object({ sessionId: z.string().uuid() }), request.params);
     return { ok: true, ...(await service.logout(principal, parameters.sessionId, context(request))) };
   });
 
   app.post('/mobile/v1/auth/logout', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
     return { ok: true, ...(await service.logout(principal, undefined, context(request))) };
   });
+  } else {
+    const retired = async () => { throw new AppError('AUTH_LOCAL_SESSION_RETIRED', 410, '请通过 KAI 统一身份管理登录状态。'); };
+    app.post('/mobile/v1/auth/refresh', retired);
+    app.get('/mobile/v1/auth/sessions', retired);
+    app.delete('/mobile/v1/auth/sessions/:sessionId', retired);
+    app.post('/mobile/v1/auth/logout', retired);
+  }
 
   app.get('/mobile/v1/account/deletion', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
     return { ok: true, request: await service.deletionStatus(principal) };
   });
 
   app.post('/mobile/v1/account/deletion', {
     config: { rateLimit: { max: 3, timeWindow: '1 hour' } },
   }, async (request, reply) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
+    if (config.NODE_ENV === 'production') {
+      throw new AppError('AUTH_RECENT_REAUTH_REQUIRED', 503, '账号注销的统一身份重新认证尚未接入。');
+    }
     const body = parse(z.object({
       reauthenticationToken: z.string().min(40).max(2_000),
       reason: z.string().trim().max(1_000).optional(),
@@ -190,6 +215,9 @@ export async function registerAccountRoutes(
   app.post('/mobile/v1/account/deletion/public', {
     config: { rateLimit: { max: 3, timeWindow: '1 hour' } },
   }, async (request, reply) => {
+    if (config.NODE_ENV === 'production') {
+      throw new AppError('AUTH_RECENT_REAUTH_REQUIRED', 503, '账号注销的统一身份重新认证尚未接入。');
+    }
     const body = parse(z.object({
       reauthenticationToken: z.string().min(40).max(2_000),
       reason: z.string().trim().max(1_000).optional(),
@@ -201,7 +229,7 @@ export async function registerAccountRoutes(
   });
 
   app.delete('/mobile/v1/account/deletion', async (request) => {
-    const { principal } = await service.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(service, request);
     return { ok: true, ...(await service.cancelDeletion(principal, context(request))) };
   });
 }

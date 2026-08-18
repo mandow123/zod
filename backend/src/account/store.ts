@@ -11,6 +11,7 @@ export type RefreshRotationResult =
   | Readonly<{ status: 'rotated'; identity: SessionIdentity }>
   | Readonly<{ status: 'invalid' }>
   | Readonly<{ status: 'reused' }>;
+export type KaiConsentAttemptResult = Readonly<{ status: 'created' | 'replayed' | 'conflict' }>;
 
 export interface AccountStore {
   countRecentOtp(destinationHash: string, since: Date): Promise<number>;
@@ -21,6 +22,16 @@ export interface AccountStore {
   findUserById(userId: string): Promise<AccountUser | null>;
   createUser(input: Readonly<{ phoneCiphertext: string; phoneLookupHash: string; displayName: string }>): Promise<AccountUser>;
   recordConsents(userId: string, consents: ConsentInput[], ipHash: string, userAgentHash: string): Promise<void>;
+  recordKaiConsents?(input: Readonly<{
+    userId: string;
+    attemptId: string;
+    payloadDigest: string;
+    termsVersion: string;
+    privacyVersion: string;
+    requestId: string;
+    ipHash: string;
+    userAgentHash: string;
+  }>): Promise<KaiConsentAttemptResult>;
   createSession(input: Readonly<{
     sessionId: string; tokenFamily: string; userId: string; refreshTokenId: string; refreshTokenHash: string;
     device: DeviceDescriptor; expiresAt: Date;
@@ -182,6 +193,44 @@ export class PostgresAccountStore implements AccountStore {
           [randomUUID(), userId, consent.kind, consent.version, ipHash, userAgentHash],
         );
       }
+    });
+  }
+
+  async recordKaiConsents(
+    input: Parameters<NonNullable<AccountStore['recordKaiConsents']>>[0],
+  ): Promise<KaiConsentAttemptResult> {
+    return this.database.transaction(async (client) => {
+      const inserted = await client.query<{ id: string }>(
+        `INSERT INTO kai_auth_consent_attempts(id, user_id, attempt_id, payload_digest)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, attempt_id) DO NOTHING
+         RETURNING id`,
+        [randomUUID(), input.userId, input.attemptId, input.payloadDigest],
+      );
+      if (!inserted.rows[0]) {
+        const existing = await client.query<{ payload_digest: string }>(
+          `SELECT payload_digest FROM kai_auth_consent_attempts
+           WHERE user_id = $1 AND attempt_id = $2 FOR UPDATE`,
+          [input.userId, input.attemptId],
+        );
+        return { status: existing.rows[0]?.payload_digest === input.payloadDigest ? 'replayed' : 'conflict' };
+      }
+      for (const [kind, version] of [['terms', input.termsVersion], ['privacy', input.privacyVersion]] as const) {
+        await client.query(
+          `INSERT INTO legal_consents(id, user_id, document_kind, document_version, ip_hash, user_agent_hash)
+           VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
+          [randomUUID(), input.userId, kind, version, input.ipHash, input.userAgentHash],
+        );
+      }
+      await client.query(
+        `INSERT INTO audit_events(id, actor_id, actor_kind, action, entity_type, entity_id,
+           request_id, ip_hash, payload_digest, metadata)
+         VALUES ($1, $2::uuid, 'user', 'KAI_DIRECT_LEGAL_CONSENT_ACCEPTED', 'USER', $2::text, $3, $4, $5,
+           jsonb_build_object('termsVersion', $6::text, 'privacyVersion', $7::text))`,
+        [randomUUID(), input.userId, input.requestId, input.ipHash, input.payloadDigest,
+          input.termsVersion, input.privacyVersion],
+      );
+      return { status: 'created' };
     });
   }
 

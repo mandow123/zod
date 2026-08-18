@@ -21,10 +21,15 @@ export type CloudPayUser = Readonly<{
 }>;
 
 export type StoredSession = Readonly<{
+  authProvider: 'kai_oidc';
   accessToken: string;
   refreshToken: string;
+  idToken: string;
+  tokenType: 'Bearer';
+  scope: string;
+  oidcSubject: string;
   accessExpiresAt: string;
-  refreshExpiresAt: string;
+  refreshExpiresAt: null;
   deviceId: string;
   user: CloudPayUser;
 }>;
@@ -32,10 +37,14 @@ export type StoredSession = Readonly<{
 function validSession(value: unknown): value is StoredSession {
   if (!value || typeof value !== 'object') return false;
   const session = value as Partial<StoredSession>;
-  return typeof session.accessToken === 'string' && session.accessToken.length > 20
+  return session.authProvider === 'kai_oidc'
+    && typeof session.accessToken === 'string' && session.accessToken.length > 20
     && typeof session.refreshToken === 'string' && session.refreshToken.length > 20
     && typeof session.accessExpiresAt === 'string' && Number.isFinite(Date.parse(session.accessExpiresAt))
-    && typeof session.refreshExpiresAt === 'string' && Number.isFinite(Date.parse(session.refreshExpiresAt))
+    && typeof session.idToken === 'string' && session.idToken.length > 40
+    && session.tokenType === 'Bearer' && typeof session.scope === 'string'
+    && typeof session.oidcSubject === 'string' && session.oidcSubject.length > 0
+    && session.refreshExpiresAt === null
     && typeof session.deviceId === 'string' && session.deviceId.length >= 8
     && Boolean(session.user && typeof session.user.id === 'string' && typeof session.user.displayName === 'string');
 }
@@ -58,7 +67,7 @@ export async function loadSession() {
   if (!raw) return null;
   try {
     const value: unknown = JSON.parse(raw);
-    if (!validSession(value) || new Date(value.refreshExpiresAt) <= new Date()) {
+    if (!validSession(value)) {
       await clearSession();
       return null;
     }
@@ -73,11 +82,33 @@ export async function saveSession(input: Readonly<{
   accessToken: string; refreshToken: string; accessExpiresInSeconds: number; refreshExpiresAt: string;
   user: CloudPayUser; deviceId?: string;
 }>) {
+  void input;
+  throw new Error('旧登录会话仅允许在本地验收构建中保存。');
+}
+
+export async function saveKaiOidcSession(input: Readonly<{
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  scope: string;
+  oidcSubject: string;
+  accessExpiresInSeconds: number;
+  user: CloudPayUser;
+  deviceId?: string;
+}>) {
   const device = input.deviceId ? { deviceId: input.deviceId } : await deviceDescriptor();
   const session: StoredSession = {
-    accessToken: input.accessToken, refreshToken: input.refreshToken,
-    accessExpiresAt: new Date(Date.now() + input.accessExpiresInSeconds * 1000).toISOString(),
-    refreshExpiresAt: input.refreshExpiresAt, deviceId: device.deviceId, user: input.user,
+    authProvider: 'kai_oidc',
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+    idToken: input.idToken,
+    tokenType: 'Bearer',
+    scope: input.scope,
+    oidcSubject: input.oidcSubject,
+    accessExpiresAt: new Date(Date.now() + input.accessExpiresInSeconds * 1_000).toISOString(),
+    refreshExpiresAt: null,
+    deviceId: device.deviceId,
+    user: input.user,
   };
   await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session), secureOptions);
   return session;
@@ -86,9 +117,21 @@ export async function saveSession(input: Readonly<{
 export async function updateSessionTokens(input: Readonly<{
   accessToken: string; refreshToken: string; accessExpiresInSeconds: number; refreshExpiresAt: string;
 }>) {
+  void input;
+  return null;
+}
+
+export async function updateKaiOidcSessionTokens(input: Readonly<{
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  scope: string;
+  oidcSubject: string;
+  accessExpiresInSeconds: number;
+}>) {
   const current = await loadSession();
-  if (!current) return null;
-  return saveSession({ ...input, deviceId: current.deviceId, user: current.user });
+  if (!current || current.authProvider !== 'kai_oidc') return null;
+  return saveKaiOidcSession({ ...input, deviceId: current.deviceId, user: current.user });
 }
 
 export async function updateSessionUser(user: CloudPayUser) {

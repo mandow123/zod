@@ -1,4 +1,8 @@
-import { ApiError, LOCAL_E2E_DEMO_ENABLED, apiRequest } from './api-client';
+import {
+  ApiError,
+  LOCAL_E2E_DEMO_ENABLED,
+  apiRequest,
+} from './api-client';
 import { loadLocalE2EDemoCatalog } from './local-e2e-runtime';
 import * as Crypto from 'expo-crypto';
 import {
@@ -10,6 +14,8 @@ import {
 import { loadProviderReadCache, saveProviderWorkspaceCache } from './provider-read-cache';
 import { mergeLocalDemoListings } from './demo-market';
 import { ensureSparkCampaignProduct } from './campaign';
+import { logoutCurrentSession } from './session-logout';
+export { SessionLogoutError } from './session-logout';
 import type { DeviceAsset, DeviceOrder, DeviceProduct } from './device-commerce';
 export * from './device-commerce';
 
@@ -831,13 +837,7 @@ export async function loadLegalDocuments() {
 }
 
 export async function logoutCloudPay() {
-  try {
-    await apiRequest<{ ok: true; revoked: boolean }>('/mobile/v1/auth/logout', {
-      method: 'POST', auth: 'required', retry: false,
-    });
-  } finally {
-    await clearSession();
-  }
+  await logoutCurrentSession();
 }
 
 export async function markNotificationRead(notificationId: string) {

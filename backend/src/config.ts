@@ -6,6 +6,7 @@ const optionalText = z.string().trim().optional().transform((value) => value || 
 
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  LOCAL_E2E: z.enum(['true', 'false']).default('false'),
   HOST: z.string().trim().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4100),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:4100'),
@@ -86,6 +87,9 @@ const environmentSchema = z.object({
   KAI_OIDC_SUBJECT_PEPPER: optionalText,
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: optionalText,
   KAI_OIDC_APP_REDIRECT_URIS: optionalText,
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT: optionalText,
+  KAI_RESOURCE_ACCESS_TOKEN_AUDIENCE: optionalText,
+  KAI_RESOURCE_ACCESS_TOKEN_REQUIRED_SCOPE: optionalText,
   VAST_API_URL: z.string().url().default('https://console.vast.ai'),
   VAST_API_KEY: optionalText,
   VAST_PRICING_POLICY_JSON: optionalText,
@@ -143,11 +147,8 @@ function pushCapability(environment: Record<string, string | undefined>, parsed:
   return mergeCapability(base, invalid);
 }
 
-function secretCapability(environment: Record<string, string | undefined>): Capability {
+function accountSecurityCapability(environment: Record<string, string | undefined>): Capability {
   const requirements: Array<[string, number]> = [
-    ['ACCESS_TOKEN_SECRET', 64],
-    ['REFRESH_TOKEN_PEPPER', 32],
-    ['OTP_PEPPER', 32],
     ['AUDIT_PEPPER', 32],
     ['CURSOR_SECRET', 32],
   ];
@@ -162,13 +163,29 @@ function secretCapability(environment: Record<string, string | undefined>): Capa
   return { available: missing.length === 0, missing };
 }
 
+function legacyLocalAuthCapability(environment: Record<string, string | undefined>): Capability {
+  const requirements: Array<[string, number]> = [
+    ['ACCESS_TOKEN_SECRET', 64],
+    ['REFRESH_TOKEN_PEPPER', 32],
+    ['OTP_PEPPER', 32],
+  ];
+  const missing = requirements.flatMap(([key, minimum]) => {
+    const length = environment[key]?.trim().length ?? 0;
+    return length >= minimum ? [] : [`${key}(>=${minimum} chars)`];
+  });
+  return { available: missing.length === 0, missing };
+}
+
 export type RuntimeConfig = ReturnType<typeof loadConfig>;
 
 export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | undefined>) {
   const parsed = environmentSchema.parse(input);
   const environment = { ...input };
   const database = capability(environment, ['DATABASE_URL']);
-  const tokenSecurity = secretCapability(environment);
+  const accountSecurity = accountSecurityCapability(environment);
+  const legacyLocalAuth = parsed.NODE_ENV === 'test' && parsed.LOCAL_E2E === 'true'
+    ? legacyLocalAuthCapability(environment)
+    : { available: false, missing: ['LOCAL_E2E(disabled)'] } as const;
   const publicHttps = new URL(parsed.PUBLIC_ORIGIN).protocol === 'https:';
   const sms = capability(environment, [
     'SMS_PROVIDER', 'SMS_ACCESS_KEY_ID', 'SMS_ACCESS_KEY_SECRET', 'SMS_SIGN_NAME', 'SMS_TEMPLATE_CODE',
@@ -213,8 +230,12 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   const nodeClaimKey = parsed.NODE_CLAIM_TOKEN_ENCRYPTION_KEY?.trim();
   const enrollmentSecrets = [parsed.NODE_GPU_FINGERPRINT_PEPPER, parsed.NODE_CLAIM_TOKEN_PEPPER, nodeClaimKey]
     .filter((value): value is string => Boolean(value));
-  const otherSecuritySecrets = [parsed.ACCESS_TOKEN_SECRET, parsed.REFRESH_TOKEN_PEPPER, parsed.OTP_PEPPER,
-    parsed.PII_ENCRYPTION_KEY, parsed.AUDIT_PEPPER, parsed.CURSOR_SECRET, parsed.COMPUTE_PROVIDER_TOKEN]
+  const otherSecuritySecrets = [
+    ...(parsed.NODE_ENV === 'test' && parsed.LOCAL_E2E === 'true'
+      ? [parsed.ACCESS_TOKEN_SECRET, parsed.REFRESH_TOKEN_PEPPER, parsed.OTP_PEPPER]
+      : []),
+    parsed.PII_ENCRYPTION_KEY, parsed.AUDIT_PEPPER, parsed.CURSOR_SECRET, parsed.COMPUTE_PROVIDER_TOKEN,
+  ]
     .filter((value): value is string => Boolean(value));
   const nodeEnrollment = mergeCapability(nodeEnrollmentBase, [
     ...(parsed.NODE_GPU_FINGERPRINT_PEPPER && parsed.NODE_GPU_FINGERPRINT_PEPPER.length < 32
@@ -262,6 +283,20 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...(kaiOidcRedirects.length > 0 && kaiOidcRedirects.some(
       (value) => value !== 'kaicloudpay://auth/kai/callback',
     ) ? ['KAI_OIDC_APP_REDIRECT_URIS(registered exact app redirects)'] : []),
+  ]);
+  const kaiResourceAccessBase = capability(environment, [
+    'KAI_OIDC_SUBJECT_PEPPER',
+    'KAI_RESOURCE_ACCESS_TOKEN_FORMAT',
+  ]);
+  const kaiResourceFormat = parsed.KAI_RESOURCE_ACCESS_TOKEN_FORMAT;
+  const kaiResourceAccess = mergeCapability(kaiResourceAccessBase, [
+    ...(kaiResourceFormat && kaiResourceFormat !== 'opaque'
+      ? ['KAI_RESOURCE_ACCESS_TOKEN_FORMAT(opaque paired-token contract)'] : []),
+    ...(parsed.KAI_OIDC_SUBJECT_PEPPER && parsed.KAI_OIDC_SUBJECT_PEPPER.length < 32
+      ? ['KAI_OIDC_SUBJECT_PEPPER(>=32 chars; stable identity key)'] : []),
+    ...(parsed.KAI_OIDC_FLOW_PEPPER && parsed.KAI_OIDC_SUBJECT_PEPPER
+      && parsed.KAI_OIDC_FLOW_PEPPER === parsed.KAI_OIDC_SUBJECT_PEPPER
+      ? ['KAI_OIDC_SUBJECT_PEPPER(independent from flow pepper)'] : []),
   ]);
   let vastPricingPolicy: z.infer<typeof vastPricingPolicySchema> | null = null;
   const vastInvalid: string[] = [];
@@ -340,9 +375,12 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   ]);
   const coreBlockers = [
     ...database.missing,
-    ...tokenSecurity.missing,
+    ...accountSecurity.missing,
+    ...(parsed.NODE_ENV === 'production' && parsed.LOCAL_E2E === 'true'
+      ? ['LOCAL_E2E(production forbidden)']
+      : []),
     ...(publicHttps || parsed.NODE_ENV !== 'production' ? [] : ['PUBLIC_ORIGIN(HTTPS)']),
-    ...(parsed.NODE_ENV === 'production' ? kaiOidc.missing : []),
+    ...(parsed.NODE_ENV === 'production' ? kaiResourceAccess.missing : []),
   ];
   const serviceBlockers = [
     ...coreBlockers,
@@ -359,6 +397,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   return {
     ...parsed,
     databaseSsl: parsed.DATABASE_SSL === 'true',
+    localE2E: parsed.LOCAL_E2E === 'true',
     trustedProxy: parsed.TRUST_PROXY_HOPS === 0 ? false : parsed.TRUST_PROXY_HOPS,
     objectStorageForcePathStyle: parsed.OBJECT_STORAGE_FORCE_PATH_STYLE === 'true',
     backupS3ForcePathStyle: parsed.BACKUP_S3_FORCE_PATH_STYLE === 'true',
@@ -374,7 +413,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       serviceBlockers: [...new Set(serviceBlockers)],
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
-        database, tokenSecurity, kaiOidc, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
+        database, accountSecurity, legacyLocalAuth, kaiOidc, kaiResourceAccess, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
         publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
       },
     },

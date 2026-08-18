@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kaicloud.marketplace",
+      "sha256_cert_fingerprints": [
+        "20:44:1F:6B:59:3C:4F:19:C0:5A:C6:69:75:E2:84:69:DA:A8:4B:36:F1:8A:41:20:E0:DC:DA:66:1C:F1:99:6A"
+      ]
+    }
+  }
+]
