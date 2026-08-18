@@ -148,6 +148,7 @@ export type CloudPayNotification = Readonly<{
 export type LegalDocuments = Readonly<{
   terms: { version: string; url: string | null };
   privacy: { version: string; url: string | null };
+  inquiry: { version: string; url: string | null };
 }>;
 
 export type SubjectPermission =

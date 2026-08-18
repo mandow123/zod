@@ -38,6 +38,12 @@ function policyBody(kind: 'privacy' | 'terms', entity: string) {
 <h2>你的权利</h2><p>你可以查看登录设备、关闭推送、撤销其他设备会话、申请或撤回账户注销，并通过下方联系方式提出访问、更正或删除请求。</p>`;
 }
 
+function inquiryTermsBody(entity:string){return `<h1>资源询期规则</h1><p>更新日期：2026年8月18日</p>
+<div class="notice">询期只用于向 ${entity} 提交时间、规格和用途偏好，不是订单、库存承诺或交付承诺。</div>
+<h2>提交与核实</h2><p>平台会将询期信息交由符合条件的供应方或运营人员核实。实际可用时间、设备形态、网络、存储和数据区域均以后续确认结果为准。</p>
+<h2>卡时上限</h2><p>用户填写的最大可接受卡时仅是询期偏好；提交询期不会冻结、预留或扣减任何卡时。</p>
+<h2>后续交易</h2><p>只有在资源条件完成核实且用户另行确认后，才可进入平台的卡时订单流程。询期记录不得被视为报价或成交凭证。</p>`;}
+
 function deletionBody(nonce: string) {
   return `<h1>删除 CloudPay 账户</h1><p>即使已经卸载 App，也可以在这里完成删除申请。</p>
 <div class="notice">验证账户手机号后，申请进入 7 天冷静期。未结订单、退款、争议、发票或供应方义务会依法处理完成后再去标识化。</div>
@@ -71,5 +77,6 @@ export async function registerPublicPages(app: FastifyInstance, config: RuntimeC
 
   app.get('/privacy', async (_request, reply) => send(reply, page('隐私政策', 'PRIVACY', () => policyBody('privacy', entity))));
   app.get('/terms', async (_request, reply) => send(reply, page('用户协议', 'TERMS', () => policyBody('terms', entity))));
+  app.get('/inquiry-terms', async (_request, reply) => send(reply, page('资源询期规则', 'INQUIRY TERMS', () => inquiryTermsBody(entity))));
   app.get('/account/delete', async (_request, reply) => send(reply, page('删除账户', 'ACCOUNT DELETION', deletionBody)));
 }

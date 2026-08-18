@@ -45,6 +45,7 @@ export class AccountService {
     return {
       terms: { version: LEGAL_VERSIONS.terms, url: config.TERMS_URL ?? null },
       privacy: { version: LEGAL_VERSIONS.privacy, url: config.PRIVACY_POLICY_URL ?? null },
+      inquiry: { version: LEGAL_VERSIONS.inquiry, url: config.INQUIRY_TERMS_URL ?? null },
     };
   }
 

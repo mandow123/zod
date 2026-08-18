@@ -29,6 +29,7 @@ if (sourceDigest && !/^[a-f0-9]{64}$/u.test(sourceDigest)) {
 module.exports = {
   expo: {
     ...source.expo,
+    plugins: [...(source.expo.plugins || []), '@react-native-community/datetimepicker'],
     extra: {
       ...source.expo.extra,
       cloudPayBaseUrl: localE2eBaseUrl || source.expo.extra.cloudPayBaseUrl,

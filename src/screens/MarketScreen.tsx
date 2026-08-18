@@ -10,6 +10,10 @@ import { distributionPolicy } from '../distribution';
 import { deviceMarketAvailability, deviceProductAvailability, listingAvailability, marketAvailability } from '../market-availability';
 import { VastPurchaseSheet } from '../VastPurchaseSheet';
 import { loadVastOffers, type VastOffer } from '../vast-commerce';
+import {
+  loadInquiryCatalog, type InquiryCatalogCandidate, type InquiryModel,
+} from '../resource-inquiries';
+import { inquiryCardTypeLabel } from '../inquiry-form';
 
 type Props = Readonly<{
   snapshot: CloudPaySnapshot;
@@ -19,16 +23,19 @@ type Props = Readonly<{
   onBuy: (listing: MarketCreditListing) => void;
   onManageOwnListing: (listing: MarketCreditListing) => void;
   onOpenSparkDetail: (product: DeviceProduct) => void;
+  onOpenInquiry: (candidate: InquiryCatalogCandidate) => void;
+  onOpenMyInquiries: () => void;
   onLogin: () => void;
 }>;
 
-type MarketSection = '算力租用' | '设备采购';
+type MarketSection = '算力租用' | '设备采购' | '预约算力';
 type ComputeSource = '平台保障' | 'Vast.ai 即时';
-const sections: MarketSection[] = ['算力租用', '设备采购'];
+const sections: MarketSection[] = ['算力租用', '预约算力', '设备采购'];
 const computeSources: ComputeSource[] = ['平台保障', 'Vast.ai 即时'];
+const inquiryModels: Array<InquiryModel | null> = [null, 'H100', 'H200', 'B300'];
 const LISTING_PAGE_SIZE = 20;
 
-export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, onBuy, onManageOwnListing, onOpenSparkDetail, onLogin }: Props) {
+export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, onBuy, onManageOwnListing, onOpenSparkDetail, onOpenInquiry, onOpenMyInquiries, onLogin }: Props) {
   const [query, setQuery] = useState('');
   const [section, setSection] = useState<MarketSection>('设备采购');
   const [computeSource, setComputeSource] = useState<ComputeSource>('平台保障');
@@ -38,6 +45,13 @@ export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, o
   const [vastOffers, setVastOffers] = useState<VastOffer[]>([]);
   const [vastState, setVastState] = useState<'idle' | 'loading' | 'available' | 'unavailable' | 'error'>('idle');
   const [selectedVastOffer, setSelectedVastOffer] = useState<VastOffer | null>(null);
+  const [inquiryModel, setInquiryModel] = useState<InquiryModel | null>(null);
+  const [inquiryCandidates, setInquiryCandidates] = useState<InquiryCatalogCandidate[]>([]);
+  const [inquiryCursor, setInquiryCursor] = useState<string | null>(null);
+  const [inquiryState, setInquiryState] = useState<'idle' | 'loading' | 'available' | 'error'>('idle');
+  const [inquiryError, setInquiryError] = useState<string | null>(null);
+  const [inquiryLoadingMore, setInquiryLoadingMore] = useState(false);
+  const [inquiryReloadToken, setInquiryReloadToken] = useState(0);
   const regions = useMemo(() => Array.from(new Set([
     ...snapshot.listings.map((item) => item.region),
     ...snapshot.deviceProducts.map(deviceProductRegion).filter((value): value is string => Boolean(value)),
@@ -73,9 +87,25 @@ export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, o
     }).catch(() => { if (active) { setVastOffers([]); setVastState('error'); } });
     return () => { active = false; };
   }, [computeSource, refreshing, section]);
+  useEffect(() => {
+    if (section !== '预约算力') return;
+    let active = true;
+    setInquiryCandidates([]); setInquiryCursor(null); setInquiryState('loading'); setInquiryError(null);
+    const timer = setTimeout(() => {
+      void loadInquiryCatalog({ model: inquiryModel, region, query, limit: LISTING_PAGE_SIZE }).then((result) => {
+        if (!active) return;
+        setInquiryCandidates(result.items); setInquiryCursor(result.nextCursor); setInquiryState('available');
+      }).catch((reason) => {
+        if (!active) return;
+        setInquiryCandidates([]); setInquiryCursor(null); setInquiryState('error');
+        setInquiryError(reason instanceof Error ? reason.message : '暂时无法读取预约目录。');
+      });
+    }, query.trim() ? 280 : 0);
+    return () => { active = false; clearTimeout(timer); };
+  }, [inquiryModel, inquiryReloadToken, query, refreshing, region, section]);
   useEffect(() => setVisibleCount(LISTING_PAGE_SIZE), [computeSource, query, region, section]);
   const visibleListings = filtered.slice(0, visibleCount);
-  const marketUnavailable = !snapshot.online || (section === '设备采购' ? !snapshot.deviceCatalogOnline
+  const marketUnavailable = section === '预约算力' ? inquiryState === 'error' : !snapshot.online || (section === '设备采购' ? !snapshot.deviceCatalogOnline
     : computeSource === 'Vast.ai 即时' ? vastState === 'unavailable' || vastState === 'error' : !snapshot.listingCatalogOnline);
   const marketState = marketAvailability(snapshot, distributionPolicy.newOrders);
   const deviceMarketState = deviceMarketAvailability(snapshot, distributionPolicy.newOrders);
@@ -83,21 +113,32 @@ export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, o
   return <View style={styles.root}>
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
-      <View style={styles.heading}><View><Text style={styles.title}>资源市场</Text><Text style={styles.subtitle}>{marketUnavailable ? '目录正在同步' : section === '设备采购' ? '实物设备采购与履约' : '即时开通，按卡时结算'}</Text></View><Text style={styles.count}>{filtered.length + deviceProducts.length + vastFiltered.length} 项</Text></View>
-      <View style={styles.search}><Ionicons name="search-outline" size={20} color={colors.ink} /><TextInput value={query} onChangeText={setQuery} placeholder={section === '设备采购' ? '搜索 Spark、DGX、02672' : '搜索 GPU 型号、地区'} placeholderTextColor={colors.subtle} style={styles.searchInput} />{query ? <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={19} color={colors.subtle} /></Pressable> : null}<Pressable onPress={() => setFilterVisible(true)} style={styles.filterButton}><Ionicons name="options-outline" size={18} color={colors.ink} />{region ? <View style={styles.filterDot} /> : null}</Pressable></View>
+      <View style={styles.heading}><View><Text style={styles.title}>资源市场</Text><Text style={styles.subtitle}>{marketUnavailable ? '目录正在同步' : section === '设备采购' ? '实物设备采购与履约' : section === '预约算力' ? '先确认时段与需求，再由平台联系供应方' : '即时开通，按卡时结算'}</Text></View><Text style={styles.count}>{section === '预约算力' ? `${inquiryCandidates.length}${inquiryCursor ? '+' : ''} 项` : `${filtered.length + deviceProducts.length + vastFiltered.length} 项`}</Text></View>
+      <View style={styles.search}><Ionicons name="search-outline" size={20} color={colors.ink} /><TextInput value={query} onChangeText={setQuery} placeholder={section === '设备采购' ? '搜索 Spark、DGX、02672' : section === '预约算力' ? '搜索 GPU 型号、卡型或宽地区' : '搜索 GPU 型号、地区'} placeholderTextColor={colors.subtle} style={styles.searchInput} />{query ? <Pressable onPress={() => setQuery('')}><Ionicons name="close-circle" size={19} color={colors.subtle} /></Pressable> : null}{section !== '预约算力' ? <Pressable onPress={() => setFilterVisible(true)} style={styles.filterButton}><Ionicons name="options-outline" size={18} color={colors.ink} />{region ? <View style={styles.filterDot} /> : null}</Pressable> : null}</View>
       <View style={styles.sections}>{sections.map((item) => <Pressable key={item} onPress={() => { setSection(item); setRegion(null); }} style={[styles.section, section === item && styles.sectionActive]}><Text style={[styles.sectionText, section === item && styles.sectionTextActive]}>{item}</Text></Pressable>)}</View>
-      {section === '算力租用' ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{computeSources.map((item) => <Pressable key={item} onPress={() => setComputeSource(item)} style={[styles.category, computeSource === item && styles.categoryActive]}><Text style={[styles.categoryText, computeSource === item && styles.categoryTextActive]}>{item}</Text></Pressable>)}</ScrollView> : <View style={styles.deviceIntro}><Text style={styles.deviceIntroTitle}>设备采购</Text><Text style={styles.deviceIntroText}>库存、卡时价格和交付进度由平台订单统一管理</Text></View>}
+      {section === '算力租用' ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{computeSources.map((item) => <Pressable key={item} onPress={() => setComputeSource(item)} style={[styles.category, computeSource === item && styles.categoryActive]}><Text style={[styles.categoryText, computeSource === item && styles.categoryTextActive]}>{item}</Text></Pressable>)}</ScrollView> : section === '预约算力' ? <View><View style={styles.inquiryIntro}><View style={styles.inquiryIntroCopy}><Text style={styles.deviceIntroTitle}>预约算力</Text><Text style={styles.deviceIntroText}>目录为可询期线索，询期后以卡时报价</Text></View><Pressable onPress={snapshot.authenticated ? onOpenMyInquiries : onLogin} style={styles.myInquiries}><Text style={styles.myInquiriesText}>我的询期</Text><Ionicons name="chevron-forward" size={14} color={colors.primary} /></Pressable></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>{inquiryModels.map((item) => <Pressable key={item ?? 'all'} onPress={() => setInquiryModel(item)} style={[styles.category, inquiryModel === item && styles.categoryActive]}><Text style={[styles.categoryText, inquiryModel === item && styles.categoryTextActive]}>{item ?? '全部型号'}</Text></Pressable>)}</ScrollView></View> : <View style={styles.deviceIntro}><Text style={styles.deviceIntroTitle}>设备采购</Text><Text style={styles.deviceIntroText}>库存、卡时价格和交付进度由平台订单统一管理</Text></View>}
 
-      {marketUnavailable ? <View style={styles.outage}><Ionicons name="cloud-offline-outline" size={20} color={colors.amber} /><View style={styles.outageCopy}><Text style={styles.outageTitle}>市场数据暂时无法确认</Text><Text style={styles.outageText}>不会把断网当成库存为零。下拉刷新后再查看价格和购买状态。</Text></View></View> : null}
-      <View style={styles.list}>{deviceProducts.map((product) => <DeviceProductRow key={product.id} product={product}
+      {marketUnavailable ? <View style={styles.outage}><Ionicons name="cloud-offline-outline" size={20} color={colors.amber} /><View style={styles.outageCopy}><Text style={styles.outageTitle}>{section === '预约算力' ? '预约目录暂时无法读取' : '市场数据暂时无法确认'}</Text><Text style={styles.outageText}>{section === '预约算力' ? inquiryError ?? '下拉刷新后重试。' : '不会把断网当成库存为零。下拉刷新后再查看价格和购买状态。'}</Text>{section === '预约算力' ? <Pressable onPress={() => setInquiryReloadToken((value) => value + 1)} style={styles.inlineRetry}><Text style={styles.inlineRetryText}>重新加载</Text></Pressable> : null}</View></View> : null}
+      {section === '预约算力' && inquiryState === 'loading' ? <View style={styles.partnerEmpty}><ActivityIndicator color={colors.primary} /><View style={styles.partnerCopy}><Text style={styles.partnerTitle}>正在读取预约目录</Text><Text style={styles.partnerText}>每次只加载一页，不会一次渲染全部候选。</Text></View></View> : null}
+      <View style={styles.list}>{section === '预约算力' ? inquiryCandidates.map((candidate) => <InquiryCandidateRow key={candidate.candidateId} candidate={candidate} onPress={() => onOpenInquiry(candidate)} />) : null}{deviceProducts.map((product) => <DeviceProductRow key={product.id} product={product}
         blockedReason={deviceProductAvailability(deviceMarketState, product).reason}
         onPress={() => onOpenSparkDetail(product)} />)}{vastFiltered.map((item) => <VastOfferRow key={item.offerId} offer={item} onPress={() => snapshot.authenticated ? setSelectedVastOffer(item) : onLogin()} />)}{visibleListings.map((item) => <MarketRow key={item.id} item={item}
         blockedReason={item.ownedByCurrentSubject ? null : listingAvailability(marketState, item, isDedicatedGpuHour(item)).reason}
         onPress={item.ownedByCurrentSubject ? () => onManageOwnListing(item) : listingAvailability(marketState, item, isDedicatedGpuHour(item)).allowed ? () => onBuy(item) : undefined} />)}</View>
       {visibleCount < filtered.length ? <Pressable onPress={() => setVisibleCount((count) => count + LISTING_PAGE_SIZE)} style={styles.loadMore}><Text style={styles.loadMoreText}>继续显示</Text></Pressable> : null}
+      {section === '预约算力' && inquiryCursor ? <Pressable disabled={inquiryLoadingMore} onPress={() => {
+        if (inquiryLoadingMore) return;
+        setInquiryLoadingMore(true); setInquiryError(null);
+        void loadInquiryCatalog({ model: inquiryModel, region, query, cursor: inquiryCursor, limit: LISTING_PAGE_SIZE })
+          .then((result) => { setInquiryCandidates((current) => [...current, ...result.items]); setInquiryCursor(result.nextCursor); })
+          .catch((reason) => setInquiryError(reason instanceof Error ? reason.message : '下一页暂时无法读取。'))
+          .finally(() => setInquiryLoadingMore(false));
+      }} style={styles.loadMore}>{inquiryLoadingMore ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.loadMoreText}>继续加载候选</Text>}</Pressable> : null}
+      {section === '预约算力' && inquiryState === 'available' && inquiryError ? <View style={styles.pageError}><Text style={styles.pageErrorText}>{inquiryError}</Text><Pressable onPress={() => setInquiryReloadToken((value) => value + 1)}><Text style={styles.inlineRetryText}>重新加载目录</Text></Pressable></View> : null}
       {section === '算力租用' && computeSource === 'Vast.ai 即时' && vastState === 'loading' ? <View style={styles.partnerEmpty}><ActivityIndicator color={colors.primary} /><View style={styles.partnerCopy}><Text style={styles.partnerTitle}>正在读取 Vast.ai</Text><Text style={styles.partnerText}>只接收可租用且已验证的即时资源。</Text></View></View> : null}
       {section === '算力租用' && computeSource === 'Vast.ai 即时' && vastState === 'available' && !vastFiltered.length ? <View style={styles.partnerEmpty}><Ionicons name="flash-outline" size={24} color={colors.primary} /><View style={styles.partnerCopy}><Text style={styles.partnerTitle}>当前没有匹配资源</Text><Text style={styles.partnerText}>Vast.ai 库存会实时变化，可稍后下拉刷新。</Text></View></View> : null}
-      {!marketUnavailable && computeSource !== 'Vast.ai 即时' && !filtered.length && !deviceProducts.length ? <View style={styles.empty}><Ionicons name="search-outline" size={28} color={colors.muted} /><Text style={styles.emptyTitle}>没找到匹配资源</Text><Text style={styles.emptyText}>换个型号或地区，也可以提交定向需求。</Text><Pressable onPress={onOpenPublish} style={styles.primary}><Text style={styles.primaryText}>发布算力需求</Text></Pressable></View> : null}
+      {section === '预约算力' && inquiryState === 'available' && !inquiryCandidates.length ? <View style={styles.empty}><Ionicons name="calendar-outline" size={28} color={colors.muted} /><Text style={styles.emptyTitle}>没有匹配的预约候选</Text><Text style={styles.emptyText}>换个型号或关键词再试，公开目录不会补造候选。</Text></View> : null}
+      {section !== '预约算力' && !marketUnavailable && computeSource !== 'Vast.ai 即时' && !filtered.length && !deviceProducts.length ? <View style={styles.empty}><Ionicons name="search-outline" size={28} color={colors.muted} /><Text style={styles.emptyTitle}>没找到匹配资源</Text><Text style={styles.emptyText}>换个型号或地区，也可以提交定向需求。</Text><Pressable onPress={onOpenPublish} style={styles.primary}><Text style={styles.primaryText}>发布算力需求</Text></Pressable></View> : null}
     </ScrollView>
     <VastPurchaseSheet offer={selectedVastOffer} visible={Boolean(selectedVastOffer)} onClose={() => setSelectedVastOffer(null)} onOrdered={() => onRefresh()} />
     <Modal visible={filterVisible} transparent animationType="slide" onRequestClose={() => setFilterVisible(false)}><Pressable onPress={() => setFilterVisible(false)} style={styles.backdrop}><Pressable onPress={() => undefined} style={styles.sheet}><View style={styles.handle} /><View style={styles.sheetHeading}><Text style={styles.sheetTitle}>筛选地区</Text><Pressable onPress={() => { setRegion(null); setFilterVisible(false); }}><Text style={styles.reset}>重置</Text></Pressable></View><View style={styles.regionGrid}><FilterChip label="全部地区" selected={!region} onPress={() => setRegion(null)} />{regions.map((item) => <FilterChip key={item} label={item} selected={region === item} onPress={() => setRegion(item)} />)}</View><Pressable onPress={() => setFilterVisible(false)} style={styles.primary}><Text style={styles.primaryText}>查看结果</Text></Pressable></Pressable></Pressable></Modal>
@@ -122,6 +163,18 @@ function VastOfferRow({ offer, onPress }: Readonly<{ offer: VastOffer; onPress: 
   </View>;
 }
 
+function InquiryCandidateRow({ candidate, onPress }: Readonly<{ candidate: InquiryCatalogCandidate; onPress: () => void }>) {
+  const mode = candidate.modes.map((item) => item === 'hourly' ? '按小时询期' : '包月询期').join(' / ');
+  const observed = new Date(candidate.sourceObservedAt);
+  const observedLabel = Number.isNaN(observed.getTime()) ? candidate.sourceObservedAt
+    : `${observed.getFullYear()}-${String(observed.getMonth() + 1).padStart(2, '0')}-${String(observed.getDate()).padStart(2, '0')}`;
+  return <View style={styles.inquiryCard}>
+    <View style={styles.cardTop}><View style={styles.inquiryIcon}><Ionicons name="calendar-outline" size={20} color={colors.primary} /></View><View style={styles.cardCopy}><View style={styles.typeRow}><Text style={styles.inquiryTag}>预约候选</Text><Text style={styles.inquiryStatus}>需询期</Text></View><Text style={styles.cardTitle}>{candidate.model} · {inquiryCardTypeLabel(candidate.cardType)}</Text><Text style={styles.meta}>{candidate.region} · 待认领供应方</Text></View></View>
+    <View style={styles.inquiryFacts}><View><Text style={styles.factLabel}>询期方式</Text><Text style={styles.factValue}>{mode}</Text></View><View style={styles.factRight}>{candidate.lastVerifiedAt ? <><Text style={styles.factLabel}>供应方确认日期</Text><Text style={styles.factValue}>{candidate.lastVerifiedAt.slice(0, 10)}</Text></> : <><Text style={styles.factLabel}>资料日期 {observedLabel}</Text><Text style={styles.factValue}>{candidate.verification.message || '资料待供应方确认'}</Text></>}</View></View>
+    <View style={styles.inquiryBottom}><View><Text style={styles.inquiryPrice}>询期后以卡时报价</Text><Text style={styles.audit}>提交询期不生成订单，不冻结卡时</Text></View><Pressable onPress={onPress} style={styles.inquiryAction}><Text style={styles.inquiryActionText}>查看并询期</Text><Ionicons name="arrow-forward" size={14} color={colors.surface} /></Pressable></View>
+  </View>;
+}
+
 function MarketRow({ item, blockedReason, onPress }: Readonly<{ item: MarketCreditListing; blockedReason: string | null; onPress?: () => void }>) {
   const device = item.productKind === 'hardware_device';
   const enabled = Boolean(onPress);
@@ -141,11 +194,14 @@ const styles = StyleSheet.create({
   sections: { flexDirection: 'row', padding: 4, marginTop: 12, borderRadius: 10, backgroundColor: '#EAF0F7' }, section: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 8 }, sectionActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#C9DCF6' }, sectionText: { color: colors.muted, fontSize: 12, fontWeight: '800' }, sectionTextActive: { color: colors.primary, fontWeight: '900' },
   categories: { gap: 7, paddingVertical: 12 }, category: { minHeight: 34, paddingHorizontal: 13, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, categoryActive: { borderColor: '#B7CEF4', backgroundColor: '#EDF4FF' }, categoryText: { color: colors.muted, fontSize: 11, fontWeight: '700' }, categoryTextActive: { color: colors.primary, fontWeight: '900' },
   deviceIntro: { paddingVertical: 12 }, deviceIntroTitle: { color: colors.ink, fontSize: 13, fontWeight: '900' }, deviceIntroText: { color: colors.muted, fontSize: 9, marginTop: 4 },
+  inquiryIntro: { paddingTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, inquiryIntroCopy: { flex: 1 }, myInquiries: { minHeight: 36, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: '#CFE0F8' }, myInquiriesText: { color: colors.primary, fontSize: 10, fontWeight: '900' },
   list: { gap: 8 }, card: { padding: 13, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, cardTop: { flexDirection: 'row', alignItems: 'center' }, icon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F3F5' }, vastIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, cardCopy: { flex: 1, marginLeft: 10 }, typeRow: { flexDirection: 'row', gap: 7, alignItems: 'center' }, type: { color: colors.muted, fontSize: 8, fontWeight: '800' }, supplier: { color: '#8A5B00', fontSize: 8, fontWeight: '800' }, discount: { color: colors.primary, fontSize: 8, fontWeight: '900' }, partnerTag: { color: colors.primary, fontSize: 8, fontWeight: '900' }, verifiedTag: { color: colors.green, fontSize: 8, fontWeight: '800' }, cardTitle: { color: colors.ink, fontSize: 14, fontWeight: '900', marginTop: 3 }, meta: { color: colors.muted, fontSize: 9, marginTop: 3 },
+  inquiryCard: { padding: 13, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: '#D5E3F5' }, inquiryIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, inquiryTag: { color: colors.primary, fontSize: 8, fontWeight: '900' }, inquiryStatus: { color: colors.amber, fontSize: 8, fontWeight: '900' }, inquiryFacts: { marginTop: 11, padding: 10, flexDirection: 'row', justifyContent: 'space-between', borderRadius: 9, backgroundColor: colors.canvas }, factRight: { alignItems: 'flex-end' }, factLabel: { color: colors.muted, fontSize: 8 }, factValue: { color: colors.ink, fontSize: 9, fontWeight: '800', marginTop: 3 }, inquiryBottom: { marginTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, inquiryPrice: { color: colors.ink, fontSize: 12, fontWeight: '900' }, inquiryAction: { minHeight: 38, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, backgroundColor: colors.primary }, inquiryActionText: { color: colors.surface, fontSize: 10, fontWeight: '900' },
   cardBottom: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: colors.line }, price: { color: colors.ink, fontSize: 18, fontWeight: '900', marginTop: 2 }, unit: { color: colors.muted, fontSize: 8, marginTop: 2 }, stock: { flex: 1, alignItems: 'flex-end', marginRight: 10 }, stockLabel: { color: colors.muted, fontSize: 8 }, stockValue: { color: colors.ink, fontSize: 10, fontWeight: '800', marginTop: 3 }, rowAction: { minHeight: 38, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.primary }, rowActionText: { color: colors.surface, fontSize: 10, fontWeight: '900' }, unavailable: { color: colors.muted, fontSize: 9 },
   audit: { color: colors.muted, fontSize: 8, lineHeight: 13, marginTop: 9 }, loadMore: { minHeight: 44, marginTop: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, loadMoreText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   pending: { color: colors.amber, fontSize: 8, marginTop: 8 },
   outage: { padding: 12, marginBottom: 10, borderRadius: 12, flexDirection: 'row', gap: 9, backgroundColor: colors.amberSoft }, outageCopy: { flex: 1 }, outageTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' }, outageText: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 3 },
+  inlineRetry: { minHeight: 30, marginTop: 6, alignSelf: 'flex-start', justifyContent: 'center' }, inlineRetryText: { color: colors.primary, fontSize: 9, fontWeight: '900' }, pageError: { marginTop: 9, padding: 11, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: 9, backgroundColor: colors.amberSoft }, pageErrorText: { flex: 1, color: colors.muted, fontSize: 9, marginRight: 8 },
   empty: { padding: 24, alignItems: 'center', borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, emptyTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', marginTop: 10 }, emptyText: { color: colors.muted, fontSize: 10, lineHeight: 16, textAlign: 'center', marginTop: 6 }, primary: { minHeight: 46, marginTop: 15, paddingHorizontal: 18, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 12, fontWeight: '900' },
   partnerEmpty: { flexDirection: 'row', gap: 12, padding: 18, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: '#C9DCF6' }, partnerCopy: { flex: 1 }, partnerTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' }, partnerText: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.30)' }, sheet: { padding: 18, paddingBottom: 28, borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: colors.surface }, handle: { width: 38, height: 4, borderRadius: 2, alignSelf: 'center', backgroundColor: '#D0D5DD' }, sheetHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }, sheetTitle: { color: colors.ink, fontSize: 19, fontWeight: '900' }, reset: { color: colors.primary, fontSize: 11, fontWeight: '800' }, regionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 15 }, regionChip: { minHeight: 38, paddingHorizontal: 13, borderRadius: 8, justifyContent: 'center', backgroundColor: colors.canvas }, regionChipActive: { backgroundColor: '#EDF4FF', borderWidth: 1, borderColor: '#B7CEF4' }, regionText: { color: colors.muted, fontSize: 11 }, regionTextActive: { color: colors.primary, fontWeight: '800' },

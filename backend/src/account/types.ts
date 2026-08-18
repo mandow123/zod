@@ -1,6 +1,7 @@
 export const LEGAL_VERSIONS = {
   terms: '2026-08-11',
   privacy: '2026-08-11',
+  inquiry: '2026-08-18',
 } as const;
 
 export type OtpPurpose = 'register' | 'login' | 'delete_account';

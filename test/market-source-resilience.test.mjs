@@ -16,7 +16,7 @@ test('Spark campaign remains a unique visible device product when the remote cat
   assert.match(campaign, /unitCredit: '32534\.93'/u);
   assert.match(campaign, /discountPercent: 20/u);
   assert.match(campaign, /products\.filter\(\(item\) => !isSparkCampaignProduct\(item\)\)/u);
-  assert.match(market, /MarketSection = '算力租用' \| '设备采购'/u);
+  assert.match(market, /MarketSection = '算力租用' \| '设备采购' \| '预约算力'/u);
   assert.match(market, /useState<MarketSection>\('设备采购'\)/u);
   assert.match(market, /deviceProductRegion\(item\) === region/u);
   assert.match(market, /02672 spark dgx/u);

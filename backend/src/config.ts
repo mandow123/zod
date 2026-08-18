@@ -68,6 +68,7 @@ const environmentSchema = z.object({
   SUPPORT_PHONE: optionalText,
   PRIVACY_POLICY_URL: optionalText,
   TERMS_URL: optionalText,
+  INQUIRY_TERMS_URL: optionalText,
   ICP_FILING: optionalText,
   APP_FILING: optionalText,
   COMPUTE_PROVIDER: optionalText,
@@ -316,7 +317,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       : []);
   const legal = capability(environment, [
     'LEGAL_ENTITY_NAME', 'UNIFIED_SOCIAL_CREDIT_CODE', 'SUPPORT_EMAIL', 'SUPPORT_PHONE',
-    'PRIVACY_POLICY_URL', 'TERMS_URL', 'ICP_FILING', 'APP_FILING',
+    'PRIVACY_POLICY_URL', 'TERMS_URL', 'INQUIRY_TERMS_URL', 'ICP_FILING', 'APP_FILING',
   ]);
   const metricsBase = capability(environment, ['METRICS_BEARER_TOKEN']);
   const observability = mergeCapability(metricsBase,

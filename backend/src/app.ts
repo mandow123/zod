@@ -47,6 +47,8 @@ import { registerTopupReversalRoutes } from './topups/reversal-routes.js';
 import type { TopupReversalService } from './topups/reversal-service.js';
 import { registerCreatorCommissionRoutes } from './creator-commissions/routes.js';
 import type { CreatorCommissionService } from './creator-commissions/service.js';
+import { registerResourceInquiryRoutes } from './resource-inquiries/routes.js';
+import type { ResourceInquiryService } from './resource-inquiries/service.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -71,10 +73,11 @@ type BuildAppOptions = Readonly<{
   assetPortfolioService?: AssetPortfolioService;
   vastMarketService?: VastMarketService;
   creatorCommissionService?: CreatorCommissionService;
+  resourceInquiryService?: ResourceInquiryService;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -206,6 +209,7 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && assetPortfolioService) await registerAssetPortfolioRoutes(app, accountService, assetPortfolioService);
   if (accountService && vastMarketService) await registerVastMarketRoutes(app,accountService,vastMarketService);
   if (accountService && creatorCommissionService) await registerCreatorCommissionRoutes(app,accountService,creatorCommissionService);
+  if (accountService && resourceInquiryService) await registerResourceInquiryRoutes(app,accountService,resourceInquiryService);
   if (operationsService) await registerOperationsRoutes(app, accountService, operationsService);
 
   return app;

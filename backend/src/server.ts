@@ -63,6 +63,9 @@ import { FirstPartyAttributionProvider } from './creator-commissions/provider.js
 import { PostgresCreatorCommissionStore } from './creator-commissions/store.js';
 import { CreatorCommissionService } from './creator-commissions/service.js';
 import { CreatorCommissionWorker } from './creator-commissions/worker.js';
+import { PostgresResourceInquiryStore } from './resource-inquiries/store.js';
+import { ResourceInquiryService } from './resource-inquiries/service.js';
+import { ResourceInquiryExpiryWorker } from './resource-inquiries/worker.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -145,6 +148,8 @@ const creatorCommissionService=creatorCommissionStore&&subjectService&&config.re
   ?new CreatorCommissionService(creatorCommissionStore,subjectService,
     new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,config.PUBLIC_ORIGIN)
   :undefined;
+const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+  ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
@@ -180,6 +185,7 @@ const app = await buildApp({
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
   ...(vastMarketService ? { vastMarketService } : {}),
   ...(creatorCommissionService ? { creatorCommissionService } : {}),
+  ...(resourceInquiryService ? { resourceInquiryService } : {}),
 });
 const vastReconciliationWorker = vastMarketService && vastProvider.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
@@ -188,6 +194,8 @@ const creatorCommissionWorker=creatorCommissionStore&&config.creatorCommissionPo
   &&config.readiness.capabilities.creatorCommissions.available
   ?new CreatorCommissionWorker(creatorCommissionStore,config.creatorCommissionPolicy.refundObservationDays,app.log as WorkerLogger)
   :undefined;
+const resourceInquiryExpiryWorker=resourceInquiryService
+  ?new ResourceInquiryExpiryWorker(resourceInquiryService,app.log as WorkerLogger):undefined;
 const topupRecoveryWorker = database && creditTopupStore && paymentProviders.size > 0
   ? new TopupRecoveryWorker(new PostgresTopupRecoveryStore(database), creditTopupStore, paymentProviders, app.log as WorkerLogger)
   : undefined;
@@ -221,6 +229,7 @@ const accountDeletionWorker = database && config.readiness.capabilities.tokenSec
 pushWorker?.start();
 vastReconciliationWorker?.start();
 creatorCommissionWorker?.start();
+resourceInquiryExpiryWorker?.start();
 accountDeletionWorker?.start();
 resourceEvidenceWorker?.start();
 topupRecoveryWorker?.start();
@@ -243,6 +252,7 @@ const shutdown = async (signal: string) => {
   await deviceSettlementWorker?.stop();
   vastReconciliationWorker?.stop();
   creatorCommissionWorker?.stop();
+  resourceInquiryExpiryWorker?.stop();
   await app.close();
   await database?.close();
   process.exit(0);

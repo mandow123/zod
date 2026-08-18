@@ -59,6 +59,9 @@ import {
   attributeCreatorReferral, consumeCreatorRewardEvent, loadCreatorRewardEvents,
   parseCreatorReferralToken, type CreatorRewardEvent,
 } from './src/creator-commissions';
+import { InquiryComposerSheet } from './src/InquiryComposerSheet';
+import { MyInquiriesSheet } from './src/MyInquiriesSheet';
+import type { InquiryCatalogCandidate } from './src/resource-inquiries';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 
@@ -92,6 +95,8 @@ function CloudPayApp() {
   const [creatorReward, setCreatorReward] = useState<CreatorRewardEvent | null>(null);
   const [pendingReferralToken, setPendingReferralToken] = useState<string | null>(null);
   const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null);
+  const [selectedInquiryCandidate, setSelectedInquiryCandidate] = useState<InquiryCatalogCandidate | null>(null);
+  const [myInquiriesVisible, setMyInquiriesVisible] = useState(false);
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const refreshGeneration = useRef(0);
 
@@ -381,6 +386,7 @@ function CloudPayApp() {
         return <MarketScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
           onOpenPublish={() => setDemandComposerVisible(true)} onBuy={setSelectedListing}
           onOpenSparkDetail={openSparkDetail} onLogin={() => setAuthVisible(true)}
+          onOpenInquiry={setSelectedInquiryCandidate} onOpenMyInquiries={() => setMyInquiriesVisible(true)}
           onManageOwnListing={(listing) => {
             setPublishListingToManage(listing.id);
             setActiveTab('publish');
@@ -493,6 +499,20 @@ function CloudPayApp() {
         onModeChange={() => undefined}
         onClose={() => setDemandComposerVisible(false)}
         onLogin={() => { setDemandComposerVisible(false); setAuthVisible(true); }}
+      />
+      <InquiryComposerSheet
+        candidate={selectedInquiryCandidate}
+        visible={selectedInquiryCandidate !== null}
+        authenticated={snapshot.authenticated}
+        onLogin={() => { setSelectedInquiryCandidate(null); setAuthVisible(true); }}
+        onClose={() => setSelectedInquiryCandidate(null)}
+        onSubmitted={() => undefined}
+      />
+      <MyInquiriesSheet
+        visible={myInquiriesVisible}
+        authenticated={snapshot.authenticated}
+        onLogin={() => { setMyInquiriesVisible(false); setAuthVisible(true); }}
+        onClose={() => setMyInquiriesVisible(false)}
       />
       <OfferWizardSheet
         visible={offerWizard !== null}
