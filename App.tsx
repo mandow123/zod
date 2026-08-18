@@ -521,8 +521,8 @@ function CloudPayApp() {
         }}
       />
       <CreditWalletSheet visible={creditWalletVisible} balance={snapshot.creditBalance}
-        alipayReady={snapshot.alipayReady} wechatReady={snapshot.wechatReady}
-        onClose={() => setCreditWalletVisible(false)} onChanged={refresh} />
+        onClose={() => setCreditWalletVisible(false)} onChanged={refresh}
+        onOpenSupport={() => { setCreditWalletVisible(false); navigate('messages'); }} />
       <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
       <AftercareReviewSheet review={selectedReview} onClose={() => setSelectedReview(null)} onChanged={refresh} />
       <SparkProductDetailSheet product={selectedSparkProduct} visible={selectedSparkProduct !== null}
