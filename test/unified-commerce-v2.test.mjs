@@ -5,13 +5,13 @@ import test from 'node:test';
 async function source(path) { return readFile(new URL(path, import.meta.url), 'utf8'); }
 
 test('V2 keeps one five-item navigation and removes the repeated global view switch', async () => {
-  const [app, components, profile, assets] = await Promise.all([
+  const [app, components, profile, assets, smoke] = await Promise.all([
     source('../App.tsx'), source('../src/components.tsx'), source('../src/screens/ProfileScreen.tsx'),
-    source('../src/screens/UnifiedAssetsScreen.tsx'),
+    source('../src/screens/UnifiedAssetsScreen.tsx'), source('../docs/ios-smoke-test.md'),
   ]);
   for (const entry of [
     "{ key: 'home', label: '首页'", "{ key: 'market', label: '市场'",
-    "{ key: 'publish', label: '上架'", "{ key: 'messages', label: '消息'",
+    "{ key: 'assets', label: '我的资产'", "{ key: 'messages', label: '消息'",
     "{ key: 'profile', label: '我的'",
   ]) assert.match(components, new RegExp(entry.replace(/[{}]/gu, '\\$&'), 'u'));
   assert.doesNotMatch(app, /<WorkspaceHeader/u);
@@ -19,6 +19,10 @@ test('V2 keeps one five-item navigation and removes the repeated global view swi
   assert.match(profile, /label="我的资产"/u);
   assert.match(assets, /我购买的/u);
   assert.match(assets, /我提供的/u);
+  assert.match(app, /assetNavigationTabs\.includes\(activeTab\) \? 'assets'/u);
+  assert.match(app, /profileNavigationTabs\.includes\(activeTab\) \? 'profile'/u);
+  assert.match(smoke, /五个主入口：首页、市场、我的资产、消息、我的/u);
+  assert.doesNotMatch(smoke, /测试前提[\s\S]{0,500}Associated Domains|测试前提[\s\S]{0,500}AASA/u);
   assert.match(app, /KAI_CLOUD_UNIFIED_ASSETS_V2/u);
 });
 

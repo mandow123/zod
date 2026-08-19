@@ -50,7 +50,7 @@ module.exports = {
     ],
     ios: {
       ...source.expo.ios,
-      associatedDomains: ['applinks:cloudpay.kai.com'],
+      associatedDomains: kaiAuthUniversalLinksEnabled ? ['applinks:cloudpay.kai.com'] : [],
       config: {
         ...source.expo.ios?.config,
         usesNonExemptEncryption: false,

@@ -61,6 +61,10 @@ import {
 } from './src/creator-commissions';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
+const assetNavigationTabs: readonly TabKey[] = [
+  'assets', 'orders', 'resources', 'credits', 'workspace', 'publish',
+];
+const profileNavigationTabs: readonly TabKey[] = ['creator'];
 
 function CloudPayApp() {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
@@ -469,7 +473,8 @@ function CloudPayApp() {
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       <View style={styles.page}>{page}</View>
-      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
+      <BottomNav active={assetNavigationTabs.includes(activeTab) ? 'assets'
+        : profileNavigationTabs.includes(activeTab) ? 'profile' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}

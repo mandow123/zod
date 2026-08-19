@@ -76,6 +76,8 @@ test('resolved iOS config excludes the Android signing plugin and embeds closed 
   assert.equal(config.extra.distributionChannel, 'app-store');
   assert.equal(config.extra.nativeTopupsEnabled, false);
   assert.equal(config.extra.newOrdersEnabled, false);
+  assert.equal(config.extra.kaiAuthUniversalLinksEnabled, false);
+  assert.deepEqual(config.ios.associatedDomains, []);
   assert.equal(pluginNames.includes('./plugins/with-android-release-signing'), false);
   assert.ok(pluginNames.includes('expo-secure-store'));
   assert.ok(pluginNames.includes('expo-notifications'));
@@ -100,6 +102,8 @@ test('EAS profiles keep Android behavior and give every iOS build the App Store 
     assert.equal(eas.build[name].env.CLOUDPAY_BUILD_PLATFORM, 'ios');
     assert.equal(eas.build[name].env.CLOUDPAY_DISTRIBUTION_CHANNEL, 'app-store');
   }
+  assert.equal(eas.build['ios-preview'].env.CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED, '0');
+  assert.equal(eas.build['ios-production'].env.CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED, '0');
   assert.equal(eas.build['ios-simulator'].ios.simulator, true);
   assert.equal(eas.build['ios-production'].distribution, 'store');
 });

@@ -26,8 +26,14 @@ export function validateIosReleaseConfig(config) {
   if (config.icon !== './assets/icon.png') issues.push('the reviewed App Store icon is not configured.');
   if (config.scheme !== 'kaicloudpay') issues.push('the compatibility callback scheme is missing.');
   if (config.orientation !== 'portrait' || ios.supportsTablet !== false) issues.push('the reviewed iPhone orientation policy changed.');
-  if (!ios.associatedDomains?.includes('applinks:cloudpay.kai.com')) issues.push('the Universal Link associated domain is missing.');
-  if (extra.kaiAuthUniversalLinksEnabled !== true) issues.push('Universal Link authentication is not enabled for production iOS.');
+  if (typeof extra.kaiAuthUniversalLinksEnabled !== 'boolean') issues.push('the iOS authentication callback mode must be explicit.');
+  if (extra.kaiAuthUniversalLinksEnabled === true
+    && !ios.associatedDomains?.includes('applinks:cloudpay.kai.com')) {
+    issues.push('the Universal Link associated domain is missing while Universal Link authentication is enabled.');
+  }
+  if (extra.kaiAuthUniversalLinksEnabled === false && (ios.associatedDomains?.length ?? 0) > 0) {
+    issues.push('associated domains must be omitted while the first release uses only the compatibility callback scheme.');
+  }
   if (ios.config?.usesNonExemptEncryption !== false) issues.push('export compliance encryption declaration is missing.');
   if (!Array.isArray(ios.privacyManifests?.NSPrivacyAccessedAPITypes)
     || ios.privacyManifests.NSPrivacyAccessedAPITypes.length === 0) issues.push('Privacy Manifest required-reason APIs are missing.');

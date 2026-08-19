@@ -101,7 +101,7 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
 const mainTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
   { key: 'home', label: '首页', icon: 'home-outline', activeIcon: 'home' },
   { key: 'market', label: '市场', icon: 'storefront-outline', activeIcon: 'storefront' },
-  { key: 'publish', label: '上架', icon: 'add-circle-outline', activeIcon: 'add-circle' },
+  { key: 'assets', label: '我的资产', icon: 'cube-outline', activeIcon: 'cube' },
   { key: 'messages', label: '消息', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' },
   { key: 'profile', label: '我的', icon: 'person-outline', activeIcon: 'person' },
 ];

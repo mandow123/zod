@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-19T03:19:29.580Z",
+  "baseCommit": "08d3c60ec8545f3fa9138a05b19079156533ae03",
+  "stagedDiffSha256": "6ce6dcec328a0bc1230ee1a44bf134098dcb65ed4adb67871fb3a92301a1b6eb",
+  "summary": "批准首版 iOS 自定义回调降级、产品导航修正及发布门禁更新。"
+}

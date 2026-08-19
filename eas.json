@@ -46,7 +46,7 @@
         "CLOUDPAY_BUILD_PLATFORM": "ios",
         "CLOUDPAY_DISTRIBUTION_CHANNEL": "app-store",
         "CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED": "1",
-        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "1"
+        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "0"
       },
       "ios": {
         "buildConfiguration": "Release"
@@ -61,7 +61,7 @@
         "CLOUDPAY_BUILD_PLATFORM": "ios",
         "CLOUDPAY_DISTRIBUTION_CHANNEL": "app-store",
         "CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED": "1",
-        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "1"
+        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "0"
       },
       "ios": {
         "buildConfiguration": "Release"

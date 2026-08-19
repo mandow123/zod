@@ -83,7 +83,7 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
 
     {showSupplyBusiness ? <MenuGroup title="供给经营" caption="资格审核与供应结算" icon="server-outline" accent="orange">
       <Menu icon="shield-checkmark-outline" label="上架资格"
-        meta={supplier.status === 'approved' ? '资格已通过 · 创建和管理资源请使用底部“上架”' : `${supplierStatusLabel[supplier.status]} · 查看审核与资格状态`}
+        meta={supplier.status === 'approved' ? '资格已通过 · 创建和管理资源请使用“我的资产”' : `${supplierStatusLabel[supplier.status]} · 查看审核与资格状态`}
         onPress={supplier.status === 'approved' ? undefined : onOpenQualification} enabled={supplier.status !== 'approved'}
         trailingIcon={supplier.status === 'approved' ? 'checkmark-circle' : undefined} tone="orange" />
       <Menu icon="cash-outline" label="供应收益与兑付" meta={payoutMeta} onPress={payoutActive ? onOpenPayout : undefined} enabled={payoutActive} tone="orange" last />

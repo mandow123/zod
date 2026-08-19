@@ -109,8 +109,8 @@ test('asset UI consumes the dedicated API contract and exposes lifecycle views',
   assert.match(screen, /assetRequestGeneration/u);
   assert.match(screen, /providerAssetActionAllowed/u);
   assert.match(screen, /!snapshot\.authenticated \|\| canManage/u);
-  assert.doesNotMatch(navigation, /key: 'assets', label: '我的资产'/u);
-  assert.match(navigation, /key: 'publish', label: '上架'/u);
+  assert.match(navigation, /key: 'assets', label: '我的资产'/u);
+  assert.doesNotMatch(navigation, /key: 'publish', label: '上架'/u);
   assert.match(profile, /label="我的资产"/u);
   for (const lifecycleCopy of ['托管设备', '部署中', '设备关闭', '已续产', '已回购']) {
     assert.match(screen, new RegExp(lifecycleCopy, 'u'));

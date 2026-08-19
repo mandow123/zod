@@ -32,7 +32,7 @@ test('供应资格与兑付采用真实服务端状态并区分经营入口', as
   for (const state of ['资料待完善', '资料审核中', '资格已通过', '审核退回，需补充资料', '供应资格已暂停']) {
     assert.match(profile, new RegExp(state, 'u'));
   }
-  assert.match(profile, /label="上架资格"[\s\S]{0,260}创建和管理资源请使用底部“上架”/u);
+  assert.match(profile, /label="上架资格"[\s\S]{0,260}创建和管理资源请使用“我的资产”/u);
   assert.match(profile, /onPress=\{supplier\.status === 'approved' \? undefined : onOpenQualification\}/u);
   assert.match(profile, /enabled=\{supplier\.status !== 'approved'\}/u);
   assert.match(app, /onOpenQualification=\{\(\) => \{ setPublishIntentToOpen\('supplier'\); navigate\('publish'\); \}\}/u);

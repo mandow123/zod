@@ -1,20 +1,20 @@
 # Zod iOS Smoke Test
 
-本清单用于 `ios-preview` 的真实 iPhone/TestFlight 构建。模拟器只能覆盖布局、冷启动和基础导航，不能替代 APNs、Universal Link、文件选择器和 Keychain 的真机验证。
+本清单用于 `ios-preview` 的真实 iPhone/TestFlight 构建。模拟器只能覆盖布局、冷启动和基础导航，不能替代 APNs、自定义认证回调、文件选择器和 Keychain 的真机验证。Universal Link 在 AASA 发布并单独验收前保持关闭。
 
 ## 测试前提
 
 - 使用 `app-store` 渠道构建，确认充值和新增购买均关闭。
 - 使用生产 HTTPS API；测试账号必须已有可查看/履约的订单，不在测试中创建新订单。
-- EAS 项目、APNs、Associated Domains、AASA 和后端 HTTPS 回调白名单均已由负责人确认。
+- EAS 项目、APNs 和精确的后端 `kaicloudpay://auth/kai/callback` 白名单均已由负责人确认。
 - 不在录屏、截图、日志或缺陷单中粘贴 Token、认证 code、PKCE verifier、推送 token 或连接凭证。
 
 ## Smoke 清单
 
 - [ ] 删除后重装并冷启动：启动图、名称、图标、纵向布局正确；无白屏或占位配置错误。
-- [ ] 五个主入口：首页、市场、发布/经营、消息、我的均可进入并返回。
+- [ ] 五个主入口：首页、市场、我的资产、消息、我的均可进入并返回；上架与供应经营从“我的资产”内进入。
 - [ ] 商业边界：市场可浏览；无充值、新购、定向需求、Vast 下单或外部购买 CTA；已有订单可查看。
-- [ ] iOS 17.4+ 登录：从明确点击进入系统认证会话；start URL 使用精确 HTTPS redirect，成功通过 Universal Link 回到 App；取消可恢复，超时提示可重试。
+- [ ] iOS 17.4+ 登录：从明确点击进入系统认证会话；首版 start URL 使用精确 `kaicloudpay://auth/kai/callback`，成功回到 App；取消可恢复，超时提示可重试。
 - [ ] iOS 17.3 及以下登录：start URL 使用精确 `kaicloudpay://auth/kai/callback`，成功通过自定义 scheme 回到 App；重复回调不重复交换，冷启动回调可恢复登录。
 - [ ] Token 刷新：等待 access token 临近到期后刷新受保护页面；会话保持，401 失败时安全退出。
 - [ ] 通知：只有点击“启用通知”后才出现系统授权；拒绝、稍后重试和允许三条路径均有明确反馈。
