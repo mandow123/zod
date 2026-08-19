@@ -104,7 +104,7 @@ postgresDescribe('admin session token registry real PostgreSQL concurrency', () 
         BEGIN RAISE EXCEPTION 'immutable'; END;
       $$`);
       const migration = await readFile(
-        fileURLToPath(new URL('../migrations/0058_admin_identity_rbac_sessions.sql', import.meta.url)),
+        fileURLToPath(new URL('../migrations/0060_admin_identity_rbac_sessions.sql', import.meta.url)),
         'utf8',
       );
       await setupClient.query(migration);

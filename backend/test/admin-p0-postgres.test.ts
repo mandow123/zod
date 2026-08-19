@@ -31,7 +31,7 @@ async function migrateAll(pglite: PGlite) {
   const migrations = (await readdir(new URL('../migrations', import.meta.url)))
     .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
   expect(migrations[0]).toBe('0001_cloudpay_ledger.sql');
-  expect(migrations).toContain('0058_admin_identity_rbac_sessions.sql');
+  expect(migrations).toContain('0060_admin_identity_rbac_sessions.sql');
   for (const name of migrations) {
     await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   }

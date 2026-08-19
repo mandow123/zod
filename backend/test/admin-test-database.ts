@@ -23,7 +23,7 @@ export function adminDatabaseAdapter(pglite: PGlite): Database {
 }
 export async function adminFixture() {
   const pglite = new PGlite();
-  for (const name of ['0001_cloudpay_ledger.sql', '0058_admin_identity_rbac_sessions.sql']) {
+  for (const name of ['0001_cloudpay_ledger.sql', '0060_admin_identity_rbac_sessions.sql']) {
     await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
   }
   return { pglite, database: adminDatabaseAdapter(pglite) };

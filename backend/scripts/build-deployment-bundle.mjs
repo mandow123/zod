@@ -43,8 +43,8 @@ try {
 
   const migrations = (await readdir(join(backendRoot, 'migrations')))
     .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-  if (migrations.length !== 58 || migrations.at(-1) !== '0058_admin_identity_rbac_sessions.sql') {
-    throw new Error(`Expected migrations 0001..0058; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+  if (migrations.length !== 60 || migrations.at(-1) !== '0060_admin_identity_rbac_sessions.sql') {
+    throw new Error(`Expected 60 migrations through 0060; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [
