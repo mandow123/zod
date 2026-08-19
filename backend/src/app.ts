@@ -18,7 +18,7 @@ import { registerSubjectRoutes } from './subjects/routes.js';
 import type { SubjectService } from './subjects/service.js';
 import type { RuntimeConfig } from './config.js';
 import type { Database } from './database.js';
-import { installErrorHandling } from './errors.js';
+import { AppError, installErrorHandling } from './errors.js';
 import { registerPublicPages } from './public-pages.js';
 import { registerResourceEvidenceRoutes } from './resource-evidence/routes.js';
 import type { ResourceEvidenceService } from './resource-evidence/service.js';
@@ -49,6 +49,15 @@ import { registerCreatorCommissionRoutes } from './creator-commissions/routes.js
 import type { CreatorCommissionService } from './creator-commissions/service.js';
 import { registerResourceInquiryRoutes } from './resource-inquiries/routes.js';
 import type { ResourceInquiryService } from './resource-inquiries/service.js';
+import {
+  adminRequestContext,
+  authenticateAdminHttpRequest,
+  registerAdminAuthRoutes,
+} from './admin/routes.js';
+import type { AdminAuthService } from './admin/auth-service.js';
+import type { AdminAuthRuntimeSettings } from './admin/runtime.js';
+import { registerAdminP0Routes } from './admin/p0-routes.js';
+import type { AdminP0Service } from './admin/p0-service.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -74,10 +83,13 @@ type BuildAppOptions = Readonly<{
   vastMarketService?: VastMarketService;
   creatorCommissionService?: CreatorCommissionService;
   resourceInquiryService?: ResourceInquiryService;
+  adminAuthService?: AdminAuthService;
+  adminAuthSettings?: AdminAuthRuntimeSettings;
+  adminP0Service?: AdminP0Service;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -178,6 +190,7 @@ export async function buildApp({ config, database, accountService, subjectServic
         computeFulfillment: config.readiness.capabilities.computeFulfillment.available,
         vastAi: config.readiness.capabilities.vastAi.available,
         creatorCommissions: config.readiness.capabilities.creatorCommissions.available,
+        adminAuth: config.readiness.capabilities.adminAuth.available,
       },
       database: { connected: databaseConnected, schema },
       deployment: { ready: deploymentReady, blockers: deploymentBlockers },
@@ -210,6 +223,25 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && vastMarketService) await registerVastMarketRoutes(app,accountService,vastMarketService);
   if (accountService && creatorCommissionService) await registerCreatorCommissionRoutes(app,accountService,creatorCommissionService);
   if (accountService && resourceInquiryService) await registerResourceInquiryRoutes(app,accountService,resourceInquiryService);
+  if (config.adminAuthEnabled && config.readiness.capabilities.adminAuth.available
+    && adminAuthService && adminAuthSettings) {
+    await registerAdminAuthRoutes(app, adminAuthService, adminAuthSettings);
+    if (adminP0Service) {
+      await registerAdminP0Routes(app, adminP0Service, async (action, request, reply) => {
+        const authenticated = await authenticateAdminHttpRequest(
+          request, reply, adminAuthService, adminAuthSettings,
+        );
+        try {
+          await adminAuthService.recordAuthorizedRead(
+            authenticated, action, adminRequestContext(request),
+          );
+        } catch {
+          throw new AppError('ADMIN_AUDIT_UNAVAILABLE', 503, '管理员审计服务暂时不可用。');
+        }
+        return { permissions: authenticated.principal.permissions };
+      }, adminAuthSettings);
+    }
+  }
   if (operationsService) await registerOperationsRoutes(app, accountService, operationsService);
 
   return app;

@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { isAbsolute } from 'node:path';
+import { isAdminRoleCode, type AdminRoleCode } from './admin/permissions.js';
 import { kaiCreditCommerceCapability } from './commerce/capabilities.js';
 
 const optionalText = z.string().trim().optional().transform((value) => value || undefined);
+const optionalUntrimmedText = z.string().optional().transform((value) => value === '' ? undefined : value);
 
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -86,6 +88,29 @@ const environmentSchema = z.object({
   KAI_OIDC_SUBJECT_PEPPER: optionalText,
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: optionalText,
   KAI_OIDC_APP_REDIRECT_URIS: optionalText,
+  ADMIN_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+  ADMIN_WEB_ORIGIN: optionalUntrimmedText,
+  ADMIN_API_ORIGIN: optionalUntrimmedText,
+  ADMIN_OIDC_CLIENT_ID: optionalUntrimmedText,
+  ADMIN_OIDC_CLIENT_SECRET: optionalUntrimmedText,
+  ADMIN_OIDC_REDIRECT_URI: optionalUntrimmedText,
+  ADMIN_OIDC_SCOPE: optionalUntrimmedText,
+  ADMIN_OIDC_GROUP_CLAIM: optionalUntrimmedText,
+  ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: optionalText,
+  ADMIN_OIDC_FLOW_PEPPER: optionalUntrimmedText,
+  ADMIN_OIDC_SUBJECT_PEPPER: optionalUntrimmedText,
+  ADMIN_OIDC_GROUP_PEPPER: optionalUntrimmedText,
+  ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY: optionalUntrimmedText,
+  ADMIN_SESSION_TOKEN_PEPPER: optionalUntrimmedText,
+  ADMIN_CSRF_TOKEN_PEPPER: optionalUntrimmedText,
+  ADMIN_PII_ENCRYPTION_KEY: optionalUntrimmedText,
+  ADMIN_AUDIT_PEPPER: optionalUntrimmedText,
+  ADMIN_LOGIN_TRANSACTION_TTL_SECONDS: optionalUntrimmedText,
+  ADMIN_SESSION_IDLE_TTL_SECONDS: optionalUntrimmedText,
+  ADMIN_SESSION_ABSOLUTE_TTL_SECONDS: optionalUntrimmedText,
+  ADMIN_SESSION_ROTATION_SECONDS: optionalUntrimmedText,
+  ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: optionalUntrimmedText,
+  ADMIN_REAUTH_FRESHNESS_SECONDS: optionalUntrimmedText,
   VAST_API_URL: z.string().url().default('https://console.vast.ai'),
   VAST_API_KEY: optionalText,
   VAST_PRICING_POLICY_JSON: optionalText,
@@ -121,6 +146,315 @@ function capability(environment: Record<string, string | undefined>, keys: strin
 function mergeCapability(base: Capability, invalid: string[]): Capability {
   const missing = [...new Set([...base.missing, ...invalid])];
   return { available: missing.length === 0, missing };
+}
+
+const ADMIN_REQUIRED_KEYS = [
+  'ADMIN_WEB_ORIGIN',
+  'ADMIN_API_ORIGIN',
+  'ADMIN_OIDC_CLIENT_ID',
+  'ADMIN_OIDC_CLIENT_SECRET',
+  'ADMIN_OIDC_REDIRECT_URI',
+  'ADMIN_OIDC_SCOPE',
+  'ADMIN_OIDC_GROUP_CLAIM',
+  'ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON',
+  'ADMIN_OIDC_FLOW_PEPPER',
+  'ADMIN_OIDC_SUBJECT_PEPPER',
+  'ADMIN_OIDC_GROUP_PEPPER',
+  'ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY',
+  'ADMIN_SESSION_TOKEN_PEPPER',
+  'ADMIN_CSRF_TOKEN_PEPPER',
+  'ADMIN_PII_ENCRYPTION_KEY',
+  'ADMIN_AUDIT_PEPPER',
+] as const;
+
+const ADMIN_PEPPER_KEYS = [
+  'ADMIN_OIDC_FLOW_PEPPER',
+  'ADMIN_OIDC_SUBJECT_PEPPER',
+  'ADMIN_OIDC_GROUP_PEPPER',
+  'ADMIN_SESSION_TOKEN_PEPPER',
+  'ADMIN_CSRF_TOKEN_PEPPER',
+  'ADMIN_AUDIT_PEPPER',
+] as const;
+
+const ADMIN_ENCRYPTION_KEY_KEYS = [
+  'ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY',
+  'ADMIN_PII_ENCRYPTION_KEY',
+] as const;
+
+const EXISTING_SECURITY_KEY_NAMES = [
+  'KAI_OIDC_CLIENT_SECRET',
+  'KAI_OIDC_FLOW_PEPPER',
+  'KAI_OIDC_SUBJECT_PEPPER',
+  'KAI_OIDC_TRANSACTION_ENCRYPTION_KEY',
+  'ACCESS_TOKEN_SECRET',
+  'REFRESH_TOKEN_PEPPER',
+  'OTP_PEPPER',
+  'PII_ENCRYPTION_KEY',
+  'AUDIT_PEPPER',
+] as const;
+
+const ADMIN_CALLBACK_PATH = '/admin/v1/auth/callback';
+const MOBILE_KAI_OIDC_CALLBACK_URL = 'https://cloudpay.kai.com/mobile/v1/auth/kai/callback';
+const MAX_ADMIN_GROUP_MAPPINGS = 64;
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/u;
+
+type ParsedEnvironment = z.infer<typeof environmentSchema>;
+type AdminGroupRoleMapping = Readonly<{ group: string; roleCode: AdminRoleCode }>;
+
+function stableStrings(values: readonly string[]): string[] {
+  return [...new Set(values)].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+}
+
+function parseAdminWebOrigin(value: string | undefined, nodeEnvironment: ParsedEnvironment['NODE_ENV'], invalid: string[]) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const localhostHttp = url.protocol === 'http:'
+      && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if (value !== value.trim() || CONTROL_CHARACTER_PATTERN.test(value)
+      || !value.startsWith(`${url.protocol}//`)
+      || url.origin === 'null' || url.username || url.password || value.includes('?') || value.includes('#')
+      || url.pathname !== '/' || !['http:', 'https:'].includes(url.protocol)
+      || (nodeEnvironment === 'production' && url.protocol !== 'https:')
+      || (nodeEnvironment !== 'production' && url.protocol === 'http:' && !localhostHttp)) {
+      throw new Error('invalid admin origin');
+    }
+    return url.origin;
+  } catch {
+    invalid.push('ADMIN_WEB_ORIGIN(secure origin)');
+    return null;
+  }
+}
+
+function parseAdminRedirectUri(value: string | undefined, invalid: string[]) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (value !== value.trim() || CONTROL_CHARACTER_PATTERN.test(value)
+      || !value.startsWith('https://') || url.protocol !== 'https:'
+      || url.origin === 'null' || url.username || url.password || value.includes('?') || value.includes('#')
+      || url.pathname !== ADMIN_CALLBACK_PATH || url.href !== value
+      || value === MOBILE_KAI_OIDC_CALLBACK_URL) {
+      throw new Error('invalid admin callback');
+    }
+    return value;
+  } catch {
+    invalid.push('ADMIN_OIDC_REDIRECT_URI(exact HTTPS admin callback)');
+    return null;
+  }
+}
+
+function parseAdminApiOrigin(value: string | undefined, nodeEnvironment: ParsedEnvironment['NODE_ENV'], invalid: string[]) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const localhostHttp = url.protocol === 'http:'
+      && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if (value !== value.trim() || CONTROL_CHARACTER_PATTERN.test(value)
+      || !value.startsWith(`${url.protocol}//`) || url.origin === 'null' || url.username || url.password
+      || value.includes('?') || value.includes('#') || url.pathname !== '/'
+      || !['http:', 'https:'].includes(url.protocol)
+      || (nodeEnvironment === 'production' && url.protocol !== 'https:')
+      || (nodeEnvironment !== 'production' && url.protocol === 'http:' && !localhostHttp)) {
+      throw new Error('invalid admin API origin');
+    }
+    return url.origin;
+  } catch {
+    invalid.push('ADMIN_API_ORIGIN(secure isolated origin)');
+    return null;
+  }
+}
+
+function parseAdminScopes(value: string | undefined, invalid: string[]): readonly string[] {
+  if (!value) return Object.freeze([]);
+  const scopes = value.split(' ');
+  const valid = value === value.trim()
+    && !CONTROL_CHARACTER_PATTERN.test(value)
+    && scopes.length <= 32
+    && scopes.every((scope) => /^[\x21\x23-\x5b\x5d-\x7e]{1,128}$/u.test(scope))
+    && new Set(scopes).size === scopes.length
+    && scopes.includes('openid')
+    && !scopes.includes('offline_access');
+  if (!valid) {
+    invalid.push('ADMIN_OIDC_SCOPE(valid online OIDC scopes)');
+    return Object.freeze([]);
+  }
+  return Object.freeze(stableStrings(scopes));
+}
+
+function validateAdminGroupClaim(value: string | undefined, invalid: string[]) {
+  if (value && (value !== value.trim() || !/^[A-Za-z_][A-Za-z0-9_.:-]{0,127}$/u.test(value)
+    || CONTROL_CHARACTER_PATTERN.test(value))) {
+    invalid.push('ADMIN_OIDC_GROUP_CLAIM(valid claim name)');
+  }
+}
+
+function parseAdminGroupRoleMappings(value: string | undefined, invalid: string[]): readonly AdminGroupRoleMapping[] {
+  if (!value) return Object.freeze([]);
+  try {
+    const decoded = JSON.parse(value) as unknown;
+    if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) throw new Error('not an object');
+    const entries = Object.entries(decoded);
+    if (entries.length < 1 || entries.length > MAX_ADMIN_GROUP_MAPPINGS) throw new Error('invalid mapping count');
+    const mappings = entries.map(([group, roleCode]) => {
+      if (group.length < 1 || group.length > 256 || group !== group.trim()
+        || CONTROL_CHARACTER_PATTERN.test(group) || !isAdminRoleCode(roleCode)) {
+        throw new Error('invalid group mapping');
+      }
+      return Object.freeze({ group, roleCode });
+    });
+    mappings.sort((left, right) => left.group < right.group ? -1 : left.group > right.group ? 1 : 0);
+    return Object.freeze(mappings);
+  } catch {
+    invalid.push('ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON(valid role allowlist)');
+    return Object.freeze([]);
+  }
+}
+
+function isCanonicalBase64Key(value: string): boolean {
+  const decoded = Buffer.from(value, 'base64');
+  return decoded.length === 32 && decoded.toString('base64') === value;
+}
+
+function parseAdminTtl(
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+  name: string,
+  invalid: string[],
+) {
+  if (value === undefined) return fallback;
+  if (!/^[1-9]\d*$/u.test(value)) {
+    invalid.push(`${name}(${minimum}-${maximum})`);
+    return fallback;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    invalid.push(`${name}(${minimum}-${maximum})`);
+    return fallback;
+  }
+  return parsed;
+}
+
+function adminAuthConfiguration(environment: Record<string, string | undefined>, parsed: ParsedEnvironment) {
+  const invalid: string[] = [];
+  const adminWebOrigin = parseAdminWebOrigin(parsed.ADMIN_WEB_ORIGIN, parsed.NODE_ENV, invalid);
+  const adminApiOrigin = parseAdminApiOrigin(parsed.ADMIN_API_ORIGIN, parsed.NODE_ENV, invalid);
+  const adminOidcRedirectUri = parseAdminRedirectUri(parsed.ADMIN_OIDC_REDIRECT_URI, invalid);
+  const adminOidcScopes = parseAdminScopes(parsed.ADMIN_OIDC_SCOPE, invalid);
+  validateAdminGroupClaim(parsed.ADMIN_OIDC_GROUP_CLAIM, invalid);
+  const adminOidcGroupRoleMappings = parseAdminGroupRoleMappings(
+    parsed.ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON,
+    invalid,
+  );
+  if (adminApiOrigin && adminWebOrigin && adminApiOrigin === adminWebOrigin) {
+    invalid.push('ADMIN_API_ORIGIN(isolated from Web origin)');
+  }
+  if (adminApiOrigin && parsed.PUBLIC_ORIGIN) {
+    try {
+      if (adminApiOrigin === new URL(parsed.PUBLIC_ORIGIN).origin) {
+        invalid.push('ADMIN_API_ORIGIN(isolated from public API)');
+      }
+    } catch { /* PUBLIC_ORIGIN has its own readiness validation. */ }
+  }
+  if (adminApiOrigin && adminOidcRedirectUri
+    && new URL(adminOidcRedirectUri).origin !== adminApiOrigin) {
+    invalid.push('ADMIN_OIDC_REDIRECT_URI(bound to admin API origin)');
+  }
+
+  if (parsed.ADMIN_OIDC_CLIENT_ID && !/^[A-Za-z0-9._:-]{3,200}$/u.test(parsed.ADMIN_OIDC_CLIENT_ID)) {
+    invalid.push('ADMIN_OIDC_CLIENT_ID(valid confidential client id)');
+  }
+  if (parsed.ADMIN_OIDC_CLIENT_SECRET && (parsed.ADMIN_OIDC_CLIENT_SECRET.length < 16
+    || parsed.ADMIN_OIDC_CLIENT_SECRET !== parsed.ADMIN_OIDC_CLIENT_SECRET.trim()
+    || CONTROL_CHARACTER_PATTERN.test(parsed.ADMIN_OIDC_CLIENT_SECRET))) {
+    invalid.push('ADMIN_OIDC_CLIENT_SECRET(>=16 chars)');
+  }
+  for (const name of ADMIN_PEPPER_KEYS) {
+    const value = parsed[name];
+    if (value && (value.length < 32 || value !== value.trim() || CONTROL_CHARACTER_PATTERN.test(value))) {
+      invalid.push(`${name}(>=32 chars)`);
+    }
+  }
+  for (const name of ADMIN_ENCRYPTION_KEY_KEYS) {
+    const value = parsed[name];
+    if (value && !isCanonicalBase64Key(value)) invalid.push(`${name}(base64 32 bytes)`);
+  }
+
+  const adminSecrets = [
+    parsed.ADMIN_OIDC_CLIENT_SECRET,
+    ...ADMIN_PEPPER_KEYS.map((name) => parsed[name]),
+    ...ADMIN_ENCRYPTION_KEY_KEYS.map((name) => parsed[name]),
+  ].filter((value): value is string => Boolean(value));
+  const existingSecrets = EXISTING_SECURITY_KEY_NAMES
+    .map((name) => parsed[name])
+    .filter((value): value is string => Boolean(value));
+  if (new Set(adminSecrets).size !== adminSecrets.length
+    || adminSecrets.some((secret) => existingSecrets.includes(secret))) {
+    invalid.push('ADMIN_AUTH_SECRETS(independent)');
+  }
+  if (parsed.ADMIN_OIDC_CLIENT_ID && parsed.KAI_OIDC_CLIENT_ID
+    && parsed.ADMIN_OIDC_CLIENT_ID === parsed.KAI_OIDC_CLIENT_ID) {
+    invalid.push('ADMIN_OIDC_CLIENT_ID(independent)');
+  }
+
+  const loginTransactionSeconds = parseAdminTtl(
+    parsed.ADMIN_LOGIN_TRANSACTION_TTL_SECONDS, 300, 60, 600,
+    'ADMIN_LOGIN_TRANSACTION_TTL_SECONDS', invalid,
+  );
+  const sessionIdleSeconds = parseAdminTtl(
+    parsed.ADMIN_SESSION_IDLE_TTL_SECONDS, 1_800, 300, 3_600,
+    'ADMIN_SESSION_IDLE_TTL_SECONDS', invalid,
+  );
+  const sessionAbsoluteSeconds = parseAdminTtl(
+    parsed.ADMIN_SESSION_ABSOLUTE_TTL_SECONDS, 28_800, 1_800, 43_200,
+    'ADMIN_SESSION_ABSOLUTE_TTL_SECONDS', invalid,
+  );
+  const sessionRotationSeconds = parseAdminTtl(
+    parsed.ADMIN_SESSION_ROTATION_SECONDS, 900, 60, 1_800,
+    'ADMIN_SESSION_ROTATION_SECONDS', invalid,
+  );
+  const previousTokenGraceSeconds = parseAdminTtl(
+    parsed.ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS, 30, 1, 30,
+    'ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS', invalid,
+  );
+  const reauthFreshnessSeconds = parseAdminTtl(
+    parsed.ADMIN_REAUTH_FRESHNESS_SECONDS, 300, 60, 900,
+    'ADMIN_REAUTH_FRESHNESS_SECONDS', invalid,
+  );
+  if (sessionIdleSeconds > sessionAbsoluteSeconds) {
+    invalid.push('ADMIN_SESSION_IDLE_TTL_SECONDS(<=absolute TTL)');
+  }
+  if (sessionRotationSeconds > sessionIdleSeconds) {
+    invalid.push('ADMIN_SESSION_ROTATION_SECONDS(<=idle TTL)');
+  }
+  if (reauthFreshnessSeconds > sessionAbsoluteSeconds) {
+    invalid.push('ADMIN_REAUTH_FRESHNESS_SECONDS(<=absolute TTL)');
+  }
+
+  const enabled = parsed.ADMIN_AUTH_ENABLED === 'true';
+  const configured = mergeCapability(capability(environment, [...ADMIN_REQUIRED_KEYS]), invalid);
+  const adminAuth = enabled
+    ? { enabled: true, available: configured.available, missing: stableStrings(configured.missing) }
+    : { enabled: false, available: false, missing: [] as string[] };
+
+  return {
+    adminAuth,
+    adminWebOrigin,
+    adminApiOrigin,
+    adminOidcRedirectUri,
+    adminOidcScopes,
+    adminOidcGroupRoleMappings,
+    adminAuthTtls: Object.freeze({
+      loginTransactionSeconds,
+      sessionIdleSeconds,
+      sessionAbsoluteSeconds,
+      sessionRotationSeconds,
+      previousTokenGraceSeconds,
+      reauthFreshnessSeconds,
+    }),
+  } as const;
 }
 
 function pushCapability(environment: Record<string, string | undefined>, parsed: {
@@ -167,6 +501,7 @@ export type RuntimeConfig = ReturnType<typeof loadConfig>;
 export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | undefined>) {
   const parsed = environmentSchema.parse(input);
   const environment = { ...input };
+  const adminConfiguration = adminAuthConfiguration(environment, parsed);
   const database = capability(environment, ['DATABASE_URL']);
   const tokenSecurity = secretCapability(environment);
   const publicHttps = new URL(parsed.PUBLIC_ORIGIN).protocol === 'https:';
@@ -343,6 +678,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...tokenSecurity.missing,
     ...(publicHttps || parsed.NODE_ENV !== 'production' ? [] : ['PUBLIC_ORIGIN(HTTPS)']),
     ...(parsed.NODE_ENV === 'production' ? kaiOidc.missing : []),
+    ...(adminConfiguration.adminAuth.enabled ? adminConfiguration.adminAuth.missing : []),
   ];
   const serviceBlockers = [
     ...coreBlockers,
@@ -364,6 +700,13 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     backupS3ForcePathStyle: parsed.BACKUP_S3_FORCE_PATH_STYLE === 'true',
     nodeSupportedAgentVersions: supportedAgentVersions,
     kaiOidcAppRedirects: kaiOidcRedirects,
+    adminAuthEnabled: adminConfiguration.adminAuth.enabled,
+    adminWebOrigin: adminConfiguration.adminWebOrigin,
+    adminApiOrigin: adminConfiguration.adminApiOrigin,
+    adminOidcRedirectUri: adminConfiguration.adminOidcRedirectUri,
+    adminOidcScopes: adminConfiguration.adminOidcScopes,
+    adminOidcGroupRoleMappings: adminConfiguration.adminOidcGroupRoleMappings,
+    adminAuthTtls: adminConfiguration.adminAuthTtls,
     vastPricingPolicy,
     creatorCommissionPolicy,
     readiness: {
@@ -374,7 +717,8 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       serviceBlockers: [...new Set(serviceBlockers)],
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
-        database, tokenSecurity, kaiOidc, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
+        database, tokenSecurity, kaiOidc, adminAuth: adminConfiguration.adminAuth,
+        sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
         publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
       },
     },

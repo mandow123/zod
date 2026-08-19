@@ -1,43 +1,32 @@
 import { createHash, randomUUID } from 'node:crypto';
-import {
-  createRemoteJWKSet,
-  jwtVerify,
-  type JWTVerifyGetKey,
-  type JWTPayload,
-} from 'jose';
 import type { RuntimeConfig } from '../config.js';
 import { AppError } from '../errors.js';
+import {
+  KAI_OIDC_AUTHORIZATION_ENDPOINT,
+  KAI_OIDC_ISSUER,
+  KAI_OIDC_SCOPE,
+} from '../identity/kai-oidc-constants.js';
+import { KaiIdTokenVerifier } from '../identity/kai-id-token-verifier.js';
+import { KaiOidcClient } from '../identity/kai-oidc-client.js';
 import { constantTimeEqual, decryptPii, encryptPii, generateOpaqueToken, lookupHash, secretHash } from './crypto.js';
 import type { KaiIdentityStore } from './kai-identity-store.js';
 import type { AccountService } from './service.js';
 import { LEGAL_VERSIONS, type DeviceDescriptor } from './types.js';
 
-export const KAI_OIDC_ISSUER = 'https://auth.kai.com/api/auth';
-export const KAI_OIDC_AUTHORIZATION_ENDPOINT = `${KAI_OIDC_ISSUER}/oauth2/authorize`;
-export const KAI_OIDC_TOKEN_ENDPOINT = `${KAI_OIDC_ISSUER}/oauth2/token`;
-export const KAI_OIDC_JWKS_URI = `${KAI_OIDC_ISSUER}/jwks`;
-export const KAI_OIDC_USERINFO_ENDPOINT = `${KAI_OIDC_ISSUER}/oauth2/userinfo`;
 export const KAI_OIDC_CALLBACK_URL = 'https://cloudpay.kai.com/mobile/v1/auth/kai/callback';
-export const KAI_OIDC_SCOPE = 'openid profile email';
+export {
+  KAI_OIDC_AUTHORIZATION_ENDPOINT,
+  KAI_OIDC_ISSUER,
+  KAI_OIDC_JWKS_URI,
+  KAI_OIDC_SCOPE,
+  KAI_OIDC_TOKEN_ENDPOINT,
+  KAI_OIDC_USERINFO_ENDPOINT,
+} from '../identity/kai-oidc-constants.js';
+export { KaiIdTokenVerifier } from '../identity/kai-id-token-verifier.js';
+export { KaiOidcClient } from '../identity/kai-oidc-client.js';
 
 type RequestContext = Readonly<{ requestId: string; ip: string; userAgent: string }>;
 
-type VerifiedIdToken = Readonly<{
-  subject: string;
-  nonce: string;
-  displayName: string | null;
-  email: string | null;
-  emailVerified: boolean;
-}>;
-
-type UserInfo = Readonly<{
-  subject: string;
-  displayName: string | null;
-  email: string | null;
-  emailVerified: boolean;
-}>;
-
-type TokenSet = Readonly<{ idToken: string; accessToken: string }>;
 type KaiTokenClient = Pick<KaiOidcClient, 'exchange' | 'userInfo'>;
 type KaiTokenVerifier = Pick<KaiIdTokenVerifier, 'verify'>;
 type FederatedSessionIssuer = Pick<AccountService, 'createFederatedSession'>;
@@ -49,109 +38,6 @@ function required(value: string | undefined, name: string) {
 
 function sha256Base64Url(value: string) {
   return createHash('sha256').update(value).digest('base64url');
-}
-
-function safeProfile(payload: JWTPayload): Omit<VerifiedIdToken, 'subject' | 'nonce'> {
-  const displayName = typeof payload.name === 'string' && payload.name.trim()
-    ? payload.name.trim().slice(0, 80) : null;
-  const email = typeof payload.email === 'string' && payload.email.trim().length <= 320
-    ? payload.email.trim() : null;
-  return { displayName, email, emailVerified: payload.email_verified === true };
-}
-
-export class KaiIdTokenVerifier {
-  private readonly key: JWTVerifyGetKey;
-
-  constructor(private readonly clientId: string, key?: JWTVerifyGetKey) {
-    this.key = key ?? createRemoteJWKSet(new URL(KAI_OIDC_JWKS_URI), {
-      timeoutDuration: 5_000,
-      cooldownDuration: 30_000,
-      cacheMaxAge: 10 * 60 * 1_000,
-    });
-  }
-
-  async verify(idToken: string): Promise<VerifiedIdToken> {
-    try {
-      const { payload } = await jwtVerify(idToken, this.key, {
-        issuer: KAI_OIDC_ISSUER,
-        audience: this.clientId,
-        algorithms: ['EdDSA'],
-        requiredClaims: ['sub', 'nonce', 'iat', 'exp'],
-        maxTokenAge: '10m',
-        clockTolerance: 5,
-      });
-      if (typeof payload.sub !== 'string' || payload.sub.length < 1 || payload.sub.length > 500
-        || typeof payload.nonce !== 'string' || payload.nonce.length < 32 || payload.nonce.length > 200) {
-        throw new Error('invalid identity claims');
-      }
-      const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-      if ((audiences.length > 1 && payload.azp !== this.clientId)
-        || (payload.azp !== undefined && payload.azp !== this.clientId)) {
-        throw new Error('invalid authorized party');
-      }
-      return { subject: payload.sub, nonce: payload.nonce, ...safeProfile(payload) };
-    } catch {
-      throw new AppError('AUTH_KAI_ID_TOKEN_INVALID', 401, '统一身份返回的登录凭证无效，请重新登录。');
-    }
-  }
-}
-
-export class KaiOidcClient {
-  constructor(
-    private readonly clientId: string,
-    private readonly clientSecret: string,
-    private readonly request: typeof fetch = fetch,
-  ) {}
-
-  async exchange(code: string, pkceVerifier: string): Promise<TokenSet> {
-    const body = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: KAI_OIDC_CALLBACK_URL,
-      code_verifier: pkceVerifier,
-    });
-    const payload = await this.fetchJson(KAI_OIDC_TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
-      },
-      body: body.toString(),
-    });
-    const token = payload as { id_token?: unknown; access_token?: unknown; token_type?: unknown };
-    if (typeof token.id_token !== 'string' || typeof token.access_token !== 'string'
-      || String(token.token_type).toLowerCase() !== 'bearer') {
-      throw new AppError('AUTH_KAI_TOKEN_RESPONSE_INVALID', 502, '统一身份暂时无法完成登录。');
-    }
-    return { idToken: token.id_token, accessToken: token.access_token };
-  }
-
-  async userInfo(accessToken: string): Promise<UserInfo> {
-    const payload = await this.fetchJson(KAI_OIDC_USERINFO_ENDPOINT, {
-      method: 'GET',
-      headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` },
-    }) as JWTPayload;
-    if (typeof payload.sub !== 'string' || payload.sub.length < 1 || payload.sub.length > 500) {
-      throw new AppError('AUTH_KAI_USERINFO_INVALID', 502, '统一身份暂时无法确认账户资料。');
-    }
-    return { subject: payload.sub, ...safeProfile(payload) };
-  }
-
-  private async fetchJson(url: string, init: RequestInit) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
-    try {
-      const response = await this.request(url, { ...init, signal: controller.signal, redirect: 'error' });
-      if (!response.ok) throw new Error(`upstream status ${response.status}`);
-      return await response.json() as unknown;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError('AUTH_KAI_UPSTREAM_UNAVAILABLE', 502, '统一身份服务暂时不可用，请稍后重试。');
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
 }
 
 export class KaiOidcBroker {
@@ -186,7 +72,7 @@ export class KaiOidcBroker {
     this.piiKey = required(config.PII_ENCRYPTION_KEY, 'PII_ENCRYPTION_KEY');
     this.appRedirects = new Set(config.kaiOidcAppRedirects);
     if (!this.appRedirects.size) throw new Error('KAI_OIDC_APP_REDIRECT_URIS is required.');
-    this.client = dependencies.client ?? new KaiOidcClient(this.clientId, clientSecret);
+    this.client = dependencies.client ?? new KaiOidcClient(this.clientId, clientSecret, KAI_OIDC_CALLBACK_URL);
     this.verifier = dependencies.verifier ?? new KaiIdTokenVerifier(this.clientId);
     this.now = dependencies.now ?? (() => new Date());
   }

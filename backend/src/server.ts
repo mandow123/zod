@@ -66,6 +66,18 @@ import { CreatorCommissionWorker } from './creator-commissions/worker.js';
 import { PostgresResourceInquiryStore } from './resource-inquiries/store.js';
 import { ResourceInquiryService } from './resource-inquiries/service.js';
 import { ResourceInquiryExpiryWorker } from './resource-inquiries/worker.js';
+import { AdminAuthService } from './admin/auth-service.js';
+import { PostgresAdminAuditStore } from './admin/audit-store.js';
+import { PostgresAdminIdentityStore } from './admin/identity-store.js';
+import { PostgresAdminLoginTransactionStore } from './admin/login-transaction-store.js';
+import { PostgresAdminRbacStore } from './admin/rbac-store.js';
+import { adminAuthRuntimeSettings } from './admin/runtime.js';
+import { PostgresAdminSessionStore } from './admin/session-store.js';
+import { AdminSessionMaintenance } from './admin/maintenance.js';
+import { PostgresAdminP0Store } from './admin/p0-store.js';
+import { AdminP0Service } from './admin/p0-service.js';
+import { KaiOidcClient } from './identity/kai-oidc-client.js';
+import { KaiIdTokenVerifier } from './identity/kai-id-token-verifier.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -73,6 +85,7 @@ if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
 }
 
 const database = createDatabase(config);
+const adminAuthSettings = adminAuthRuntimeSettings(config);
 const privateObjects = createPrivateObjectStore(config);
 const malwareScanner = createMalwareScanner(config);
 const paymentProviders = createPaymentProviders(config);
@@ -150,6 +163,27 @@ const creatorCommissionService=creatorCommissionStore&&subjectService&&config.re
   :undefined;
 const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.tokenSecurity.available
   ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
+const adminSessionStore = database && adminAuthSettings
+  ? new PostgresAdminSessionStore(database, {
+    previousTokenGraceMs: adminAuthSettings.previousTokenGraceSeconds * 1_000,
+  }) : undefined;
+const adminAuthService = database && adminAuthSettings && adminSessionStore
+  ? new AdminAuthService(
+    new PostgresAdminIdentityStore(database),
+    new PostgresAdminRbacStore(database),
+    adminSessionStore,
+    new PostgresAdminLoginTransactionStore(database),
+    new PostgresAdminAuditStore(database, adminAuthSettings.auditPepper),
+    new KaiOidcClient(
+      adminAuthSettings.oidcClientId,
+      adminAuthSettings.oidcClientSecret,
+      adminAuthSettings.oidcRedirectUri,
+    ),
+    new KaiIdTokenVerifier(adminAuthSettings.oidcClientId),
+    adminAuthSettings,
+  ) : undefined;
+const adminP0Service = database && adminAuthSettings
+  ? new AdminP0Service(new PostgresAdminP0Store(database)) : undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
@@ -186,7 +220,16 @@ const app = await buildApp({
   ...(vastMarketService ? { vastMarketService } : {}),
   ...(creatorCommissionService ? { creatorCommissionService } : {}),
   ...(resourceInquiryService ? { resourceInquiryService } : {}),
+  ...(adminAuthService && adminAuthSettings ? {
+    adminAuthService,
+    adminAuthSettings,
+    ...(adminP0Service ? { adminP0Service } : {}),
+  } : {}),
 });
+const adminSessionMaintenance = adminSessionStore
+  ? new AdminSessionMaintenance(adminSessionStore, {
+    logger: { error: (event) => app.log.error(event, 'administrator session registry cleanup failed') },
+  }) : undefined;
 const vastReconciliationWorker = vastMarketService && vastProvider.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
   : undefined;
@@ -238,6 +281,7 @@ creditSupplierSettlementWorker?.start();
 fulfillmentExpiryWorker?.start();
 deviceOrderExpiryWorker?.start();
 deviceSettlementWorker?.start();
+adminSessionMaintenance?.start();
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'graceful shutdown');
@@ -250,6 +294,7 @@ const shutdown = async (signal: string) => {
   await fulfillmentExpiryWorker?.stop();
   await deviceOrderExpiryWorker?.stop();
   await deviceSettlementWorker?.stop();
+  adminSessionMaintenance?.stop();
   vastReconciliationWorker?.stop();
   creatorCommissionWorker?.stop();
   resourceInquiryExpiryWorker?.stop();
