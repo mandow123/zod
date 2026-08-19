@@ -45,6 +45,30 @@ const secureEnvironment = {
   KAI_OIDC_APP_REDIRECT_URIS: 'kaicloudpay://auth/kai/callback',
 } as const;
 
+const adminEnvironment = {
+  ...secureEnvironment,
+  ADMIN_AUTH_ENABLED: 'true',
+  ADMIN_WEB_ORIGIN: 'https://admin.example.test/',
+  ADMIN_API_ORIGIN: 'https://admin-api.example.test/',
+  ADMIN_OIDC_CLIENT_ID: 'cloudpay-admin-broker',
+  ADMIN_OIDC_CLIENT_SECRET: 'admin-client-secret-unique-value-0123456789',
+  ADMIN_OIDC_REDIRECT_URI: 'https://admin-api.example.test/admin/v1/auth/callback',
+  ADMIN_OIDC_SCOPE: 'profile openid email kai_admin',
+  ADMIN_OIDC_GROUP_CLAIM: 'kai_admin_groups',
+  ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: JSON.stringify({
+    'zeta-reviewers': 'price_reviewer',
+    'alpha-support': 'support_viewer',
+  }),
+  ADMIN_OIDC_FLOW_PEPPER: 'F'.repeat(40),
+  ADMIN_OIDC_SUBJECT_PEPPER: 'S'.repeat(40),
+  ADMIN_OIDC_GROUP_PEPPER: 'G'.repeat(40),
+  ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY: Buffer.alloc(32, 17).toString('base64'),
+  ADMIN_SESSION_TOKEN_PEPPER: 'T'.repeat(40),
+  ADMIN_CSRF_TOKEN_PEPPER: 'C'.repeat(40),
+  ADMIN_PII_ENCRYPTION_KEY: Buffer.alloc(32, 18).toString('base64'),
+  ADMIN_AUDIT_PEPPER: 'U'.repeat(40),
+} as const;
+
 describe('runtime configuration', () => {
   it('fails closed when production secrets and providers are absent', () => {
     const config = loadConfig({ NODE_ENV: 'production', PUBLIC_ORIGIN: 'http://localhost:4100' });
@@ -152,5 +176,271 @@ describe('runtime configuration', () => {
     expect(configured.vastPricingPolicy).toMatchObject({ version:'ops-v1',cardHourMicrosPerProviderUsd:2_000_000n });
     const invalid = loadConfig({ ...secureEnvironment,VAST_API_KEY:'vast-key',VAST_PRICING_POLICY_JSON:'{}' });
     expect(invalid.readiness.capabilities.vastAi.available).toBe(false);
+  });
+
+  it('keeps administrator authentication disabled without changing existing core readiness', () => {
+    const config = loadConfig(secureEnvironment);
+    expect(config.adminAuthEnabled).toBe(false);
+    expect(config.readiness.coreReady).toBe(true);
+    expect(config.readiness.capabilities.adminAuth).toEqual({
+      enabled: false, available: false, missing: [],
+    });
+    expect(config.adminAuthTtls).toEqual({
+      loginTransactionSeconds: 300,
+      sessionIdleSeconds: 1_800,
+      sessionAbsoluteSeconds: 28_800,
+      sessionRotationSeconds: 900,
+      previousTokenGraceSeconds: 30,
+      reauthFreshnessSeconds: 300,
+    });
+  });
+
+  it('fails readiness closed when administrator authentication is enabled without its configuration', () => {
+    const config = loadConfig({ ...secureEnvironment, ADMIN_AUTH_ENABLED: 'true' });
+    expect(config.readiness.coreReady).toBe(false);
+    expect(config.readiness.capabilities.adminAuth).toMatchObject({ enabled: true, available: false });
+    expect(config.readiness.capabilities.adminAuth.missing).toEqual(expect.arrayContaining([
+      'ADMIN_WEB_ORIGIN',
+      'ADMIN_API_ORIGIN',
+      'ADMIN_OIDC_CLIENT_ID',
+      'ADMIN_OIDC_CLIENT_SECRET',
+      'ADMIN_OIDC_REDIRECT_URI',
+      'ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON',
+      'ADMIN_SESSION_TOKEN_PEPPER',
+    ]));
+    expect(config.readiness.coreBlockers).toEqual(expect.arrayContaining(
+      config.readiness.capabilities.adminAuth.missing,
+    ));
+  });
+
+  it('normalizes one complete and isolated administrator authentication configuration', () => {
+    const config = loadConfig(adminEnvironment);
+    expect(config.readiness.coreReady).toBe(true);
+    expect(config.readiness.capabilities.adminAuth).toEqual({ enabled: true, available: true, missing: [] });
+    expect(config.adminWebOrigin).toBe('https://admin.example.test');
+    expect(config.adminApiOrigin).toBe('https://admin-api.example.test');
+    expect(config.adminOidcRedirectUri).toBe(adminEnvironment.ADMIN_OIDC_REDIRECT_URI);
+    expect(config.adminOidcScopes).toEqual(['email', 'kai_admin', 'openid', 'profile']);
+    expect(config.adminOidcGroupRoleMappings).toEqual([
+      { group: 'alpha-support', roleCode: 'support_viewer' },
+      { group: 'zeta-reviewers', roleCode: 'price_reviewer' },
+    ]);
+  });
+
+  it('allows HTTP admin origins only on explicit local development and test hosts', () => {
+    expect(loadConfig({ ...adminEnvironment, NODE_ENV: 'development', ADMIN_WEB_ORIGIN: 'http://localhost:3000/' })
+      .readiness.capabilities.adminAuth.available).toBe(true);
+    expect(loadConfig({ ...adminEnvironment, NODE_ENV: 'test', ADMIN_WEB_ORIGIN: 'http://127.0.0.1:3000' })
+      .readiness.capabilities.adminAuth.available).toBe(true);
+    expect(loadConfig({ ...adminEnvironment, ADMIN_WEB_ORIGIN: 'http://localhost:3000' })
+      .readiness.capabilities.adminAuth.missing).toContain('ADMIN_WEB_ORIGIN(secure origin)');
+    expect(loadConfig({ ...adminEnvironment, NODE_ENV: 'development', ADMIN_WEB_ORIGIN: 'http://admin.example.test' })
+      .readiness.capabilities.adminAuth.missing).toContain('ADMIN_WEB_ORIGIN(secure origin)');
+  });
+
+  it.each([
+    'https://user@admin.example.test/',
+    'https://user:password@admin.example.test/',
+    'https://admin.example.test/dashboard',
+    'https://admin.example.test/?next=/dashboard',
+    'https://admin.example.test/#fragment',
+    ' https://admin.example.test/',
+    'https://admin.exa\nmple.test/',
+  ])('rejects an unsafe administrator Web origin: %s', (origin) => {
+    const config = loadConfig({ ...adminEnvironment, ADMIN_WEB_ORIGIN: origin });
+    expect(config.adminWebOrigin).toBeNull();
+    expect(config.readiness.capabilities.adminAuth.missing).toContain('ADMIN_WEB_ORIGIN(secure origin)');
+  });
+
+  it.each([
+    'http://admin-api.example.test/',
+    'https://user@admin-api.example.test/',
+    'https://admin-api.example.test/path',
+    'https://admin-api.example.test/?query=1',
+    ' https://admin-api.example.test/',
+  ])('rejects an unsafe administrator API origin: %s', (origin) => {
+    const config = loadConfig({ ...adminEnvironment, ADMIN_API_ORIGIN: origin });
+    expect(config.adminApiOrigin).toBeNull();
+    expect(config.readiness.capabilities.adminAuth.missing)
+      .toContain('ADMIN_API_ORIGIN(secure isolated origin)');
+  });
+
+  it('requires the admin API, Web, public API, and callback deployment origins to remain isolated and bound', () => {
+    expect(loadConfig({ ...adminEnvironment, ADMIN_API_ORIGIN: adminEnvironment.ADMIN_WEB_ORIGIN })
+      .readiness.capabilities.adminAuth.missing).toContain('ADMIN_API_ORIGIN(isolated from Web origin)');
+    expect(loadConfig({ ...adminEnvironment, ADMIN_API_ORIGIN: secureEnvironment.PUBLIC_ORIGIN })
+      .readiness.capabilities.adminAuth.missing).toContain('ADMIN_API_ORIGIN(isolated from public API)');
+    expect(loadConfig({ ...adminEnvironment,
+      ADMIN_OIDC_REDIRECT_URI: 'https://another-admin-api.example.test/admin/v1/auth/callback' })
+      .readiness.capabilities.adminAuth.missing)
+      .toContain('ADMIN_OIDC_REDIRECT_URI(bound to admin API origin)');
+  });
+
+  it.each([
+    'http://admin-api.example.test/admin/v1/auth/callback',
+    'https://user@admin-api.example.test/admin/v1/auth/callback',
+    'https://user:password@admin-api.example.test/admin/v1/auth/callback',
+    'https://admin-api.example.test/admin/v1/auth/callback?next=/dashboard',
+    'https://admin-api.example.test/admin/v1/auth/callback#fragment',
+    'https://admin-api.example.test/admin/v1/auth/wrong',
+    'https://cloudpay.kai.com/mobile/v1/auth/kai/callback',
+    ' https://admin-api.example.test/admin/v1/auth/callback',
+    'https://admin-api.exa\nmple.test/admin/v1/auth/callback',
+  ])('rejects an unsafe administrator redirect URI: %s', (redirectUri) => {
+    const capability = loadConfig({ ...adminEnvironment, ADMIN_OIDC_REDIRECT_URI: redirectUri })
+      .readiness.capabilities.adminAuth;
+    expect(capability.available).toBe(false);
+    expect(capability.missing).toContain('ADMIN_OIDC_REDIRECT_URI(exact HTTPS admin callback)');
+  });
+
+  it.each([
+    'profile email',
+    'openid profile offline_access',
+    'openid profile openid',
+    'openid\tprofile',
+    `openid ${'x'.repeat(129)}`,
+  ])('rejects unsafe administrator OIDC scopes: %s', (scope) => {
+    const config = loadConfig({ ...adminEnvironment, ADMIN_OIDC_SCOPE: scope });
+    expect(config.adminOidcScopes).toEqual([]);
+    expect(config.readiness.capabilities.adminAuth.missing)
+      .toContain('ADMIN_OIDC_SCOPE(valid online OIDC scopes)');
+  });
+
+  it.each([
+    '{invalid',
+    '{}',
+    JSON.stringify({ operators: 'unknown_role' }),
+    JSON.stringify({ ' padded ': 'support_viewer' }),
+    JSON.stringify({ 'control\u0001group': 'support_viewer' }),
+    JSON.stringify(Object.fromEntries(Array.from({ length: 65 }, (_, index) => [`group-${index}`, 'support_viewer']))),
+  ])('rejects an unsafe administrator Group allowlist', (mapping) => {
+    const config = loadConfig({ ...adminEnvironment, ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: mapping });
+    expect(config.adminOidcGroupRoleMappings).toEqual([]);
+    expect(config.readiness.capabilities.adminAuth.missing)
+      .toContain('ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON(valid role allowlist)');
+  });
+
+  it('rejects invalid Group claim names without assuming a fixed claim', () => {
+    for (const claim of ['', ' padded ', 'control\u0001claim', 'x'.repeat(129)]) {
+      const config = loadConfig({ ...adminEnvironment, ADMIN_OIDC_GROUP_CLAIM: claim });
+      expect(config.readiness.capabilities.adminAuth.available).toBe(false);
+    }
+  });
+
+  it('enforces administrator pepper length and canonical encryption key encoding', () => {
+    const pepperNames = [
+      'ADMIN_OIDC_FLOW_PEPPER', 'ADMIN_OIDC_SUBJECT_PEPPER', 'ADMIN_OIDC_GROUP_PEPPER',
+      'ADMIN_SESSION_TOKEN_PEPPER', 'ADMIN_CSRF_TOKEN_PEPPER', 'ADMIN_AUDIT_PEPPER',
+    ] as const;
+    for (const name of pepperNames) {
+      const capability = loadConfig({ ...adminEnvironment, [name]: 'short' }).readiness.capabilities.adminAuth;
+      expect(capability.available).toBe(false);
+      expect(capability.missing).toContain(`${name}(>=32 chars)`);
+    }
+    for (const name of ['ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY', 'ADMIN_PII_ENCRYPTION_KEY'] as const) {
+      const capability = loadConfig({ ...adminEnvironment, [name]: Buffer.alloc(32, 5).toString('base64url') })
+        .readiness.capabilities.adminAuth;
+      expect(capability.available).toBe(false);
+      expect(capability.missing).toContain(`${name}(base64 32 bytes)`);
+    }
+  });
+
+  it('rejects surrounding or control whitespace instead of normalizing administrator credentials and keys', () => {
+    const credentialNames = [
+      'ADMIN_OIDC_CLIENT_ID', 'ADMIN_OIDC_CLIENT_SECRET',
+      'ADMIN_OIDC_FLOW_PEPPER', 'ADMIN_OIDC_SUBJECT_PEPPER', 'ADMIN_OIDC_GROUP_PEPPER',
+      'ADMIN_SESSION_TOKEN_PEPPER', 'ADMIN_CSRF_TOKEN_PEPPER', 'ADMIN_AUDIT_PEPPER',
+      'ADMIN_OIDC_TRANSACTION_ENCRYPTION_KEY', 'ADMIN_PII_ENCRYPTION_KEY',
+    ] as const;
+    for (const name of credentialNames) {
+      const value = adminEnvironment[name];
+      expect(loadConfig({ ...adminEnvironment, [name]: `${value} ` })
+        .readiness.capabilities.adminAuth.available).toBe(false);
+    }
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_OIDC_CLIENT_SECRET: `${adminEnvironment.ADMIN_OIDC_CLIENT_SECRET.slice(0, 8)}\n${adminEnvironment.ADMIN_OIDC_CLIENT_SECRET.slice(8)}`,
+    }).readiness.capabilities.adminAuth.available).toBe(false);
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_SESSION_TOKEN_PEPPER: `${adminEnvironment.ADMIN_SESSION_TOKEN_PEPPER.slice(0, 8)}\t${adminEnvironment.ADMIN_SESSION_TOKEN_PEPPER.slice(8)}`,
+    }).readiness.capabilities.adminAuth.available).toBe(false);
+  });
+
+  it('requires every administrator secret and OIDC client registration to be independent', () => {
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_CSRF_TOKEN_PEPPER: adminEnvironment.ADMIN_SESSION_TOKEN_PEPPER,
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_AUTH_SECRETS(independent)');
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_AUDIT_PEPPER: secureEnvironment.AUDIT_PEPPER,
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_AUTH_SECRETS(independent)');
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_OIDC_CLIENT_SECRET: secureEnvironment.KAI_OIDC_CLIENT_SECRET,
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_AUTH_SECRETS(independent)');
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_OIDC_CLIENT_ID: secureEnvironment.KAI_OIDC_CLIENT_ID,
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_OIDC_CLIENT_ID(independent)');
+  });
+
+  it('enforces every administrator TTL boundary', () => {
+    const invalidTtls = [
+      ['ADMIN_LOGIN_TRANSACTION_TTL_SECONDS', '59'], ['ADMIN_LOGIN_TRANSACTION_TTL_SECONDS', '601'],
+      ['ADMIN_SESSION_IDLE_TTL_SECONDS', '299'], ['ADMIN_SESSION_IDLE_TTL_SECONDS', '3601'],
+      ['ADMIN_SESSION_ABSOLUTE_TTL_SECONDS', '1799'], ['ADMIN_SESSION_ABSOLUTE_TTL_SECONDS', '43201'],
+      ['ADMIN_SESSION_ROTATION_SECONDS', '59'], ['ADMIN_SESSION_ROTATION_SECONDS', '1801'],
+      ['ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS', '0'], ['ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS', '31'],
+      ['ADMIN_REAUTH_FRESHNESS_SECONDS', '59'], ['ADMIN_REAUTH_FRESHNESS_SECONDS', '901'],
+    ] as const;
+    for (const [name, value] of invalidTtls) {
+      expect(loadConfig({ ...adminEnvironment, [name]: value }).readiness.capabilities.adminAuth.available).toBe(false);
+    }
+  });
+
+  it.each(['300 ', ' 300', '+300', '0300', '3e2', '0x12c', '300.0'])
+  ('rejects a non-canonical administrator TTL: %s', (value) => {
+    const capability = loadConfig({
+      ...adminEnvironment,
+      ADMIN_LOGIN_TRANSACTION_TTL_SECONDS: value,
+    }).readiness.capabilities.adminAuth;
+    expect(capability.available).toBe(false);
+    expect(capability.missing).toContain('ADMIN_LOGIN_TRANSACTION_TTL_SECONDS(60-600)');
+  });
+
+  it('enforces administrator TTL relationships', () => {
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_SESSION_IDLE_TTL_SECONDS: '3600',
+      ADMIN_SESSION_ABSOLUTE_TTL_SECONDS: '1800',
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_SESSION_IDLE_TTL_SECONDS(<=absolute TTL)');
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_SESSION_IDLE_TTL_SECONDS: '300',
+      ADMIN_SESSION_ROTATION_SECONDS: '301',
+    }).readiness.capabilities.adminAuth.missing).toContain('ADMIN_SESSION_ROTATION_SECONDS(<=idle TTL)');
+    expect(loadConfig({
+      ...adminEnvironment,
+      ADMIN_SESSION_ABSOLUTE_TTL_SECONDS: '1800',
+      ADMIN_REAUTH_FRESHNESS_SECONDS: '900',
+    }).readiness.capabilities.adminAuth.available).toBe(true);
+  });
+
+  it('does not leak administrator secrets, Group names, or mapping JSON through readiness', () => {
+    const secret = 'DISTINCTIVE_ADMIN_SECRET_VALUE';
+    const group = 'DISTINCTIVE_PRIVATE_GROUP';
+    const mapping = JSON.stringify({ [group]: 'unknown_role' });
+    const config = loadConfig({
+      ...adminEnvironment,
+      ADMIN_OIDC_CLIENT_SECRET: secret,
+      ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: mapping,
+    });
+    const readiness = JSON.stringify(config.readiness);
+    expect(readiness).not.toContain(secret);
+    expect(readiness).not.toContain(group);
+    expect(readiness).not.toContain(mapping);
+    expect(config.readiness.capabilities.adminAuth.available).toBe(false);
   });
 });

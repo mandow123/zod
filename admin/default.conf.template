@@ -1,0 +1,65 @@
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${ADMIN_API_ORIGIN}; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+    add_header X-Frame-Options "DENY" always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${ADMIN_API_ORIGIN}; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Cache-Control "no-store" always;
+        return 200 "ok\n";
+    }
+
+    # Vite names every file in this directory with content hashes.
+    location ^~ /assets/ {
+        try_files $uri =404;
+        add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${ADMIN_API_ORIGIN}; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location = /index.html {
+        add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${ADMIN_API_ORIGIN}; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Cache-Control "no-store, max-age=0" always;
+        try_files $uri =404;
+    }
+
+    # React Router routes must resolve to the SPA shell while real files retain
+    # normal nginx handling.
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Content-Security-Policy "default-src 'self'; connect-src 'self' ${ADMIN_API_ORIGIN}; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Cache-Control "no-store, max-age=0" always;
+    }
+}

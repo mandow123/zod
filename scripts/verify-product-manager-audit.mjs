@@ -10,7 +10,11 @@ const commitPattern = /^[a-f0-9]{40}$/u;
 const digestPattern = /^[a-f0-9]{64}$/u;
 
 function git(root, args, encoding = 'utf8') {
-  const output = execFileSync('git', args, { cwd: root, encoding });
+  const output = execFileSync('git', args, {
+    cwd: root,
+    encoding,
+    maxBuffer: 32 * 1024 * 1024,
+  });
   return typeof output === 'string' ? output.trim() : output;
 }
 

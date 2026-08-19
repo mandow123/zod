@@ -3,13 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { PGlite, type Results, type Transaction } from '@electric-sql/pglite';
 import type { PoolClient } from 'pg';
 import {
-  createLocalJWKSet,
   exportJWK,
   generateKeyPair,
   SignJWT,
   type JWTPayload,
 } from 'jose';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadConfig } from '../src/config.js';
 import type {
   KaiAppLoginCodeResult,
@@ -148,8 +147,17 @@ async function signIdToken(payload: JWTPayload, audience: string | string[], azp
     .setIssuedAt()
     .setExpirationTime('5m')
     .sign(privateKey);
-  return { token, key: createLocalJWKSet({ keys: [jwk] }) };
+  return { token, jwks: { keys: [jwk] } };
 }
+
+function verifierFor(jwks: Readonly<{ keys: readonly JsonWebKey[] }>) {
+  vi.stubGlobal('fetch', async () => new Response(JSON.stringify(jwks), {
+    status: 200, headers: { 'content-type': 'application/json' },
+  }));
+  return new KaiIdTokenVerifier(clientId);
+}
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('KAI unified identity broker', () => {
   it('refuses to start a login transaction without the exact current CloudPay legal versions', async () => {
@@ -208,19 +216,19 @@ describe('KAI unified identity broker', () => {
 
   it('verifies EdDSA issuer, audience and nonce claims and enforces azp for multiple audiences', async () => {
     const valid = await signIdToken({ name: 'KAI User' }, [clientId, 'another-api'], clientId);
-    await expect(new KaiIdTokenVerifier(clientId, valid.key).verify(valid.token))
+    await expect(verifierFor(valid.jwks).verify(valid.token))
       .resolves.toMatchObject({ subject: 'kai-user-123', nonce: 'n'.repeat(48) });
 
     const missingAzp = await signIdToken({}, [clientId, 'another-api']);
-    await expect(new KaiIdTokenVerifier(clientId, missingAzp.key).verify(missingAzp.token))
+    await expect(verifierFor(missingAzp.jwks).verify(missingAzp.token))
       .rejects.toMatchObject({ code: 'AUTH_KAI_ID_TOKEN_INVALID' });
 
     const wrongSingleAzp = await signIdToken({}, clientId, 'another-api');
-    await expect(new KaiIdTokenVerifier(clientId, wrongSingleAzp.key).verify(wrongSingleAzp.token))
+    await expect(verifierFor(wrongSingleAzp.jwks).verify(wrongSingleAzp.token))
       .rejects.toMatchObject({ code: 'AUTH_KAI_ID_TOKEN_INVALID' });
 
     const wrongAudience = await signIdToken({}, 'another-api');
-    await expect(new KaiIdTokenVerifier(clientId, wrongAudience.key).verify(wrongAudience.token))
+    await expect(verifierFor(wrongAudience.jwks).verify(wrongAudience.token))
       .rejects.toMatchObject({ code: 'AUTH_KAI_ID_TOKEN_INVALID' });
   });
 
@@ -232,7 +240,7 @@ describe('KAI unified identity broker', () => {
         status: 200, headers: { 'content-type': 'application/json' },
       });
     };
-    const client = new KaiOidcClient(clientId, 'confidential-secret', request as typeof fetch);
+    const client = new KaiOidcClient(clientId, 'confidential-secret', KAI_OIDC_CALLBACK_URL, request as typeof fetch);
     await client.exchange('authorization-code', 'backend-pkce-verifier');
     expect(calls[0]?.init.headers).toMatchObject({
       Authorization: `Basic ${Buffer.from(`${clientId}:confidential-secret`).toString('base64')}`,
