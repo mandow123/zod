@@ -43,8 +43,8 @@ try {
 
   const migrations = (await readdir(join(backendRoot, 'migrations')))
     .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-  if (migrations.length !== 57 || migrations.at(-1) !== '0057_creator_commissions.sql') {
-    throw new Error(`Expected migrations 0001..0057; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+  if (migrations.length !== 60 || migrations.at(-1) !== '0060_video_tasks.sql') {
+    throw new Error(`Expected migrations 0001..0060; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [

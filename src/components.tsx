@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { brand, colors, shadows } from './theme';
 
-export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile' | 'creator';
+export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile' | 'creator' | 'video';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function BrandHeader({

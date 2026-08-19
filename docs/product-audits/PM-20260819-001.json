@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-19T05:20:27.3586213Z",
+  "baseCommit": "e081dd539bcd212ec1be739cb5cd72de0ad2e470",
+  "stagedDiffSha256": "e20f8d77c828e9da99cafb9c8616f03561f12255c9fa2e75a49f44c7dc8e448a",
+  "summary": "Seedance 视频生成的前后端契约、账号隔离、密钥边界、任务持久化与失败处理审计通过。"
+}
