@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-003",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-19T08:21:57.765Z",
+  "baseCommit": "156906881707ec0393d4f409f618f3d108f79217",
+  "stagedDiffSha256": "f27b006e26c88895707275b7526af8dab776084b6e39a5ddd48c20cae3eb2a99",
+  "summary": "批准发布 KAI Play 第一阶段：将现有免费竞技产品升级为原创多游戏大厅，统一 Web 与 Expo 移动端的 KAI Play、三人争先、竞技分及预览入口表达，并加入默认关闭、仅支持隔离本地沙盒的 CloudPay 卡时计费骨架。竞技分不可购买、提现、转让、兑换或赢取卡时；KAI 象棋、三张竞技、AI 挑战场及卡时服务均明确标记为预览或尚未接入。计费实现不包含任何真实 CloudPay 网络请求、预留、扣减、结算或付费权益交付，生产必须保持 DOUJOY_CLOUDPAY_MODE=disabled。并发幂等、用户隔离、不可变读取和落盘失败回滚已有测试覆盖；35/35 测试、移动端类型检查、完整性检查、发布预检、Web 语法检查、Compose 配置检查及 staged diff check 均通过。本批准不授权真实卡时支付或 sandbox 公网启用。"
+}

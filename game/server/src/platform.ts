@@ -80,7 +80,7 @@ export class DouJoyPlatform {
     const waitingRoom = this.store.roomsForUser(userId).find((room) => room.status === 'waiting');
     if (waitingRoom) throw new PlatformError(409, 'ROOM_WAITING', '你正在好友房中，请先返回房间或退出。');
     const balance = this.store.balance(userId);
-    if (balance < 128) throw new PlatformError(409, 'RELIEF_REQUIRED', '欢乐豆不足，请先领取今日补助。');
+    if (balance < 128) throw new PlatformError(409, 'RELIEF_REQUIRED', '竞技分不足，请先领取今日补助。');
     const user = this.store.user(userId)!;
     const game = createGame({ humanId: userId, humanName: user.name, baseStake: Math.min(100, Math.floor(balance / 128)) });
     this.store.putGame(game);
@@ -165,7 +165,7 @@ export class DouJoyPlatform {
     if (room.status !== 'waiting') throw new PlatformError(409, 'ROOM_ALREADY_STARTED', '房间已经开局。');
     const humans = room.memberIds.map((id) => this.store.user(id)!).filter(Boolean);
     const poorPlayer = humans.find((user) => this.store.balance(user.id) < 128);
-    if (poorPlayer) throw new PlatformError(409, 'PLAYER_RELIEF_REQUIRED', `${poorPlayer.name} 欢乐豆不足，需要先领取补助。`);
+    if (poorPlayer) throw new PlatformError(409, 'PLAYER_RELIEF_REQUIRED', `${poorPlayer.name} 竞技分不足，需要先领取补助。`);
     const botNames = ['阿满', '小禾'];
     const players = humans.map((user) => ({ id: user.id, name: user.name, isBot: false }));
     while (players.length < 3) players.push({ id: `bot:${randomUUID()}`, name: botNames[players.length - humans.length]!, isBot: true });

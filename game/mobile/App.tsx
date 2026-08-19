@@ -30,6 +30,16 @@ const comboNames: Record<ComboType, string> = {
 
 function number(value: number) { return new Intl.NumberFormat('zh-CN').format(value); }
 
+function productCopy(value: string) {
+  return value
+    .replace(/新玩家欢迎赠豆/g, '新玩家初始竞技分')
+    .replace(/每日补助/g, '每日竞技分补给')
+    .replace(/欢乐豆/g, '竞技分')
+    .replace(/补助/g, '补给')
+    .replace(/扣豆/g, '扣分')
+    .replace(/派奖/g, '结算');
+}
+
 function cardText(card: Card) {
   if (card.rank === 16) return { rank: '小王', suit: '♛', red: false };
   if (card.rank === 17) return { rank: '大王', suit: '♛', red: true };
@@ -81,11 +91,11 @@ function Pill({ icon, children, tone = 'default' }: { icon?: keyof typeof Ionico
 
 function AppHeader({ profile, onHome }: { profile: Profile; onHome: () => void }) {
   return <View style={styles.header}>
-    <Pressable accessibilityRole="button" accessibilityLabel="豆局，返回大厅" onPress={onHome} style={styles.brandRow}>
-      <View style={styles.brandMark}><Text style={styles.brandMarkText}>豆</Text></View>
-      <View><Text style={styles.brand}>豆局</Text><Text style={styles.brandSub}>DOUJOY</Text></View>
+    <Pressable accessibilityRole="button" accessibilityLabel="KAI Play，返回游戏大厅" onPress={onHome} style={styles.brandRow}>
+      <View style={styles.brandMark}><Text style={styles.brandMarkText}>K</Text></View>
+      <View><Text style={styles.brand}>KAI PLAY</Text><Text style={styles.brandSub}>算力局</Text></View>
     </Pressable>
-    <View accessible accessibilityLabel={`欢乐豆余额 ${number(profile.balance)}`} style={styles.balance}><View style={styles.beanDot} /><Text style={styles.balanceText}>{number(profile.balance)}</Text></View>
+    <View accessible accessibilityLabel={`竞技分 ${number(profile.balance)}，不可购买、转让或提现`} style={styles.balance}><View style={styles.scoreDot} /><Text style={styles.balanceText}>{number(profile.balance)}</Text><Text style={styles.balanceUnit}>竞技分</Text></View>
   </View>;
 }
 
@@ -124,20 +134,45 @@ function Lobby({ profile, busy, onQuick, onRelief, onCreateRoom, onJoinRoom }: {
   onCreateRoom: () => void; onJoinRoom: (code: string) => void;
 }) {
   const [roomCode, setRoomCode] = useState('');
+  const games: ReadonlyArray<{ name: string; copy: string; icon: keyof typeof Ionicons.glyphMap; available: boolean }> = [
+    { name: '三人争先', copy: '原创三人牌局', icon: 'layers-outline', available: true },
+    { name: 'KAI 象棋', copy: '棋局与 AI 复盘', icon: 'grid-outline', available: false },
+    { name: '三张竞技', copy: '积分回合竞技', icon: 'copy-outline', available: false },
+    { name: 'AI 挑战场', copy: '残局与棋力闯关', icon: 'sparkles-outline', available: false },
+  ];
   return <ScrollView contentContainerStyle={styles.lobby} showsVerticalScrollIndicator={false}>
-    <View style={styles.greeting}><Text style={styles.eyebrow}>晚上好，{profile.name}</Text><Text style={styles.heroTitle}>三分钟，来一局。</Text><Text style={styles.heroCopy}>纯粹斗地主，只用无现金价值的欢乐豆。</Text></View>
+    <View style={styles.greeting}><Text style={styles.eyebrow}>KAI PLAY · 晚上好，{profile.name}</Text><Text style={styles.heroTitle}>算力驱动，随时开局。</Text><Text style={styles.heroCopy}>游戏免费，胜负只影响不可交易的竞技分。</Text></View>
     <LinearGradient colors={['#174F40', '#092A23']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
       <View style={styles.heroGlow} />
-      <View style={styles.tableStamp}><Text style={styles.tableStampTop}>经 典</Text><Text style={styles.tableStampMain}>斗</Text><Text style={styles.tableStampBottom}>三人场</Text></View>
+      <View style={styles.tableStamp}><Text style={styles.tableStampTop}>原 创</Text><Text style={styles.tableStampMain}>争</Text><Text style={styles.tableStampBottom}>三人场</Text></View>
       <View style={styles.heroBody}>
         <Pill icon="shield-checkmark" tone="lime">公平洗牌 · 服务端判定</Pill>
-        <Text style={styles.modeTitle}>经典斗地主</Text>
-        <Text style={styles.modeMeta}>底分按余额保护性计算 · 最高 64 倍</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="快速开始经典斗地主" accessibilityHint="立即匹配一局三人斗地主" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={onQuick} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
+        <Text style={styles.modeTitle}>三人争先</Text>
+        <Text style={styles.modeMeta}>竞技分保护性底分 · 最高 64 倍 · 不涉及现实资产</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="快速开始三人争先" accessibilityHint="立即匹配一局三人牌局" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={onQuick} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
           {busy ? <ActivityIndicator color={C.deep} /> : <><Text style={styles.primaryText}>快速开始</Text><Ionicons name="arrow-forward" size={20} color={C.deep} /></>}
         </Pressable>
       </View>
     </LinearGradient>
+
+    <View style={styles.gameSection}>
+      <View style={styles.sectionHeadingRow}><Text style={styles.sectionHeading}>游戏大厅</Text><Text style={styles.sectionHint}>更多玩法持续加入</Text></View>
+      <View style={styles.gameGrid}>{games.map((item) => <Pressable
+        key={item.name}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}，${item.available ? '当前可玩' : '即将开放'}`}
+        accessibilityHint={item.available ? '快速开始游戏' : '该游戏仍在开发中'}
+        accessibilityState={{ disabled: !item.available || busy, busy: item.available && busy }}
+        disabled={!item.available || busy}
+        onPress={item.available ? onQuick : undefined}
+        style={({ pressed }) => [styles.gameCard, item.available && styles.gameCardAvailable, pressed && styles.pressed]}
+      >
+        <View style={[styles.gameIcon, item.available && styles.gameIconAvailable]}><Ionicons name={item.icon} size={21} color={item.available ? C.deep : C.muted} /></View>
+        <Text style={styles.gameName}>{item.name}</Text>
+        <Text style={styles.gameCopy}>{item.copy}</Text>
+        <Text style={[styles.gameStatus, item.available && styles.gameStatusAvailable]}>{item.available ? '当前可玩' : '即将开放'}</Text>
+      </Pressable>)}</View>
+    </View>
 
     <View style={styles.statRow}>
       <View style={styles.stat}><Text style={styles.statValue}>{profile.games}</Text><Text style={styles.statLabel}>已玩牌局</Text></View>
@@ -155,15 +190,22 @@ function Lobby({ profile, busy, onQuick, onRelief, onCreateRoom, onJoinRoom }: {
       </View>
     </View>
 
-    {profile.balance < 2_000 ? <Pressable accessibilityRole="button" accessibilityLabel="领取今日欢乐豆补助" accessibilityHint="将低余额免费补足至两千欢乐豆" onPress={onRelief} style={styles.reliefCard}>
+    {profile.balance < 2_000 ? <Pressable accessibilityRole="button" accessibilityLabel="领取今日竞技分补给" accessibilityHint="将低竞技分免费补足至两千分" onPress={onRelief} style={styles.reliefCard}>
       <View style={styles.reliefIcon}><Ionicons name="gift-outline" size={22} color={C.gold} /></View>
-      <View style={{ flex: 1 }}><Text style={styles.reliefTitle}>今日欢乐豆补助</Text><Text style={styles.reliefCopy}>余额可免费补足至 2,000 豆</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.reliefTitle}>今日竞技分补给</Text><Text style={styles.reliefCopy}>低于门槛时可免费补足至 2,000 分</Text></View>
       <Ionicons name="chevron-forward" size={20} color={C.muted} />
     </Pressable> : null}
 
     <View style={styles.policyCard}>
       <Ionicons name="leaf-outline" size={22} color={C.lime} />
-      <View style={{ flex: 1 }}><Text style={styles.policyTitle}>娱乐积分，无现金价值</Text><Text style={styles.policyCopy}>不可购买 · 不可提现 · 不可转账 · 不可兑换</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.policyTitle}>竞技分只记录游戏表现</Text><Text style={styles.policyCopy}>不可购买 · 不可提现 · 不可转让 · 不可兑换</Text></View>
+    </View>
+
+    <View accessible accessibilityLabel="卡时服务规划中，包括 AI 复盘、高级 AI 对手和云端托管；暂未接入，当前不会扣除卡时" style={styles.computeCard}>
+      <View style={styles.computeTop}><View style={styles.computeIcon}><Ionicons name="flash-outline" size={22} color={C.gold} /></View><View style={{ flex: 1 }}><Text style={styles.computeTitle}>卡时服务</Text><Text style={styles.computeBadge}>规划中 · 尚未接入</Text></View></View>
+      <Text style={styles.computeCopy}>未来可使用 KAI 卡时购买真实算力服务，不参与牌局输赢。</Text>
+      <View style={styles.computeTags}>{['AI 复盘', '高级 AI', '云端托管'].map((label) => <View key={label} style={styles.computeTag}><Text style={styles.computeTagText}>{label}</Text></View>)}</View>
+      <Text style={styles.computeNotice}>当前不会产生任何卡时消耗</Text>
     </View>
   </ScrollView>;
 }
@@ -191,16 +233,16 @@ function RoomScreen({ room, busy, onStart, onLeave, onShare }: {
     <View style={styles.roomNotice}><Ionicons name="sync-outline" size={17} color={C.lime} /><Text style={styles.roomNoticeText}>房间状态自动同步，无需手动刷新</Text></View>
     <View style={{ flex: 1 }} />
     {room.isHost ? <Pressable accessibilityRole="button" accessibilityLabel={room.members.length === 3 ? '开始真人对局' : `开始对局并补入 ${3 - room.members.length} 个机器人`} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={onStart} style={styles.primaryButton}>{busy ? <ActivityIndicator color={C.deep} /> : <><Text style={styles.primaryText}>{room.members.length === 3 ? '开始真人对局' : `开始并补入 ${3 - room.members.length} 个机器人`}</Text><Ionicons name="play" size={19} color={C.deep} /></>}</Pressable> : <View accessible accessibilityLabel="等待房主开始对局" style={styles.waitHost}><ActivityIndicator color={C.lime} size="small" /><Text style={styles.waitHostText}>等待房主开始…</Text></View>}
-    <Text style={styles.roomPolicy}>本房间只结算无现金价值的欢乐豆</Text>
+    <Text style={styles.roomPolicy}>本房间只结算不可购买、转让或提现的竞技分</Text>
   </ScrollView>;
 }
 
 function Opponent({ player, active, turnRemaining }: { player: PlayerView; active: boolean; turnRemaining: number }) {
   const status = active ? (turnRemaining > 0 ? `剩 ${turnRemaining} 秒` : '托管判定中…') : `${player.cardCount} 张牌`;
-  return <View accessible accessibilityLabel={`${player.name}，${player.role === 'landlord' ? '地主' : player.role === 'farmer' ? '农民' : '身份未定'}，${status}`} style={[styles.opponent, active && styles.opponentActive]}>
+  return <View accessible accessibilityLabel={`${player.name}，${player.role === 'landlord' ? '领队' : player.role === 'farmer' ? '协作位' : '身份未定'}，${status}`} style={[styles.opponent, active && styles.opponentActive]}>
     <View style={styles.avatar}><Ionicons name="person" size={22} color={C.deep} /></View>
     <View style={{ flex: 1 }}>
-      <View style={styles.opponentNameRow}><Text style={styles.opponentName}>{player.name}</Text>{player.role ? <Text style={[styles.role, player.role === 'landlord' && styles.roleLandlord]}>{player.role === 'landlord' ? '地主' : '农民'}</Text> : null}</View>
+      <View style={styles.opponentNameRow}><Text style={styles.opponentName}>{player.name}</Text>{player.role ? <Text style={[styles.role, player.role === 'landlord' && styles.roleLandlord]}>{player.role === 'landlord' ? '领队' : '协作位'}</Text> : null}</View>
       <Text style={[styles.opponentMeta, active && turnRemaining <= 10 && styles.turnUrgentText]}>{status}</Text>
     </View>
     <View style={styles.backCards}><View style={styles.cardBack} /><View style={[styles.cardBack, { marginLeft: -14 }]} /><Text style={styles.cardCount}>{player.cardCount}</Text></View>
@@ -239,7 +281,7 @@ function Table({ game, profile, busy, onAction, onExit, onReport }: {
   return <View style={styles.tablePage}>
     <View style={styles.tableTopbar}>
       <Pressable accessibilityRole="button" accessibilityLabel="离开当前牌桌" hitSlop={8} onPress={onExit} style={styles.circleButton}><Ionicons name="chevron-back" size={22} color={C.ink} /></Pressable>
-      <View accessible accessibilityLabel={`经典三人场，底分 ${game.baseStake}，当前 ${Math.max(1, game.highestBid) * (2 ** game.bombs)} 倍，四十五秒自动托管`} style={styles.tableMeta}><Text style={styles.tableMetaTop}>经典三人场</Text><Text numberOfLines={2} style={styles.tableMetaBottom}>底分 {game.baseStake} · {Math.max(1, game.highestBid) * (2 ** game.bombs)} 倍 · 45 秒自动托管</Text></View>
+      <View accessible accessibilityLabel={`三人争先，底分 ${game.baseStake}，当前 ${Math.max(1, game.highestBid) * (2 ** game.bombs)} 倍，四十五秒自动托管`} style={styles.tableMeta}><Text style={styles.tableMetaTop}>三人争先</Text><Text numberOfLines={2} style={styles.tableMetaBottom}>底分 {game.baseStake} · {Math.max(1, game.highestBid) * (2 ** game.bombs)} 倍 · 45 秒自动托管</Text></View>
       <Pressable accessibilityRole="button" accessibilityLabel="打开牌桌菜单" accessibilityState={{ expanded: reportOpen }} hitSlop={8} onPress={() => setReportOpen((value) => !value)} style={styles.circleButton}><Ionicons name="ellipsis-horizontal" size={21} color={C.ink} /></Pressable>
     </View>
     {reportOpen ? <View style={styles.reportMenu}>
@@ -271,10 +313,10 @@ function Table({ game, profile, busy, onAction, onExit, onReport }: {
         </> : <View style={styles.turnPrompt}><View style={styles.turnPulse} /><Text style={styles.turnText}>{myTurn ? '轮到你了' : `${current?.name ?? ''} 正在出牌`}</Text></View>}
       </View>
       {game.phase === 'bidding' ? <View style={styles.bidPanel}>
-        <Text accessibilityLiveRegion="polite" style={[styles.actionHint, myTurn && timerUrgent && styles.turnUrgentText]}>{myTurn ? (turnRemaining > 0 ? (timerUrgent ? `请叫分，${turnRemaining} 秒后自动托管` : '选择叫分') : '正在等待服务端托管叫分') : `${current?.name} 正在叫分`}</Text>
+        <Text accessibilityLiveRegion="polite" style={[styles.actionHint, myTurn && timerUrgent && styles.turnUrgentText]}>{myTurn ? (turnRemaining > 0 ? (timerUrgent ? `请争分，${turnRemaining} 秒后自动托管` : '选择争分') : '正在等待服务端托管争分') : `${current?.name} 正在争分`}</Text>
         <View style={styles.actionRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="不叫地主" accessibilityState={{ disabled: !myTurn || busy }} disabled={!myTurn || busy} onPress={() => onAction('bid', { score: 0 })} style={styles.secondaryButton}><Text style={styles.secondaryText}>不叫</Text></Pressable>
-          {([1, 2, 3] as const).filter((score) => score > game.highestBid).map((score) => <Pressable accessibilityRole="button" accessibilityLabel={`叫 ${score} 分`} accessibilityState={{ disabled: !myTurn || busy }} key={score} disabled={!myTurn || busy} onPress={() => onAction('bid', { score })} style={styles.bidButton}><Text style={styles.bidText}>{score} 分</Text></Pressable>)}
+          <Pressable accessibilityRole="button" accessibilityLabel="不争" accessibilityState={{ disabled: !myTurn || busy }} disabled={!myTurn || busy} onPress={() => onAction('bid', { score: 0 })} style={styles.secondaryButton}><Text style={styles.secondaryText}>不争</Text></Pressable>
+          {([1, 2, 3] as const).filter((score) => score > game.highestBid).map((score) => <Pressable accessibilityRole="button" accessibilityLabel={`争 ${score} 分`} accessibilityState={{ disabled: !myTurn || busy }} key={score} disabled={!myTurn || busy} onPress={() => onAction('bid', { score })} style={styles.bidButton}><Text style={styles.bidText}>{score} 分</Text></Pressable>)}
         </View>
       </View> : game.phase === 'playing' ? <View style={styles.actionPanel}>
         <Text accessibilityLiveRegion="polite" style={[styles.actionHint, myTurn && timerUrgent && styles.turnUrgentText]}>{myTurn ? (turnRemaining === 0 ? '正在等待服务端托管出牌' : timerUrgent ? `还剩 ${turnRemaining} 秒，请尽快出牌` : selected.length ? `已选 ${selected.length} 张` : '请选择要出的牌') : '等待其他玩家'}</Text>
@@ -287,17 +329,17 @@ function Table({ game, profile, busy, onAction, onExit, onReport }: {
       </View> : null}
     </View>
 
-    <View style={styles.myInfo}><View><Text style={styles.myName}>{me.name} <Text style={[styles.role, me.role === 'landlord' && styles.roleLandlord]}>{me.role === 'landlord' ? '地主' : me.role === 'farmer' ? '农民' : ''}</Text></Text><Text style={styles.myBalance}>● {number(profile.balance)} 欢乐豆</Text></View><Text style={styles.handCount}>{game.hand.length} 张</Text></View>
+    <View style={styles.myInfo}><View><Text style={styles.myName}>{me.name} <Text style={[styles.role, me.role === 'landlord' && styles.roleLandlord]}>{me.role === 'landlord' ? '领队' : me.role === 'farmer' ? '协作位' : ''}</Text></Text><Text style={styles.myBalance}>● {number(profile.balance)} 竞技分</Text></View><Text style={styles.handCount}>{game.hand.length} 张</Text></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hand}>
       {game.hand.map((card, index) => <View key={card.id} style={{ marginLeft: index ? -20 : 0 }}><PlayingCard card={card} selected={selected.includes(card.id)} onPress={game.phase === 'playing' && myTurn ? () => toggle(card.id) : undefined} /></View>)}
     </ScrollView>
 
     {game.phase === 'finished' ? <View style={styles.resultShade}>
       <View style={styles.resultCard}>
-        <Text style={styles.resultEyebrow}>{game.settlement?.winner === 'landlord' ? '地主胜利' : '农民胜利'}</Text>
+        <Text style={styles.resultEyebrow}>{game.settlement?.winner === 'landlord' ? '领队胜利' : '协作位胜利'}</Text>
         <Text style={styles.resultTitle}>{delta >= 0 ? '漂亮！' : '再来一局'}</Text>
-        <Text style={[styles.resultDelta, delta < 0 && { color: C.red }]}>{delta >= 0 ? '+' : ''}{number(delta)} <Text style={styles.resultUnit}>欢乐豆</Text></Text>
-        <Text style={styles.resultMeta}>{game.settlement?.multiplier} 倍结算 · 账本已记录</Text>
+        <Text style={[styles.resultDelta, delta < 0 && { color: C.red }]}>{delta >= 0 ? '+' : ''}{number(delta)} <Text style={styles.resultUnit}>竞技分</Text></Text>
+        <Text style={styles.resultMeta}>{game.settlement?.multiplier} 倍结算 · 竞技记录已保存</Text>
         <Text style={styles.fairnessCode}>公平校验 {game.fairness.commitment.slice(0, 12)}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="回到大厅" onPress={onExit} style={styles.primaryButton}><Text style={styles.primaryText}>回到大厅</Text><Ionicons name="home-outline" size={20} color={C.deep} /></Pressable>
       </View>
@@ -312,24 +354,24 @@ function HistoryScreen({ data, loading }: { data: History | null; loading: boole
     <Text style={styles.sectionTitle}>最近牌局</Text>
     {!data?.games.length ? <View style={styles.empty}><Ionicons name="albums-outline" size={28} color={C.muted} /><Text style={styles.emptyText}>还没有完成的牌局</Text></View> : data.games.map((game) => <View key={game.id} style={styles.historyRow}>
       <View style={[styles.historyIcon, game.delta >= 0 ? styles.historyWin : styles.historyLose]}><Ionicons name={game.delta >= 0 ? 'trophy' : 'flag'} size={18} color={game.delta >= 0 ? C.lime : C.red} /></View>
-      <View style={{ flex: 1 }}><Text style={styles.historyTitle}>{game.role === 'landlord' ? '地主' : '农民'} · {game.multiplier} 倍</Text><Text style={styles.historyDate}>{new Date(game.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.historyTitle}>{game.role === 'landlord' ? '领队' : '协作位'} · {game.multiplier} 倍</Text><Text style={styles.historyDate}>{new Date(game.updatedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text></View>
       <Text style={[styles.historyDelta, game.delta < 0 && { color: C.red }]}>{game.delta >= 0 ? '+' : ''}{number(game.delta)}</Text>
     </View>)}
-    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>欢乐豆流水</Text>
-    {data?.ledger.map((entry) => <View key={entry.id} style={styles.ledgerRow}><View><Text style={styles.ledgerMemo}>{entry.memo}</Text><Text style={styles.historyDate}>{new Date(entry.createdAt).toLocaleString('zh-CN')}</Text></View><Text style={[styles.ledgerAmount, entry.amount < 0 && { color: C.red }]}>{entry.amount >= 0 ? '+' : ''}{number(entry.amount)}</Text></View>)}
+    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>竞技分记录</Text>
+    {data?.ledger.map((entry) => <View key={entry.id} style={styles.ledgerRow}><View><Text style={styles.ledgerMemo}>{productCopy(entry.memo)}</Text><Text style={styles.historyDate}>{new Date(entry.createdAt).toLocaleString('zh-CN')}</Text></View><Text style={[styles.ledgerAmount, entry.amount < 0 && { color: C.red }]}>{entry.amount >= 0 ? '+' : ''}{number(entry.amount)}</Text></View>)}
   </ScrollView>;
 }
 
 function RulesScreen() {
   const rules = [
-    ['01', '娱乐豆边界', '欢乐豆只用于游戏记分，不支持购买、提现、转账或兑换。'],
-    ['02', '服务端权威', '洗牌、叫分、出牌合法性与最终结算全部由服务端完成。'],
-    ['03', '叫分与身份', '三人依次叫 0–3 分，最高分玩家成为地主并获得三张底牌。'],
-    ['04', '倍数保护', '炸弹、王炸和春天会翻倍，单局最高 64 倍，并按余额设置保护底分。'],
+    ['01', '竞技分边界', '竞技分只记录游戏表现，不支持购买、提现、转让或兑换。'],
+    ['02', '服务端权威', '洗牌、争分、出牌合法性与最终结算全部由服务端完成。'],
+    ['03', '争分与身份', '三人依次选择不争或争 1–3 分，最高分玩家成为领队并获得三张底牌，其余两位成为协作位。'],
+    ['04', '倍数保护', '炸弹、王炸和春天会翻倍，单局最高 64 倍，并按竞技分设置保护底分。'],
   ];
   return <ScrollView contentContainerStyle={styles.contentPage}><Text style={styles.pageEyebrow}>FAIR PLAY</Text><Text style={styles.pageTitle}>规则与公平</Text><Text style={styles.pageIntro}>我们希望每一局都简单、透明、没有现实金钱压力。</Text>
     {rules.map(([index, title, copy]) => <View key={index} style={styles.ruleRow}><Text style={styles.ruleIndex}>{index}</Text><View style={{ flex: 1 }}><Text style={styles.ruleTitle}>{title}</Text><Text style={styles.ruleCopy}>{copy}</Text></View></View>)}
-    <View style={styles.fairCard}><Ionicons name="shield-checkmark-outline" size={28} color={C.lime} /><Text style={styles.fairTitle}>公平性承诺</Text><Text style={styles.fairCopy}>每局使用操作系统安全随机源洗牌；所有动作都有顺序编号，重复请求不会造成重复扣豆或派奖。</Text></View>
+    <View style={styles.fairCard}><Ionicons name="shield-checkmark-outline" size={28} color={C.lime} /><Text style={styles.fairTitle}>公平性承诺</Text><Text style={styles.fairCopy}>每局使用操作系统安全随机源洗牌；所有动作都有顺序编号，重复请求不会造成重复扣分或结算。</Text></View>
   </ScrollView>;
 }
 
@@ -378,7 +420,7 @@ export default function App() {
 
   function showError(value: unknown) {
     if (isConnectionIssue(value)) setConnectionStatus('offline');
-    setError(value instanceof ApiError || value instanceof Error ? value.message : '操作失败，请重试。');
+    setError(value instanceof ApiError || value instanceof Error ? productCopy(value.message) : '操作失败，请重试。');
   }
   async function initialize() {
     setBusy(true); setBootError(null); setConnectionStatus('connecting');
@@ -390,7 +432,7 @@ export default function App() {
       else if (resumable.room) setRoom(resumable.room);
       setConnectionStatus('online');
     }
-    catch (value) { const message = value instanceof Error ? value.message : '暂时无法连接服务'; setBootError(message); setError(message); setConnectionStatus('offline'); }
+    catch (value) { const message = productCopy(value instanceof Error ? value.message : '暂时无法连接服务'); setBootError(message); setError(message); setConnectionStatus('offline'); }
     finally { setBusy(false); }
   }
   async function start() {
@@ -401,7 +443,7 @@ export default function App() {
     setBusy(true); try { const result = await gameAction(game.id, game.sequence, kind, input); setGame(result.game); setProfile(result.profile); setConnectionStatus('online'); await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (value) { showError(value); await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } finally { setBusy(false); }
   }
   async function relief() {
-    setBusy(true); try { const result = await claimRelief(); setProfile(result.profile); setConnectionStatus('online'); setError(result.claimed ? '今日补助已到账' : '当前不满足补助条件'); } catch (value) { showError(value); } finally { setBusy(false); }
+    setBusy(true); try { const result = await claimRelief(); setProfile(result.profile); setConnectionStatus('online'); setError(result.claimed ? '今日竞技分补给已到账' : '当前不满足补给条件'); } catch (value) { showError(value); } finally { setBusy(false); }
   }
   async function makeRoom() {
     setBusy(true); try {
@@ -431,8 +473,8 @@ export default function App() {
     if (!room) return;
     try {
       const result = await Share.share({
-        title: `豆局好友房 ${room.code}`,
-        message: `来豆局一起斗地主！好友房房间号：${room.code}\n欢乐豆仅用于娱乐记分，无现金价值。`,
+        title: `KAI Play 好友房 ${room.code}`,
+        message: `来 KAI Play 一起玩三人争先！好友房房间号：${room.code}\n竞技分仅记录游戏表现，不可购买、转让或提现。`,
       });
       if (result.action === Share.sharedAction) {
         setError('房间号已分享');
@@ -468,7 +510,7 @@ export default function App() {
   return <SafeAreaProvider><LinearGradient colors={[C.deep, '#08251E']} style={styles.root}><StatusBar style="light" />
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {profile ? <ConnectionBanner status={connectionStatus} retrying={retrying} onRetry={retryConnection} /> : null}
-      {!profile ? <View style={styles.loading}><View style={styles.brandMarkLarge}><Text style={styles.brandMarkLargeText}>豆</Text></View><Text style={styles.loadingBrand}>豆局</Text>{bootError ? <><Text accessibilityRole="alert" style={styles.bootError}>{bootError}</Text><Pressable accessibilityRole="button" accessibilityLabel="重新连接牌局服务" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={initialize} style={styles.retryButton}><Text style={styles.retryText}>重新连接</Text></Pressable></> : <ActivityIndicator accessibilityLabel="正在连接牌局服务" color={C.lime} style={{ marginTop: 24 }} />}</View> : game ? <Table game={game} profile={profile} busy={busy} onAction={act} onReport={report} onExit={() => { setGame(null); setTab('lobby'); }} /> : room ? <RoomScreen room={room} busy={busy} onStart={beginRoom} onLeave={exitRoom} onShare={shareRoomCode} /> : <>
+      {!profile ? <View style={styles.loading}><View style={styles.brandMarkLarge}><Text style={styles.brandMarkLargeText}>K</Text></View><Text style={styles.loadingBrand}>KAI PLAY</Text><Text style={styles.loadingSub}>算力局</Text>{bootError ? <><Text accessibilityRole="alert" style={styles.bootError}>{bootError}</Text><Pressable accessibilityRole="button" accessibilityLabel="重新连接牌局服务" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={initialize} style={styles.retryButton}><Text style={styles.retryText}>重新连接</Text></Pressable></> : <ActivityIndicator accessibilityLabel="正在连接牌局服务" color={C.lime} style={{ marginTop: 24 }} />}</View> : game ? <Table game={game} profile={profile} busy={busy} onAction={act} onReport={report} onExit={() => { setGame(null); setTab('lobby'); }} /> : room ? <RoomScreen room={room} busy={busy} onStart={beginRoom} onLeave={exitRoom} onShare={shareRoomCode} /> : <>
         <AppHeader profile={profile} onHome={() => setTab('lobby')} />
         <View style={{ flex: 1 }} accessibilityLabel={title}>{tab === 'lobby' ? <Lobby profile={profile} busy={busy} onQuick={start} onRelief={relief} onCreateRoom={makeRoom} onJoinRoom={enterRoom} /> : tab === 'history' ? <HistoryScreen data={historyData} loading={busy} /> : <RulesScreen />}</View>
         <BottomNav tab={tab} onChange={setTab} />
@@ -480,21 +522,23 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 }, safe: { flex: 1 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' }, loadingBrand: { color: C.ink, fontSize: 28, fontWeight: '900', marginTop: 14, letterSpacing: 4 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' }, loadingBrand: { color: C.ink, fontSize: 28, fontWeight: '900', marginTop: 14, letterSpacing: 3 }, loadingSub: { color: C.muted, fontSize: 11, fontWeight: '800', letterSpacing: 5, marginTop: 5, marginLeft: 5 },
   bootError: { color: C.muted, fontSize: 12, lineHeight: 19, textAlign: 'center', maxWidth: 260, marginTop: 18 }, retryButton: { marginTop: 16, height: 44, paddingHorizontal: 24, borderRadius: 14, backgroundColor: C.lime, alignItems: 'center', justifyContent: 'center' }, retryText: { color: C.deep, fontSize: 13, fontWeight: '900' },
   brandMarkLarge: { width: 72, height: 72, borderRadius: 24, backgroundColor: C.lime, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-6deg' }] }, brandMarkLargeText: { color: C.deep, fontSize: 36, fontWeight: '900' },
   connectionBanner: { minHeight: 58, marginHorizontal: 12, marginTop: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(244,201,104,0.28)', backgroundColor: C.panel, paddingHorizontal: 13, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 10 },
   connectionBannerOffline: { backgroundColor: C.gold, borderColor: C.gold }, connectionCopy: { flex: 1 }, connectionTitle: { color: C.ink, fontSize: 13, fontWeight: '900' }, connectionTextOffline: { color: C.deep }, connectionHint: { color: C.muted, fontSize: 10, lineHeight: 15, marginTop: 2 }, connectionHintOffline: { color: '#435048' }, connectionRetry: { minWidth: 64, minHeight: 40, paddingHorizontal: 12, borderRadius: 12, backgroundColor: C.deep, alignItems: 'center', justifyContent: 'center' }, connectionRetryText: { color: C.lime, fontSize: 12, fontWeight: '900' },
   header: { minHeight: 68, paddingHorizontal: 20, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, brandMark: { width: 38, height: 38, borderRadius: 12, backgroundColor: C.lime, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-5deg' }] }, brandMarkText: { color: C.deep, fontWeight: '900', fontSize: 20 }, brand: { color: C.ink, fontWeight: '900', fontSize: 18, letterSpacing: 2 }, brandSub: { color: C.muted, fontSize: 8, letterSpacing: 2.5, marginTop: 1 },
-  balance: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: C.line, paddingHorizontal: 13, height: 36, borderRadius: 18, gap: 7 }, beanDot: { width: 11, height: 14, borderRadius: 8, backgroundColor: C.gold, transform: [{ rotate: '28deg' }] }, balanceText: { color: C.ink, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  balance: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: C.line, paddingHorizontal: 11, height: 36, borderRadius: 18, gap: 6 }, scoreDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.gold }, balanceText: { color: C.ink, fontWeight: '800', fontVariant: ['tabular-nums'] }, balanceUnit: { color: C.muted, fontSize: 8, fontWeight: '800' },
   lobby: { padding: 20, paddingBottom: 36 }, greeting: { marginTop: 8, marginBottom: 22 }, eyebrow: { color: C.lime, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 }, heroTitle: { color: C.ink, fontSize: 32, lineHeight: 40, fontWeight: '900' }, heroCopy: { color: C.muted, fontSize: 14, marginTop: 5 },
   heroCard: { minHeight: 300, borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(183,243,93,0.22)' }, heroGlow: { position: 'absolute', width: 240, height: 240, borderRadius: 120, right: -110, top: -100, backgroundColor: 'rgba(183,243,93,0.12)' }, tableStamp: { position: 'absolute', right: 20, top: 22, width: 108, height: 136, borderRadius: 54, backgroundColor: 'rgba(4,23,19,0.65)', borderWidth: 1, borderColor: 'rgba(244,201,104,0.35)', alignItems: 'center', justifyContent: 'center' }, tableStampTop: { color: C.gold, fontSize: 10, letterSpacing: 5, marginLeft: 5 }, tableStampMain: { color: C.ink, fontSize: 56, lineHeight: 64, fontWeight: '900' }, tableStampBottom: { color: C.muted, fontSize: 10, letterSpacing: 2 }, heroBody: { padding: 24, paddingTop: 28, justifyContent: 'flex-end', flex: 1 }, pill: { alignSelf: 'flex-start', minHeight: 28, flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: 'rgba(244,201,104,0.10)', borderWidth: 1, borderColor: 'rgba(244,201,104,0.18)' }, pillLime: { backgroundColor: C.lime, borderColor: C.lime }, pillText: { color: C.gold, fontSize: 10, fontWeight: '800', flexShrink: 1 }, modeTitle: { color: C.ink, fontSize: 28, lineHeight: 36, fontWeight: '900', marginTop: 72 }, modeMeta: { color: C.muted, fontSize: 12, lineHeight: 18, marginTop: 5, marginBottom: 20 },
   primaryButton: { minHeight: 52, borderRadius: 17, backgroundColor: C.lime, paddingHorizontal: 20, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, primaryText: { color: C.deep, fontSize: 16, lineHeight: 22, fontWeight: '900', textAlign: 'center', flexShrink: 1 }, pressed: { transform: [{ scale: 0.985 }] },
+  gameSection: { marginTop: 20 }, sectionHeadingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }, sectionHeading: { color: C.ink, fontSize: 17, fontWeight: '900' }, sectionHint: { color: C.muted, fontSize: 9 }, gameGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, gameCard: { width: '48%', minHeight: 150, flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.025)', padding: 14, opacity: 0.72 }, gameCardAvailable: { borderColor: 'rgba(183,243,93,0.3)', backgroundColor: 'rgba(183,243,93,0.07)', opacity: 1 }, gameIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }, gameIconAvailable: { backgroundColor: C.lime }, gameName: { color: C.ink, fontSize: 14, fontWeight: '900', marginTop: 12 }, gameCopy: { color: C.muted, fontSize: 10, lineHeight: 15, marginTop: 4, flexGrow: 1 }, gameStatus: { color: C.muted, fontSize: 9, fontWeight: '800', marginTop: 9 }, gameStatusAvailable: { color: C.lime },
   statRow: { marginTop: 16, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.035)', borderRadius: 20, flexDirection: 'row', paddingVertical: 17 }, stat: { flex: 1, alignItems: 'center' }, statValue: { color: C.ink, fontSize: 20, fontWeight: '900', fontVariant: ['tabular-nums'] }, statLabel: { color: C.muted, fontSize: 10, marginTop: 3 }, statDivider: { width: 1, backgroundColor: C.line, marginVertical: 4 },
   friendCard: { marginTop: 16, borderRadius: 22, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.035)', padding: 16 }, friendHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, friendTitle: { color: C.ink, fontSize: 15, fontWeight: '900' }, friendCopy: { color: C.muted, fontSize: 10, lineHeight: 15, marginTop: 4 }, friendActions: { marginTop: 15, gap: 10 }, createRoomButton: { minHeight: 44, paddingVertical: 9, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: C.line, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 }, createRoomText: { color: C.ink, fontSize: 13, fontWeight: '800' }, joinBox: { minHeight: 46, flexDirection: 'row', borderRadius: 14, borderWidth: 1, borderColor: C.line, overflow: 'hidden' }, roomInput: { flex: 1, color: C.ink, paddingHorizontal: 14, paddingVertical: 8, fontSize: 13, letterSpacing: 1 }, joinButton: { minWidth: 66, paddingHorizontal: 10, backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center' }, joinText: { color: C.deep, fontSize: 12, fontWeight: '900' },
   reliefCard: { marginTop: 16, minHeight: 76, borderRadius: 19, borderWidth: 1, borderColor: 'rgba(244,201,104,0.25)', backgroundColor: 'rgba(244,201,104,0.07)', flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }, reliefIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(244,201,104,0.11)', alignItems: 'center', justifyContent: 'center' }, reliefTitle: { color: C.ink, fontWeight: '800', fontSize: 14 }, reliefCopy: { color: C.muted, fontSize: 11, marginTop: 4 },
   policyCard: { marginTop: 16, minHeight: 72, borderRadius: 19, backgroundColor: 'rgba(183,243,93,0.06)', flexDirection: 'row', alignItems: 'center', padding: 16, gap: 13 }, policyTitle: { color: C.ink, fontWeight: '800', fontSize: 13 }, policyCopy: { color: C.muted, fontSize: 10, marginTop: 5 },
+  computeCard: { marginTop: 16, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(244,201,104,0.22)', backgroundColor: 'rgba(244,201,104,0.055)', padding: 17 }, computeTop: { flexDirection: 'row', alignItems: 'center', gap: 12 }, computeIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(244,201,104,0.11)', alignItems: 'center', justifyContent: 'center' }, computeTitle: { color: C.ink, fontSize: 15, fontWeight: '900' }, computeBadge: { color: C.gold, fontSize: 9, fontWeight: '800', marginTop: 4 }, computeCopy: { color: C.muted, fontSize: 11, lineHeight: 18, marginTop: 13 }, computeTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 12 }, computeTag: { minHeight: 28, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: 'rgba(255,255,255,0.035)' }, computeTagText: { color: C.ink, fontSize: 9, fontWeight: '800' }, computeNotice: { color: C.muted, fontSize: 9, marginTop: 13 },
   roomPage: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 24 }, roomTop: { minHeight: 60, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, roomTopTitle: { color: C.ink, fontSize: 15, fontWeight: '900' }, roomCodeCard: { marginTop: 12, borderRadius: 26, padding: 20, alignItems: 'center', backgroundColor: '#123A30', borderWidth: 1, borderColor: 'rgba(183,243,93,0.20)' }, roomCodeLabel: { color: C.muted, fontSize: 10, letterSpacing: 3 }, roomCode: { width: '100%', color: C.lime, textAlign: 'center', fontSize: 42, fontWeight: '900', letterSpacing: 8, marginLeft: 8, marginTop: 8, fontVariant: ['tabular-nums'] }, roomCodeHint: { color: C.muted, fontSize: 10, lineHeight: 15, textAlign: 'center', marginTop: 8 }, shareRoomButton: { minHeight: 42, marginTop: 14, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 13, backgroundColor: C.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, shareRoomText: { color: C.deep, fontSize: 12, fontWeight: '900' }, roomPlayers: { flexDirection: 'row', gap: 8, marginTop: 18 }, roomPlayer: { flex: 1, minHeight: 142, borderRadius: 20, alignItems: 'center', padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: C.line }, roomPlayerEmpty: { borderStyle: 'dashed', backgroundColor: 'transparent' }, roomAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center', marginTop: 4 }, roomPlayerName: { color: C.ink, fontSize: 11, lineHeight: 16, fontWeight: '800', marginTop: 12, textAlign: 'center' }, roomPlayerMeta: { color: C.muted, fontSize: 9, lineHeight: 14, marginTop: 5, textAlign: 'center' }, roomNotice: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }, roomNoticeText: { color: C.muted, fontSize: 10, lineHeight: 15, flexShrink: 1 }, waitHost: { minHeight: 52, paddingVertical: 9, borderRadius: 17, borderWidth: 1, borderColor: C.line, flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center' }, waitHostText: { color: C.ink, fontWeight: '800', fontSize: 13 }, roomPolicy: { color: C.muted, fontSize: 9, lineHeight: 14, textAlign: 'center', marginTop: 12 },
   nav: { minHeight: 70, paddingTop: 6, paddingBottom: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line, flexDirection: 'row', backgroundColor: 'rgba(4,23,19,0.96)' }, navItem: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 4 }, navLabel: { color: C.muted, fontSize: 10, fontWeight: '700' }, navActive: { color: C.lime },
   tablePage: { flex: 1 }, tableTopbar: { minHeight: 60, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14 }, circleButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }, tableMeta: { flex: 1, alignItems: 'center', paddingHorizontal: 8 }, tableMetaTop: { color: C.ink, fontSize: 14, fontWeight: '800' }, tableMetaBottom: { color: C.muted, fontSize: 10, lineHeight: 14, textAlign: 'center', marginTop: 3 },

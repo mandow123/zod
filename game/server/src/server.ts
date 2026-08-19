@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { CloudPayBillingService, SandboxBillingStore, sandboxWarning, type CloudPayMode } from './billing.ts';
 import { DouJoyPlatform, PlatformError } from './platform.ts';
 import { JsonGameStore } from './store.ts';
 import { SlidingWindowLimiter } from './security.ts';
@@ -11,15 +12,25 @@ const corsOrigin = process.env.DOUJOY_CORS_ORIGIN ?? (process.env.NODE_ENV === '
 const turnTimeoutMs = Number(process.env.DOUJOY_TURN_TIMEOUT_MS ?? 45_000);
 const backupCount = Number(process.env.DOUJOY_BACKUP_COUNT ?? 3);
 const waitTimeoutMaxMs = Number(process.env.DOUJOY_WAIT_TIMEOUT_MAX_MS ?? 25_000);
+const cloudPayMode = process.env.DOUJOY_CLOUDPAY_MODE ?? 'disabled';
+const cloudPaySandboxDataPath = process.env.DOUJOY_CLOUDPAY_SANDBOX_DATA_PATH
+  ?? resolve(dirname(dataPath), 'cloudpay-sandbox-orders.json');
 if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('DOUJOY_PORT_INVALID');
 if (!corsOrigin) throw new Error('DOUJOY_CORS_ORIGIN_REQUIRED_IN_PRODUCTION');
 if (!Number.isInteger(turnTimeoutMs) || turnTimeoutMs < 10_000 || turnTimeoutMs > 120_000) throw new Error('DOUJOY_TURN_TIMEOUT_MS_INVALID');
 if (!Number.isInteger(backupCount) || backupCount < 1 || backupCount > 10) throw new Error('DOUJOY_BACKUP_COUNT_INVALID');
 if (!Number.isInteger(waitTimeoutMaxMs) || waitTimeoutMaxMs < 100 || waitTimeoutMaxMs > 30_000) throw new Error('DOUJOY_WAIT_TIMEOUT_MAX_MS_INVALID');
+if (!['disabled', 'sandbox'].includes(cloudPayMode)) throw new Error('DOUJOY_CLOUDPAY_MODE_INVALID');
+if (cloudPayMode === 'sandbox' && resolve(cloudPaySandboxDataPath) === resolve(dataPath)) {
+  throw new Error('DOUJOY_CLOUDPAY_SANDBOX_DATA_PATH_MUST_BE_ISOLATED');
+}
 const store = new JsonGameStore(dataPath, { backupCount });
 await store.load();
 if (store.recoverySource()) console.warn(`DouJoy store recovered from ${store.recoverySource()}`);
 const platform = new DouJoyPlatform(store, turnTimeoutMs);
+const sandboxBillingStore = new SandboxBillingStore(cloudPaySandboxDataPath);
+if (cloudPayMode === 'sandbox') await sandboxBillingStore.load();
+const billing = new CloudPayBillingService(cloudPayMode as CloudPayMode, sandboxBillingStore);
 const requestLimiter = new SlidingWindowLimiter();
 const guestLimiter = new SlidingWindowLimiter();
 const pendingWaitsByUser = new Map<string, number>();
@@ -29,7 +40,7 @@ function json(response: import('node:http').ServerResponse, status: number, body
   response.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': corsOrigin,
-    'access-control-allow-headers': 'authorization, content-type, x-request-id',
+    'access-control-allow-headers': 'authorization, content-type, idempotency-key, x-request-id',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
@@ -124,6 +135,26 @@ const server = createServer(async (request, response) => {
       return json(response, 201, { ok: true, ...(await platform.guest(typeof input.name === 'string' ? input.name : undefined)) });
     }
     const user = platform.authenticate(request.headers.authorization);
+    if (request.method === 'GET' && url.pathname === '/v1/billing/catalog') {
+      return json(response, 200, { ok: true, catalog: billing.catalog() });
+    }
+    if (request.method === 'POST' && url.pathname === '/v1/billing/orders') {
+      const input = await body(request);
+      const result = await billing.createOrder(user.id, {
+        productId: typeof input.productId === 'string' ? input.productId : '',
+        quantity: typeof input.quantity === 'number' ? input.quantity : undefined,
+        idempotencyKey: typeof request.headers['idempotency-key'] === 'string'
+          ? request.headers['idempotency-key'] : undefined,
+      });
+      return json(response, result.replayed ? 200 : 201, { ok: true, ...result, sandbox: sandboxWarning });
+    }
+    const billingOrderMatch = url.pathname.match(/^\/v1\/billing\/orders\/([^/]+)(?:\/(cancel))?$/);
+    if (billingOrderMatch && request.method === 'GET' && !billingOrderMatch[2]) {
+      return json(response, 200, { ok: true, order: billing.order(user.id, billingOrderMatch[1]!), sandbox: sandboxWarning });
+    }
+    if (billingOrderMatch && request.method === 'POST' && billingOrderMatch[2] === 'cancel') {
+      return json(response, 200, { ok: true, ...(await billing.cancelOrder(user.id, billingOrderMatch[1]!)), sandbox: sandboxWarning });
+    }
     if (request.method === 'GET' && url.pathname === '/v1/me') return json(response, 200, { ok: true, profile: platform.profile(user.id) });
     if (request.method === 'GET' && url.pathname === '/v1/resume') return json(response, 200, { ok: true, ...(await platform.resume(user.id)) });
     if (request.method === 'POST' && url.pathname === '/v1/games/quick') return json(response, 201, { ok: true, game: await platform.quickGame(user.id) });
@@ -179,4 +210,5 @@ const server = createServer(async (request, response) => {
 server.listen(port, '0.0.0.0', () => {
   console.log(`DouJoy server listening on http://0.0.0.0:${port}`);
   console.log('Token mode: play-only; purchase/withdraw/transfer/redeem are disabled');
+  console.log(`CloudPay card-hour billing mode: ${cloudPayMode}`);
 });

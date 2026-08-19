@@ -216,7 +216,7 @@ export class StoreSnapshotError extends Error {
   readonly snapshotPath: string;
 
   constructor(snapshotPath: string, reason: string, options?: ErrorOptions) {
-    super(`Invalid DouJoy store snapshot at ${snapshotPath}: ${reason}`, options);
+    super(`Invalid KAI Play store snapshot at ${snapshotPath}: ${reason}`, options);
     this.name = 'StoreSnapshotError';
     this.snapshotPath = snapshotPath;
   }

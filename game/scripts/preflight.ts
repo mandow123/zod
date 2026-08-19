@@ -51,4 +51,4 @@ const compose = await read('docker-compose.yml');
 assert.match(compose, /DOUJOY_BIND_IP:-127\.0\.0\.1/, 'Server must bind to loopback by default');
 assert.match(compose, /DOUJOY_WEB_BIND_IP:-127\.0\.0\.1/, 'Web preview must bind to loopback by default');
 
-console.log('DouJoy release preflight passed: SDK 57, package identity, play-only boundary, fairness, and required docs.');
+console.log('KAI Play release preflight passed: SDK 57, package identity, play-only boundary, fairness, and required docs.');

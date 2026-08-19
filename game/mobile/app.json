@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "豆局",
+    "name": "KAI Play",
     "slug": "doujoy",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -24,7 +24,7 @@
         "expo-secure-store",
         {
           "configureAndroidBackup": true,
-          "faceIDPermission": "允许豆局安全读取你的本地登录状态"
+          "faceIDPermission": "允许 KAI Play 安全读取你的本地登录状态"
         }
       ]
     ]
