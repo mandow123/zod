@@ -1,4 +1,4 @@
-import { advanceBots, advanceTimedOutPlayer, bid, createGame, pass, play } from '../../core/engine.ts';
+import { advanceBotTurn, advanceTimedOutPlayer, bid, createGame, forfeit, pass, play } from '../../core/engine.ts';
 import { gameView } from '../../core/view.ts';
 import { GameRuleError } from '../../core/types.ts';
 import { JsonGameStore } from './store.ts';
@@ -21,15 +21,55 @@ export class DouJoyPlatform {
   readonly store: JsonGameStore;
   readonly turnTimeoutMs: number;
   readonly changes: ChangeBroker;
+  readonly botThinkMinMs: number;
+  readonly botThinkMaxMs: number;
+  private readonly botTurnSchedules = new Map<string, { sequence: number; durationMs: number; deadlineMs: number }>();
 
-  constructor(store: JsonGameStore, turnTimeoutMs = 45_000, changes = new ChangeBroker()) {
+  constructor(store: JsonGameStore, turnTimeoutMs = 45_000, botThinkMinMs = 1_200, botThinkMaxMs = 2_200, changes = new ChangeBroker()) {
     this.store = store;
     this.turnTimeoutMs = turnTimeoutMs;
     this.changes = changes;
+    this.botThinkMinMs = botThinkMinMs;
+    this.botThinkMaxMs = Math.max(botThinkMinMs, botThinkMaxMs);
   }
 
   private roomResource(roomId: string) { return `room:${roomId}`; }
   private gameResource(gameId: string) { return `game:${gameId}`; }
+
+  private botTurnTiming(game: NonNullable<ReturnType<JsonGameStore['game']>>) {
+    if (game.phase === 'finished' || !game.players[game.currentSeat]!.isBot) {
+      this.botTurnSchedules.delete(game.id);
+      return null;
+    }
+    const existing = this.botTurnSchedules.get(game.id);
+    if (existing?.sequence === game.sequence) return existing;
+    const durationMs = this.botThinkMinMs === this.botThinkMaxMs
+      ? this.botThinkMinMs
+      : randomInt(this.botThinkMinMs, this.botThinkMaxMs + 1);
+    const timing = { sequence: game.sequence, durationMs, deadlineMs: Date.parse(game.updatedAt) + durationMs };
+    this.botTurnSchedules.set(game.id, timing);
+    return timing;
+  }
+
+  private timedGameView(game: NonNullable<ReturnType<JsonGameStore['game']>>, userId: string) {
+    const timing = this.botTurnTiming(game);
+    const player = game.players[game.currentSeat];
+    return {
+      ...gameView(game, userId),
+      turn: game.phase === 'finished' ? null : {
+        kind: player?.isBot ? 'bot' as const : 'human' as const,
+        durationMs: timing?.durationMs ?? this.turnTimeoutMs,
+        deadline: new Date(timing?.deadlineMs ?? (Date.parse(game.updatedAt) + this.turnTimeoutMs)).toISOString(),
+      },
+    };
+  }
+
+  private advanceReadyBot(game: NonNullable<ReturnType<JsonGameStore['game']>>, at: number) {
+    const timing = this.botTurnTiming(game);
+    if (!timing || at < timing.deadlineMs) return false;
+    this.botTurnSchedules.delete(game.id);
+    return advanceBotTurn(game);
+  }
 
   private touchRoom(room: RoomRecord) {
     room.version += 1;
@@ -85,7 +125,7 @@ export class DouJoyPlatform {
     const game = createGame({ humanId: userId, humanName: user.name, baseStake: Math.min(100, Math.floor(balance / 128)) });
     this.store.putGame(game);
     await this.store.save();
-    return gameView(game, userId);
+    return this.timedGameView(game, userId);
   }
 
   private roomView(room: RoomRecord, userId: string) {
@@ -180,7 +220,7 @@ export class DouJoyPlatform {
     this.touchRoom(room);
     await this.store.save();
     this.changes.notify(this.roomResource(room.id));
-    return { room: this.roomView(room, userId), game: gameView(game, userId) };
+    return { room: this.roomView(room, userId), game: this.timedGameView(game, userId) };
   }
 
   async leaveRoom(roomId: string, userId: string) {
@@ -207,21 +247,21 @@ export class DouJoyPlatform {
     const game = this.store.game(gameId);
     if (!game) throw new PlatformError(404, 'GAME_NOT_FOUND', '牌局不存在。');
     if (!game.players.some((player) => player.id === userId)) throw new PlatformError(403, 'GAME_FORBIDDEN', '你不在这局牌中。');
-    return gameView(game, userId);
+    return this.timedGameView(game, userId);
   }
 
   async refreshedView(gameId: string, userId: string, at = Date.now()) {
     const game = this.store.game(gameId);
     if (!game) throw new PlatformError(404, 'GAME_NOT_FOUND', '牌局不存在。');
     if (!game.players.some((player) => player.id === userId)) throw new PlatformError(403, 'GAME_FORBIDDEN', '你不在这局牌中。');
-    if (advanceTimedOutPlayer(game, at, this.turnTimeoutMs)) {
+    if (this.advanceReadyBot(game, at) || advanceTimedOutPlayer(game, at, this.turnTimeoutMs)) {
       this.postSettlement(game);
       const finishedRoomId = game.phase === 'finished' ? this.finishRoomForGame(game.id) : null;
       await this.store.save();
       this.changes.notify(this.gameResource(game.id));
       if (finishedRoomId) this.changes.notify(this.roomResource(finishedRoomId));
     }
-    return gameView(game, userId);
+    return this.timedGameView(game, userId);
   }
 
   async waitGame(gameId: string, userId: string, version: number, timeoutMs: number, signal?: AbortSignal) {
@@ -233,7 +273,9 @@ export class DouJoyPlatform {
     game = this.view(gameId, userId);
     if (game.sequence !== version) return { game, version: game.sequence, changed: true, timedOut: false };
 
-    const outcome = await this.changes.wait(resource, generation, timeoutMs, signal);
+    const botDeadline = game.turn?.kind === 'bot' ? Date.parse(game.turn.deadline) : null;
+    const effectiveTimeout = botDeadline === null ? timeoutMs : Math.min(timeoutMs, Math.max(1, botDeadline - Date.now()));
+    const outcome = await this.changes.wait(resource, generation, effectiveTimeout, signal);
     if (outcome === 'aborted') return null;
     game = await this.refreshedView(gameId, userId);
     return { game, version: game.sequence, changed: game.sequence !== version, timedOut: outcome === 'timeout' };
@@ -269,19 +311,32 @@ export class DouJoyPlatform {
       if (input.kind === 'bid') bid(game, input.userId, input.score as 0 | 1 | 2 | 3);
       else if (input.kind === 'play') play(game, input.userId, input.cardIds ?? []);
       else pass(game, input.userId);
-      advanceBots(game);
     } catch (error) {
       if (error instanceof GameRuleError) throw new PlatformError(409, error.code, error.message);
       throw error;
     }
     this.postSettlement(game);
     const finishedRoomId = game.phase === 'finished' ? this.finishRoomForGame(game.id) : null;
-    const result = { game: gameView(game, input.userId), profile: this.profile(input.userId) };
+    const result = { game: this.timedGameView(game, input.userId), profile: this.profile(input.userId) };
     this.store.setActionResult(key, result);
     await this.store.save();
     this.changes.notify(this.gameResource(game.id));
     if (finishedRoomId) this.changes.notify(this.roomResource(finishedRoomId));
     return result;
+  }
+
+  async abandonGame(gameId: string, userId: string) {
+    const game = this.store.game(gameId);
+    if (!game) throw new PlatformError(404, 'GAME_NOT_FOUND', '牌局不存在。');
+    if (!game.players.some((player) => player.id === userId)) throw new PlatformError(403, 'GAME_FORBIDDEN', '你不在这局牌中。');
+    if (game.phase !== 'finished') forfeit(game, userId);
+    this.botTurnSchedules.delete(game.id);
+    this.postSettlement(game);
+    const finishedRoomId = this.finishRoomForGame(game.id);
+    await this.store.save();
+    this.changes.notify(this.gameResource(game.id));
+    if (finishedRoomId) this.changes.notify(this.roomResource(finishedRoomId));
+    return { left: true, game: this.timedGameView(game, userId), profile: this.profile(userId) };
   }
 
   async relief(userId: string) {

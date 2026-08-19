@@ -22,6 +22,10 @@ export function gameView(state: GameState, viewerId: string) {
     leadCombination: state.leadCombination,
     leadCards: state.leadCardIds.map((id) => allKnownCards.find((card) => card.id === id)).filter(Boolean),
     lastEvent: state.events.at(-1) ?? null,
+    recentEvents: state.events.slice(-4).map((event) => ({
+      ...event,
+      cards: event.cardIds.map((id) => allKnownCards.find((card) => card.id === id)).filter(Boolean),
+    })),
     sequence: state.sequence,
     bombs: state.bombs,
     baseStake: state.baseStake,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bid, createGame, pass, play } from '../core/engine.ts';
+import { advanceBotTurn, bid, createGame, forfeit, pass, play } from '../core/engine.ts';
 import { createDeck } from '../core/cards.ts';
 import { GameRuleError } from '../core/types.ts';
 import { createHash } from 'node:crypto';
@@ -44,4 +44,26 @@ test('settlement is zero-sum and cannot leave the winner ambiguous', () => {
   assert.equal(Object.values(game.settlement!.deltas).reduce((sum, value) => sum + value, 0), 0);
   const digest = createHash('sha256').update(`${game.fairness.nonce}:${game.fairness.deckOrder.join(',')}`).digest('hex');
   assert.equal(digest, game.fairness.commitment);
+});
+
+test('a bot advances exactly one visible turn at a time', () => {
+  const game = createGame({ humanId: 'human', humanName: '测试玩家', baseStake: 50, deck: createDeck() });
+  bid(game, 'human', 3);
+  play(game, 'human', [game.hands.human[0]!.id]);
+  const beforeSequence = game.sequence;
+  const beforeEvents = game.events.length;
+  assert.equal(game.players[game.currentSeat]!.isBot, true);
+  assert.equal(advanceBotTurn(game), true);
+  assert.equal(game.sequence, beforeSequence + 1);
+  assert.equal(game.events.length, beforeEvents + 1);
+});
+
+test('forfeiting finishes the game as a loss with a zero-sum settlement', () => {
+  const game = createGame({ humanId: 'human', humanName: '测试玩家', baseStake: 50, deck: createDeck() });
+  forfeit(game, 'human');
+  assert.equal(game.phase, 'finished');
+  assert.equal(game.players[0]!.role, 'landlord');
+  assert.equal(game.settlement?.winner, 'farmers');
+  assert.ok(game.settlement!.deltas.human! < 0);
+  assert.equal(Object.values(game.settlement!.deltas).reduce((sum, value) => sum + value, 0), 0);
 });

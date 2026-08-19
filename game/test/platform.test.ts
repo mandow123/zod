@@ -7,6 +7,18 @@ import { chooseBotPlay } from '../core/bot.ts';
 import { DouJoyPlatform, PlatformError } from '../server/src/platform.ts';
 import { JsonGameStore } from '../server/src/store.ts';
 
+type PlatformGameView = Awaited<ReturnType<DouJoyPlatform['quickGame']>>;
+
+async function advanceBotTurns(platform: DouJoyPlatform, game: PlatformGameView, userId: string) {
+  let current = game;
+  while (current.phase !== 'finished' && current.players[current.currentSeat]!.isBot) {
+    const beforeSequence = current.sequence;
+    current = await platform.refreshedView(current.id, userId, Date.parse(current.updatedAt) + 10_000);
+    assert.equal(current.sequence, beforeSequence + 1, 'each bot refresh must expose exactly one action');
+  }
+  return current;
+}
+
 test('a guest can finish an authoritative game and receive one ledger settlement', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'doujoy-'));
   try {
@@ -30,6 +42,7 @@ test('a guest can finish an authoritative game and receive one ledger settlement
           kind: selected ? 'play' : 'pass', cardIds: selected?.map((card) => card.id),
         }));
       }
+      game = await advanceBotTurns(platform, game, session.profile.id);
     }
     assert.equal(game.phase, 'finished');
     const history = platform.history(session.profile.id);
@@ -77,9 +90,11 @@ test('an offline player is safely auto-played after the configured turn timeout'
     assert.equal(resume.room, null);
     const beforeSequence = game.sequence;
     const refreshed = await platform.refreshedView(game.id, session.profile.id, Date.parse(game.updatedAt) + 10_001);
-    assert.ok(refreshed.sequence > beforeSequence);
+    assert.equal(refreshed.sequence, beforeSequence + 1);
     assert.notEqual(refreshed.phase, 'finished');
-    assert.equal(refreshed.currentSeat, refreshed.viewerSeat);
+    assert.equal(refreshed.players[refreshed.currentSeat]!.isBot, true);
+    const returned = await advanceBotTurns(platform, refreshed, session.profile.id);
+    assert.equal(returned.currentSeat, returned.viewerSeat);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

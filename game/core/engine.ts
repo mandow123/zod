@@ -126,6 +126,27 @@ function settle(state: GameState, winnerSeat: number) {
   state.updatedAt = now();
 }
 
+export function forfeit(state: GameState, playerId: string) {
+  if (state.phase === 'finished') return state;
+  const forfeitingSeat = state.players.findIndex((player) => player.id === playerId);
+  if (forfeitingSeat < 0) throw new GameRuleError('PLAYER_NOT_IN_GAME', '你不在这局牌中。');
+  if (state.phase === 'bidding') {
+    state.landlordSeat = forfeitingSeat;
+    state.highestBid = Math.max(1, state.highestBid) as 1 | 2 | 3;
+    state.highestBidSeat = forfeitingSeat;
+    state.players = state.players.map((player, seat) => ({
+      ...player,
+      role: seat === forfeitingSeat ? 'landlord' : 'farmer',
+    }));
+  }
+  const winnerSeat = forfeitingSeat === state.landlordSeat
+    ? nextSeat(forfeitingSeat)
+    : state.landlordSeat!;
+  state.sequence += 1;
+  settle(state, winnerSeat);
+  return state;
+}
+
 export function play(state: GameState, playerId: string, cardIds: readonly string[]) {
   if (state.phase !== 'playing') throw new GameRuleError('PLAYING_CLOSED', '当前不能出牌。');
   assertTurn(state, playerId);
@@ -166,18 +187,23 @@ export function pass(state: GameState, playerId: string) {
   return state;
 }
 
+export function advanceBotTurn(state: GameState) {
+  if (state.phase === 'finished' || !state.players[state.currentSeat]!.isBot) return false;
+  const bot = state.players[state.currentSeat]!;
+  if (state.phase === 'bidding') bid(state, bot.id, chooseBotBid(state.hands[bot.id]!, state.highestBid));
+  else {
+    const cards = chooseBotPlay(state.hands[bot.id]!, state.leadCombination);
+    if (cards) play(state, bot.id, cards.map((card) => card.id));
+    else pass(state, bot.id);
+  }
+  return true;
+}
+
 export function advanceBots(state: GameState) {
   let safety = 0;
   while (state.phase !== 'finished' && state.players[state.currentSeat]!.isBot) {
     if (safety++ > 200) throw new Error('BOT_TURN_SAFETY_LIMIT');
-    const bot = state.players[state.currentSeat]!;
-    if (state.phase === 'bidding') {
-      bid(state, bot.id, chooseBotBid(state.hands[bot.id]!, state.highestBid));
-      continue;
-    }
-    const cards = chooseBotPlay(state.hands[bot.id]!, state.leadCombination);
-    if (cards) play(state, bot.id, cards.map((card) => card.id));
-    else pass(state, bot.id);
+    advanceBotTurn(state);
   }
   return state;
 }
@@ -185,10 +211,7 @@ export function advanceBots(state: GameState) {
 export function advanceTimedOutPlayer(state: GameState, at = Date.now(), timeoutMs = 45_000) {
   if (state.phase === 'finished' || at - Date.parse(state.updatedAt) < timeoutMs) return false;
   const player = state.players[state.currentSeat]!;
-  if (player.isBot) {
-    advanceBots(state);
-    return true;
-  }
+  if (player.isBot) return false;
   if (state.phase === 'bidding') bid(state, player.id, 0);
   else if (state.leadCombination && state.lastPlaySeat !== state.currentSeat) pass(state, player.id);
   else {
@@ -196,6 +219,5 @@ export function advanceTimedOutPlayer(state: GameState, at = Date.now(), timeout
     if (!cards) throw new Error('TIMEOUT_PLAY_REQUIRED');
     play(state, player.id, cards.map((card) => card.id));
   }
-  advanceBots(state);
   return true;
 }

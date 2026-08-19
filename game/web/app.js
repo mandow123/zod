@@ -5,7 +5,7 @@ const LEGACY_TOKEN_KEY = 'doujoy.web.token';
 const TOKEN_KEY = 'kai.play.token';
 const TURN_TIMEOUT_MS = 45_000;
 const DEAL_ANIMATION_MS = 3_750;
-const state = { token: localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY), profile: null, view: 'lobby', game: null, room: null, history: null, selected: new Set(), busy: false, error: '', dealingGameId: null, dealTimer: null, waitController: null };
+const state = { token: localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY), profile: null, view: 'lobby', game: null, room: null, history: null, selected: new Set(), busy: false, error: '', dealingGameId: null, dealTimer: null, waitController: null, exitConfirm: false };
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => new Intl.NumberFormat('zh-CN').format(value || 0);
@@ -113,9 +113,11 @@ function poker(c, selectable = true) {
 }
 
 function turnRemaining(g) {
-  const updatedAt = Date.parse(g?.updatedAt || '');
-  if (!Number.isFinite(updatedAt) || g?.phase === 'finished') return 0;
-  return Math.max(0, Math.ceil((updatedAt + TURN_TIMEOUT_MS - Date.now()) / 1000));
+  const deadline = Date.parse(g?.turn?.deadline || '');
+  const fallback = Date.parse(g?.updatedAt || '') + TURN_TIMEOUT_MS;
+  const effectiveDeadline = Number.isFinite(deadline) ? deadline : fallback;
+  if (!Number.isFinite(effectiveDeadline) || g?.phase === 'finished') return 0;
+  return Math.max(0, Math.ceil((effectiveDeadline - Date.now()) / 1000));
 }
 
 function dealSequence() {
@@ -131,16 +133,29 @@ function dealSequence() {
 function turnFeedback(g, canAct) {
   const remaining = turnRemaining(g);
   const current = g.players.find(player => player.seat === g.currentSeat);
-  const urgent = remaining <= 10;
-  const progress = Math.round((remaining / (TURN_TIMEOUT_MS / 1000)) * 360);
+  const botTurn = g.turn?.kind === 'bot' || current?.isBot;
+  const durationSeconds = Math.max(1, Math.ceil((g.turn?.durationMs || TURN_TIMEOUT_MS) / 1000));
+  const urgent = !botTurn && remaining <= 10;
+  const progress = Math.min(360, Math.round((remaining / durationSeconds) * 360));
   const title = canAct ? '你的思考时间' : `${current?.name || '牌友'}正在思考`;
   const detail = remaining > 0
-    ? (canAct ? '请在倒计时结束前完成操作' : '对方操作后牌桌会自动同步')
+    ? (canAct ? '请在倒计时结束前完成操作' : botTurn ? `预计 ${remaining} 秒内行动` : '对方操作后牌桌会自动同步')
     : '时间到，服务端正在自动托管';
-  return `<div class="turn-feedback ${canAct?'is-mine':'is-waiting'} ${urgent?'is-urgent':''}" role="timer" aria-live="${urgent?'polite':'off'}" aria-label="${esc(title)}，${remaining > 0 ? `剩余 ${remaining} 秒` : detail}">
+  return `<div class="turn-feedback ${canAct?'is-mine':'is-waiting'} ${botTurn?'is-bot':''} ${urgent?'is-urgent':''}" role="timer" aria-live="${urgent?'polite':'off'}" aria-label="${esc(title)}，${remaining > 0 ? `剩余 ${remaining} 秒` : detail}">
     <div class="turn-timer" style="--turn-progress:${progress}deg"><strong>${remaining || '··'}</strong><small>${remaining ? '秒' : '托管'}</small></div>
-    <div class="turn-copy"><b>${esc(title)}</b><small>${detail}</small></div>
+    <div class="turn-copy"><b>${esc(title)}${botTurn?'<span class="thinking-dots"><i></i><i></i><i></i></span>':''}</b><small>${detail}</small></div>
   </div>`;
+}
+
+function actionTrail(g) {
+  const events = (g.recentEvents || []).slice(-3);
+  if (!events.length) return '<p>牌局开始，祝你好运</p>';
+  return `<div class="action-trail" aria-label="最近行动">${events.map(event => {
+    const player = g.players.find(candidate => candidate.seat === event.seat);
+    const cards = (event.cards || []).map(card => `${rank(card.rank)}${suit(card.suit)}`);
+    const summary = event.kind === 'pass' ? '略过' : `${cards.slice(0,4).join(' ')}${cards.length>4?` +${cards.length-4}`:''}`;
+    return `<span class="${event.seat===g.currentSeat?'current':''}"><b>${esc(player?.name || '玩家')}</b>${esc(summary || '已出牌')}</span>`;
+  }).join('<i>→</i>')}</div>`;
 }
 
 function game() {
@@ -156,8 +171,10 @@ function game() {
   const disabled=canAct?'':'disabled';
   const actions=g.phase==='bidding' ? [0,1,2,3].map(n=>`<button class="btn table-action ${n===3?'gold':''}" data-bid="${n}" ${disabled}>${n===0?'让先':n+' 档'}</button>`).join('') : g.phase==='playing' ? `<button class="btn table-action ghost" data-action="pass" ${disabled}>略过</button><button class="btn table-action primary" data-action="play" ${disabled}>出牌</button>` : `<button class="btn table-action primary" data-action="finish">回到大厅</button>`;
   const result=g.settlement?`<div class="card result-card"><span class="kicker">本局战报</span><h2>${g.settlement.winner==='landlord'?'领队获胜':'协作方获胜'}</h2><p class="muted">竞技系数 ${g.settlement.multiplier} · 公平承诺 ${esc(g.fairness.commitment.slice(0,12))}…</p></div>`:'';
-  const turnText = isDealing?'正在依次发牌':g.phase==='finished'?'本局已结束':g.currentSeat===g.viewerSeat?(g.phase==='bidding'?'轮到你选择争分':'轮到你出牌'):'牌友正在思考';
-  return `<div class="shell table"><header class="game-top"><div class="brand compact"><div class="logo"><span></span>K</div><div>KAI PLAY<small>三人争先</small></div></div><div class="round-state"><span>${turnText}</span><b>基础系数 ${g.baseStake} · 当前 ${Math.max(1,2**g.bombs)}</b></div><div class="score-pill compact-score"><small>竞技分</small><strong>${money(competitiveScore(state.profile))}</strong></div></header>${result}<section class="landscape-table ${isDealing?'is-dealing':''}"><div class="table-score"><b>基础 ${g.baseStake}</b><span>系数 ${Math.max(1,2**g.bombs)}</span></div>${playerPod(rivals[0]||viewer,'opponent-left')}${playerPod(rivals[1]||viewer,'opponent-right')}${playerPod(viewer,'viewer-pod')}${g.bottomCards?.length?`<div class="bottom-reveal"><small>增补牌</small>${g.bottomCards.map(c=>poker(c,false)).join('')}</div>`:''}<div class="play-zone"><div class="play-cards">${lead}</div><p>${g.lastEvent?`${esc(g.players.find(p=>p.seat===g.lastEvent.seat)?.name||'玩家')} ${g.lastEvent.kind==='pass'?'选择略过':'已出牌'}`:'牌局开始，祝你好运'}</p></div><div class="center-controls" ${isDealing?'aria-hidden="true"':''}>${g.phase==='finished'?'':turnFeedback(g,viewerTurn)}<div class="game-actions">${actions}</div></div><footer class="hand-dock" ${isDealing?'aria-hidden="true"':''}><div class="hand">${g.hand.map(c=>poker(c,true)).join('')}</div><p>点击手牌选择 · 规则由服务端统一判定</p></footer>${isDealing?dealSequence():''}</section></div>`;
+  const currentPlayer=g.players.find(p=>p.seat===g.currentSeat);
+  const turnText = isDealing?'正在依次发牌':g.phase==='finished'?'本局已结束':viewerTurn?(g.phase==='bidding'?'轮到你选择争分':'轮到你出牌'):`${currentPlayer?.name||'牌友'}正在思考`;
+  const exitDialog=state.exitConfirm?`<div class="exit-shade"><section class="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-title"><span>结束本局</span><h2 id="exit-title">确定不打了吗？</h2><p>退出会按本局负场结算；好友局也会同时结束。你可以留下继续完成这一局。</p><div><button class="btn" data-action="cancel-exit">继续本局</button><button class="btn danger" data-action="confirm-exit">认输并退出</button></div></section></div>`:'';
+  return `<div class="shell table"><header class="game-top"><div class="game-branding"><div class="brand compact"><div class="logo"><span></span>K</div><div>KAI PLAY<small>三人争先</small></div></div></div><div class="round-state"><span>${turnText}</span><b>基础系数 ${g.baseStake} · 当前 ${Math.max(1,2**g.bombs)}</b></div><div class="score-pill compact-score"><small>竞技分</small><strong>${money(competitiveScore(state.profile))}</strong></div></header>${result}<section class="landscape-table ${isDealing?'is-dealing':''}">${g.phase==='finished'?'':`<button class="table-exit table-exit-float" data-action="open-exit" aria-label="退出当前牌局">← 退出</button>`}<div class="table-score"><b>基础 ${g.baseStake}</b><span>系数 ${Math.max(1,2**g.bombs)}</span></div>${playerPod(rivals[0]||viewer,'opponent-left')}${playerPod(rivals[1]||viewer,'opponent-right')}${playerPod(viewer,'viewer-pod')}${g.bottomCards?.length?`<div class="bottom-reveal"><small>增补牌</small>${g.bottomCards.map(c=>poker(c,false)).join('')}</div>`:''}<div class="play-zone"><div class="play-cards">${lead}</div>${actionTrail(g)}</div><div class="center-controls" ${isDealing?'aria-hidden="true"':''}>${g.phase==='finished'?'':turnFeedback(g,viewerTurn)}<div class="game-actions">${actions}</div></div><footer class="hand-dock" ${isDealing?'aria-hidden="true"':''}><div class="hand">${g.hand.map(c=>poker(c,true)).join('')}</div><p>点击手牌选择 · 规则由服务端统一判定</p></footer>${isDealing?dealSequence():''}</section>${exitDialog}</div>`;
 }
 
 function history() {
@@ -186,6 +203,7 @@ function enterGame(nextGame, {animateDeal=false}={}) {
   state.game=nextGame;
   state.view='game';
   state.selected.clear();
+  state.exitConfirm=false;
   const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   state.dealingGameId=animateDeal&&nextGame.phase==='bidding'&&!reducedMotion ? nextGame.id : null;
   state.dealTimer=state.dealingGameId ? setTimeout(()=>finishDeal(nextGame.id),DEAL_ANIMATION_MS) : null;
@@ -253,6 +271,9 @@ app.addEventListener('click', e => {
   if(a==='pass') act(async()=>{const r=await api(`/v1/games/${state.game.id}/pass`,{method:'POST',body:JSON.stringify({expectedSequence:state.game.sequence}),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;});
   if(a==='play') act(async()=>{if(!state.selected.size)throw new Error('请先选择要出的牌');const r=await api(`/v1/games/${state.game.id}/play`,{method:'POST',body:JSON.stringify({cardIds:[...state.selected],expectedSequence:state.game.sequence}),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;state.selected.clear();});
   if(a==='finish') act(async()=>{stopGameSync();await refreshProfile();state.game=null;state.view='lobby';});
+  if(a==='open-exit'){state.exitConfirm=true;render();}
+  if(a==='cancel-exit'){state.exitConfirm=false;render();}
+  if(a==='confirm-exit') act(async()=>{const r=await api(`/v1/games/${state.game.id}/abandon`,{method:'POST',body:'{}'});stopGameSync();state.profile=r.profile;state.game=null;state.exitConfirm=false;state.view='lobby';toast('已退出本局');});
   if(a?.startsWith('preview-')) {
     const messages = {
       'preview-xiangqi':'KAI 象棋正在设计中，当前页面只展示产品方向。',

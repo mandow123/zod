@@ -48,6 +48,14 @@ test('HTTP server exposes health, guest session, profile and quick game contract
     }).then((response) => response.json()) as { report: { created: boolean; status: string } };
     assert.equal(report.report.created, true);
     assert.equal(report.report.status, 'open');
+    const abandoned = await fetch(`http://127.0.0.1:${port}/v1/games/${quick.game.id}/abandon`, {
+      method: 'POST', headers: { authorization: `Bearer ${session.token}`, 'content-type': 'application/json' }, body: '{}',
+    }).then((response) => response.json()) as { ok: boolean; left: boolean; game: { phase: string; settlement: { winner: string } }; profile: { games: number } };
+    assert.equal(abandoned.ok, true);
+    assert.equal(abandoned.left, true);
+    assert.equal(abandoned.game.phase, 'finished');
+    assert.equal(abandoned.game.settlement.winner, 'farmers');
+    assert.equal(abandoned.profile.games, 1);
 
     const second = await fetch(`http://127.0.0.1:${port}/v1/sessions/guest`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: '房主' }),

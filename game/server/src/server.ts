@@ -10,6 +10,8 @@ const port = Number(process.env.DOUJOY_PORT ?? 4310);
 const dataPath = process.env.DOUJOY_DATA_PATH ?? resolve(fileURLToPath(new URL('../data/state.json', import.meta.url)));
 const corsOrigin = process.env.DOUJOY_CORS_ORIGIN ?? (process.env.NODE_ENV === 'production' ? '' : '*');
 const turnTimeoutMs = Number(process.env.DOUJOY_TURN_TIMEOUT_MS ?? 45_000);
+const botThinkMinMs = Number(process.env.DOUJOY_BOT_THINK_MIN_MS ?? 1_200);
+const botThinkMaxMs = Number(process.env.DOUJOY_BOT_THINK_MAX_MS ?? 2_200);
 const backupCount = Number(process.env.DOUJOY_BACKUP_COUNT ?? 3);
 const waitTimeoutMaxMs = Number(process.env.DOUJOY_WAIT_TIMEOUT_MAX_MS ?? 25_000);
 const cloudPayMode = process.env.DOUJOY_CLOUDPAY_MODE ?? 'disabled';
@@ -18,6 +20,10 @@ const cloudPaySandboxDataPath = process.env.DOUJOY_CLOUDPAY_SANDBOX_DATA_PATH
 if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('DOUJOY_PORT_INVALID');
 if (!corsOrigin) throw new Error('DOUJOY_CORS_ORIGIN_REQUIRED_IN_PRODUCTION');
 if (!Number.isInteger(turnTimeoutMs) || turnTimeoutMs < 10_000 || turnTimeoutMs > 120_000) throw new Error('DOUJOY_TURN_TIMEOUT_MS_INVALID');
+if (!Number.isInteger(botThinkMinMs) || !Number.isInteger(botThinkMaxMs)
+  || botThinkMinMs < 500 || botThinkMaxMs > 10_000 || botThinkMinMs > botThinkMaxMs) {
+  throw new Error('DOUJOY_BOT_THINK_RANGE_INVALID');
+}
 if (!Number.isInteger(backupCount) || backupCount < 1 || backupCount > 10) throw new Error('DOUJOY_BACKUP_COUNT_INVALID');
 if (!Number.isInteger(waitTimeoutMaxMs) || waitTimeoutMaxMs < 100 || waitTimeoutMaxMs > 30_000) throw new Error('DOUJOY_WAIT_TIMEOUT_MAX_MS_INVALID');
 if (!['disabled', 'sandbox'].includes(cloudPayMode)) throw new Error('DOUJOY_CLOUDPAY_MODE_INVALID');
@@ -27,7 +33,7 @@ if (cloudPayMode === 'sandbox' && resolve(cloudPaySandboxDataPath) === resolve(d
 const store = new JsonGameStore(dataPath, { backupCount });
 await store.load();
 if (store.recoverySource()) console.warn(`DouJoy store recovered from ${store.recoverySource()}`);
-const platform = new DouJoyPlatform(store, turnTimeoutMs);
+const platform = new DouJoyPlatform(store, turnTimeoutMs, botThinkMinMs, botThinkMaxMs);
 const sandboxBillingStore = new SandboxBillingStore(cloudPaySandboxDataPath);
 if (cloudPayMode === 'sandbox') await sandboxBillingStore.load();
 const billing = new CloudPayBillingService(cloudPayMode as CloudPayMode, sandboxBillingStore);
@@ -181,11 +187,14 @@ const server = createServer(async (request, response) => {
     }
     if (roomMatch && request.method === 'POST' && roomMatch[2] === 'start') return json(response, 200, { ok: true, ...(await platform.startRoom(roomMatch[1]!, user.id)) });
     if (roomMatch && request.method === 'POST' && roomMatch[2] === 'leave') return json(response, 200, { ok: true, ...(await platform.leaveRoom(roomMatch[1]!, user.id)) });
-    const gameMatch = url.pathname.match(/^\/v1\/games\/([^/]+)(?:\/(bid|play|pass|wait))?$/);
+    const gameMatch = url.pathname.match(/^\/v1\/games\/([^/]+)(?:\/(bid|play|pass|wait|abandon))?$/);
     if (gameMatch && request.method === 'GET' && !gameMatch[2]) return json(response, 200, { ok: true, game: await platform.refreshedView(gameMatch[1]!, user.id) });
     if (gameMatch && request.method === 'GET' && gameMatch[2] === 'wait') {
       const input = waitInput(url);
       return await longPoll(request, response, clientAddress, user.id, (signal) => platform.waitGame(gameMatch[1]!, user.id, input.version, input.timeoutMs, signal));
+    }
+    if (gameMatch && request.method === 'POST' && gameMatch[2] === 'abandon') {
+      return json(response, 200, { ok: true, ...(await platform.abandonGame(gameMatch[1]!, user.id)) });
     }
     if (gameMatch && request.method === 'POST' && gameMatch[2]) {
       const input = await body(request);
