@@ -61,6 +61,7 @@ import {
 } from './src/creator-commissions';
 import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
+import { VideoGenerationScreen } from './src/screens/VideoGenerationScreen';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
@@ -456,6 +457,8 @@ function CloudPayApp() {
           onOpenCreatorCollaboration={() => navigate('creator')}
           onOpenPayout={() => setPayoutVisible(true)}
           onOpenMessages={() => navigate('messages')} />;
+      case 'video':
+        return <VideoGenerationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)} />;
       case 'home':
       default:
         return <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}
@@ -475,7 +478,7 @@ function CloudPayApp() {
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       <View style={styles.page}>{page}</View>
-      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
+      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab === 'video' ? 'home' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}

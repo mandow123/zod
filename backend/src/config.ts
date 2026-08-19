@@ -10,6 +10,8 @@ const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(4100),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:4100'),
   DATABASE_URL: optionalText,
+  AI_API_KEY: optionalText,
+  AI_API_BASE_URL: z.string().url().default('https://gw.aiapiway.com/v1'),
   DATABASE_SSL: z.enum(['true', 'false']).default('false'),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   ACCESS_TOKEN_SECRET: optionalText,
@@ -168,6 +170,9 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   const parsed = environmentSchema.parse(input);
   const environment = { ...input };
   const database = capability(environment, ['DATABASE_URL']);
+  const seedance = mergeCapability(capability(environment, ['AI_API_KEY']), [
+    ...(parsed.AI_API_BASE_URL.startsWith('https://') ? [] : ['AI_API_BASE_URL(HTTPS)']),
+  ]);
   const tokenSecurity = secretCapability(environment);
   const publicHttps = new URL(parsed.PUBLIC_ORIGIN).protocol === 'https:';
   const sms = capability(environment, [
@@ -375,7 +380,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
         database, tokenSecurity, kaiOidc, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
-        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
+        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions, seedance,
       },
     },
   } as const;

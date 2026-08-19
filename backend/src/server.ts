@@ -66,6 +66,9 @@ import { CreatorCommissionWorker } from './creator-commissions/worker.js';
 import { PostgresResourceInquiryStore } from './resource-inquiries/store.js';
 import { ResourceInquiryService } from './resource-inquiries/service.js';
 import { ResourceInquiryExpiryWorker } from './resource-inquiries/worker.js';
+import { AiApiWayVideoProvider } from './video-tasks/provider.js';
+import { PostgresVideoTaskStore } from './video-tasks/store.js';
+import { VideoTaskService } from './video-tasks/service.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -150,6 +153,9 @@ const creatorCommissionService=creatorCommissionStore&&subjectService&&config.re
   :undefined;
 const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.tokenSecurity.available
   ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
+const videoTaskService = database && accountService && config.readiness.capabilities.tokenSecurity.available
+  ? new VideoTaskService(new PostgresVideoTaskStore(database), new AiApiWayVideoProvider(config))
+  : undefined;
 const nodeEnrollmentService = database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
@@ -186,6 +192,7 @@ const app = await buildApp({
   ...(vastMarketService ? { vastMarketService } : {}),
   ...(creatorCommissionService ? { creatorCommissionService } : {}),
   ...(resourceInquiryService ? { resourceInquiryService } : {}),
+  ...(videoTaskService ? { videoTaskService } : {}),
 });
 const vastReconciliationWorker = vastMarketService && vastProvider.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
