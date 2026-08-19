@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-002",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-19T05:31:11.211Z",
+  "baseCommit": "5a4ea842d412cc8d95e0dcbae32ce88becc5eaf2",
+  "stagedDiffSha256": "9ae73736cdac0b01362bed193dd17bd578a67543625afad124e6c3a5f86d7520",
+  "summary": "批准首版关闭 Universal Link 时完全省略关联域 entitlement 的配置修复。"
+}

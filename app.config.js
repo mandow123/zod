@@ -16,6 +16,7 @@ const pushNotificationsEnabled = process.env.CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED
   || (process.env.CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED === undefined && Boolean(configuredProjectId));
 const kaiAuthUniversalLinksEnabled = buildPolicy.platform === 'ios'
   && process.env.CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED === '1';
+const { associatedDomains: _sourceAssociatedDomains, ...sourceIos } = source.expo.ios ?? {};
 const pluginName = (plugin) => Array.isArray(plugin) ? plugin[0] : plugin;
 const configuredPlugins = source.expo.plugins.filter((plugin) => ![
   'expo-secure-store', 'expo-notifications', 'expo-splash-screen', 'expo-web-browser',
@@ -49,8 +50,10 @@ module.exports = {
       ...platformPlugins,
     ],
     ios: {
-      ...source.expo.ios,
-      associatedDomains: kaiAuthUniversalLinksEnabled ? ['applinks:cloudpay.kai.com'] : [],
+      ...sourceIos,
+      ...(kaiAuthUniversalLinksEnabled
+        ? { associatedDomains: ['applinks:cloudpay.kai.com'] }
+        : {}),
       config: {
         ...source.expo.ios?.config,
         usesNonExemptEncryption: false,

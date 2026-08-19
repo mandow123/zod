@@ -77,7 +77,7 @@ test('resolved iOS config excludes the Android signing plugin and embeds closed 
   assert.equal(config.extra.nativeTopupsEnabled, false);
   assert.equal(config.extra.newOrdersEnabled, false);
   assert.equal(config.extra.kaiAuthUniversalLinksEnabled, false);
-  assert.deepEqual(config.ios.associatedDomains, []);
+  assert.equal(config.ios.associatedDomains, undefined);
   assert.equal(pluginNames.includes('./plugins/with-android-release-signing'), false);
   assert.ok(pluginNames.includes('expo-secure-store'));
   assert.ok(pluginNames.includes('expo-notifications'));
