@@ -11,7 +11,7 @@ const isRed = c => c.suit === 'heart' || c.suit === 'diamond';
 const toast = msg => { toastNode.textContent = msg; toastNode.classList.add('show'); setTimeout(() => toastNode.classList.remove('show'), 2200); };
 
 async function api(path, options = {}) {
-  const res = await fetch(`${API}${path}`, { ...options, headers: { 'content-type':'application/json', ...(state.token ? {authorization:`Bearer ${state.token}`} : {}), ...options.headers } });
+  const res = await fetch(`${API}${path}`, { ...options, headers: { 'content-type':'application/json', ...(state.token ? {'x-doujoy-token':state.token} : {}), ...options.headers } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.ok) throw new Error(body?.error?.message || `请求失败（${res.status}）`);
   return body;

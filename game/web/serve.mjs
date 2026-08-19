@@ -12,6 +12,11 @@ const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; char
 function proxy(req, res, pathname, search) {
   const headers = { ...req.headers, host: upstream.host };
   delete headers.origin;
+  const sessionToken = headers['x-doujoy-token'];
+  if (!headers.authorization && typeof sessionToken === 'string' && sessionToken) {
+    headers.authorization = `Bearer ${sessionToken}`;
+  }
+  delete headers['x-doujoy-token'];
   const proxied = upstreamRequest({ protocol:upstream.protocol, hostname:upstream.hostname, port:upstream.port, method:req.method, path:`${pathname.slice(4) || '/'}${search}`, headers }, response => {
     res.writeHead(response.statusCode || 502, { ...response.headers, 'cache-control':'no-store' });
     response.pipe(res);
