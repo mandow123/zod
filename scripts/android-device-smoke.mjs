@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
-import { androidToolchainEnvironment, discoverAndroidHome } from './android-toolchain.mjs';
+import { androidToolchainEnvironment, discoverAndroidHome, platformExecutable, runPlatformCommand } from './android-toolchain.mjs';
 import { frontendSourceDigest } from './frontend-source-digest.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -18,9 +17,9 @@ const requireProviderMode = process.argv.includes('--provider');
 const requireStoreChannel = process.argv.includes('--store');
 const toolchainEnvironment = androidToolchainEnvironment();
 const androidHome = discoverAndroidHome(toolchainEnvironment);
-const adb = androidHome ? join(androidHome, 'platform-tools/adb') : 'adb';
-const aapt = androidHome ? join(androidHome, 'build-tools/36.0.0/aapt') : 'aapt';
-const apksigner = androidHome ? join(androidHome, 'build-tools/36.0.0/apksigner') : 'apksigner';
+const adb = platformExecutable(androidHome, androidHome ? 'platform-tools/adb' : 'adb');
+const aapt = platformExecutable(androidHome, androidHome ? 'build-tools/36.0.0/aapt' : 'aapt');
+const apksigner = platformExecutable(androidHome, androidHome ? 'build-tools/36.0.0/apksigner' : 'apksigner');
 const packageName = app.android.package;
 const reportPath = join(root, requireStoreChannel
   ? 'artifacts/test/android-store-provider-smoke-report.json'
@@ -28,21 +27,21 @@ const reportPath = join(root, requireStoreChannel
 const outputDirectory = join(root, requireStoreChannel ? 'artifacts/test/store-smoke' : 'artifacts/release/smoke');
 
 function run(binary, args, options = {}) {
-  const result = spawnSync(binary, args, { encoding: 'utf8', env: toolchainEnvironment, ...options });
+  const result = runPlatformCommand(binary, args, { encoding: 'utf8', env: toolchainEnvironment, ...options });
   if (result.status !== 0) {
-    const detail = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim();
-    throw new Error(`${basename(binary)} ${args.join(' ')} failed${detail ? `:\n${detail}` : ''}`);
-  }
-  return result.stdout ?? '';
-}
-
-function runBinary(binary, args, options = {}) {
-  const result = spawnSync(binary, args, { encoding: null, env: toolchainEnvironment, maxBuffer: 128 * 1024 * 1024, ...options });
-  if (result.status !== 0) {
-    const detail = `${String(result.stdout ?? '')}\n${String(result.stderr ?? '')}`.trim();
+    const detail = `${result.stdout}\n${result.stderr}`.trim();
     throw new Error(`${basename(binary)} ${args.join(' ')} failed${detail ? `:\n${detail}` : ''}`);
   }
   return result.stdout;
+}
+
+function runBinary(binary, args, options = {}) {
+  const result = runPlatformCommand(binary, args, { encoding: null, env: toolchainEnvironment, maxBuffer: 128 * 1024 * 1024, ...options });
+  if (result.status !== 0) {
+    const detail = `${result.stdout}\n${result.stderr}`.trim();
+    throw new Error(`${basename(binary)} ${args.join(' ')} failed${detail ? `:\n${detail}` : ''}`);
+  }
+  return Buffer.isBuffer(result.rawStdout) ? result.rawStdout : Buffer.from(result.stdout);
 }
 
 const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
@@ -159,7 +158,7 @@ if (install) {
     const installedBefore = adbRun('shell', 'pm', 'path', packageName).trim();
     if (installedBefore.startsWith('package:')) adbRun('uninstall', packageName);
   }
-  const firstInstall = spawnSync(adb, ['install', ...(cleanInstall ? [] : ['-r']), apk], { encoding: 'utf8', env: toolchainEnvironment });
+  const firstInstall = runPlatformCommand(adb, ['install', ...(cleanInstall ? [] : ['-r']), apk], { encoding: 'utf8', env: toolchainEnvironment });
   if (firstInstall.status !== 0 && /INSTALL_FAILED_UPDATE_INCOMPATIBLE/u.test(`${firstInstall.stdout}${firstInstall.stderr}`) && replaceIncompatible) {
     const isEmulator = adbRun('shell', 'getprop', 'ro.kernel.qemu').trim() === '1';
     if (!isEmulator) {
@@ -253,9 +252,10 @@ for (const [index, tab] of tabs.entries()) {
     if (expectedReady && !stillSettling) break;
   } while (Date.now() < deadline);
   await writeFile(join(outputDirectory, `android-production-${id}.xml`), hierarchy);
-  const screenshot = spawnSync(adb, ['exec-out', 'screencap', '-p'], { env: toolchainEnvironment });
+  const screenshot = runPlatformCommand(adb, ['exec-out', 'screencap', '-p'], { encoding: null, env: toolchainEnvironment });
   if (screenshot.status !== 0) throw new Error(`Unable to capture ${id} screenshot.`);
-  await writeFile(join(outputDirectory, `android-production-${id}.png`), screenshot.stdout);
+  const screenshotBytes = Buffer.isBuffer(screenshot.rawStdout) ? screenshot.rawStdout : Buffer.from(screenshot.stdout);
+  await writeFile(join(outputDirectory, `android-production-${id}.png`), screenshotBytes);
   const hasExpectedMarker = markers.some((marker) => hierarchy.includes(marker));
   const forbiddenMarker = forbidden.find((marker) => hierarchy.includes(marker));
   const hasRemovedPublishHeader = id === 'publish' && (hierarchy.includes('创建任务') || hierarchy.includes('算力需求、资源与供应商入驻'));

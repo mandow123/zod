@@ -1,4 +1,49 @@
-import type { OfferWizardStep } from './publishing';
+import type { OfferRevisionDraft, OfferWizardDraft, OfferWizardStep } from './publishing';
+
+export type EditableOfferDraft = OfferWizardDraft | OfferRevisionDraft;
+export type OfferSaveState = 'idle' | 'saving' | 'saved' | 'conflict' | 'error';
+
+export const offerConflictCopy = Object.freeze({
+  alertTitle: '这份方案已更新',
+  alertBody: '当前页面的内容不会自动覆盖最新版本。你可以重新读取，或者直接退出。',
+  stayLabel: '继续留在此页',
+  exitLabel: '退出不覆盖',
+  reloadLabel: '重新读取',
+});
+
+export function isRevisionDraft(value: EditableOfferDraft): value is OfferRevisionDraft {
+  return 'offerId' in value && typeof value.offerId === 'string';
+}
+
+export function shouldPromptOfferConflictResolution(saveState: OfferSaveState) {
+  return saveState === 'conflict';
+}
+
+export function discardOfferConflict(discardLocal: () => void, close: () => void) {
+  discardLocal();
+  close();
+}
+
+export async function reloadLatestOfferAfterConflict({
+  current,
+  discardLocal,
+  loadDraft,
+  loadRevision,
+  hydrate,
+}: Readonly<{
+  current: EditableOfferDraft;
+  discardLocal: () => void;
+  loadDraft: (draftId: string) => Promise<OfferWizardDraft>;
+  loadRevision: (offerId: string) => Promise<OfferRevisionDraft>;
+  hydrate: (draft: EditableOfferDraft) => void;
+}>) {
+  discardLocal();
+  const latest = isRevisionDraft(current)
+    ? await loadRevision(current.offerId)
+    : await loadDraft(current.id);
+  hydrate(latest);
+  return latest;
+}
 
 export type OfferWizardFormValues = Readonly<{
   title: string;
@@ -14,7 +59,7 @@ export type OfferWizardFormValues = Readonly<{
   evidenceSummary: string;
 }>;
 
-export function shouldClearFormErrorOnEdit(saveState: 'idle' | 'saving' | 'saved' | 'conflict' | 'error') {
+export function shouldClearFormErrorOnEdit(saveState: OfferSaveState) {
   return saveState !== 'error' && saveState !== 'conflict';
 }
 

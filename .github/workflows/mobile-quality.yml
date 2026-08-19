@@ -1,0 +1,105 @@
+name: Mobile quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: Ubuntu mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check mobile TypeScript
+        run: npm run typecheck:mobile
+
+      - name: Verify mobile/backend contract
+        run: npm run contract:verify
+
+  backend:
+    name: Ubuntu backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install locked backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Check backend TypeScript
+        run: npm run typecheck:backend
+
+      - name: Run backend tests
+        run: npm --prefix backend test
+
+  windows-toolchain:
+    name: Windows toolchain
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run real CMD and batch tests
+        run: node --test test/android-toolchain.test.mjs
+
+  pr-audit:
+    name: PR product audit
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+
+      - name: Verify every PR commit audit
+        run: npm run audit:product -- --range "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

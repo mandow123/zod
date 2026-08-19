@@ -19,8 +19,9 @@ import {
 import { colors } from './theme';
 import { compactDecimal, creditAmount } from './format';
 import {
-  commonDeliveryTerms, draftPriceEvidence, normalizeCreditInput, shouldClearFormErrorOnEdit,
-  validateOfferWizardStep,
+  commonDeliveryTerms, discardOfferConflict, draftPriceEvidence, isRevisionDraft, normalizeCreditInput,
+  offerConflictCopy, reloadLatestOfferAfterConflict, shouldClearFormErrorOnEdit,
+  shouldPromptOfferConflictResolution, validateOfferWizardStep, type EditableOfferDraft, type OfferSaveState,
 } from './offer-wizard-form';
 import { dedicatedGpuServiceTitle, gpuNodeSummary, nodeGpuCount } from './compute-product';
 import { resourceIsDeliverable } from './resource-delivery-readiness';
@@ -59,8 +60,6 @@ const evidenceOptions: Array<{ value: Form['evidenceType']; label: string }> = [
   { value: 'market_quote', label: '市场报价' }, { value: 'cost_breakdown', label: '成本拆分' },
 ];
 
-type EditableOfferDraft = OfferWizardDraft | OfferRevisionDraft;
-
 function formFromDraft(draft: EditableOfferDraft): Form {
   const payload = draft.payload;
   const evidence = payload.priceEvidence?.[0];
@@ -97,10 +96,6 @@ function payloadFromForm(form: Form, capacityUnit: string, previous: OfferWizard
       ...(previous.priceEvidence?.slice(1) ?? []),
     ],
   };
-}
-
-function isRevisionDraft(value: EditableOfferDraft): value is OfferRevisionDraft {
-  return 'offerId' in value && typeof value.offerId === 'string';
 }
 
 function stableValue(value: unknown): unknown {
@@ -156,7 +151,7 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
   const [draft, setDraftState] = useState<EditableOfferDraft | null>(null);
   const [form, setForm] = useState<Form>(emptyForm);
   const [step, setStep] = useState<OfferWizardStep>('service');
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'conflict' | 'error'>('idle');
+  const [saveState, setSaveState] = useState<OfferSaveState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -327,46 +322,49 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
     return () => subscription.remove();
   }, [draft, drain, form, step, visible]);
 
-  const exitWithoutSaving = useCallback(() => {
-    if (submitInFlightRef.current) return;
+  const discardLocalConflict = useCallback(() => {
     desiredRef.current = null;
     submitAttemptRef.current = null;
     hydratedRef.current = false;
-    onClose();
-  }, [onClose]);
+  }, []);
+
+  const exitWithoutSaving = useCallback(() => {
+    if (submitInFlightRef.current) return;
+    discardOfferConflict(discardLocalConflict, onClose);
+  }, [discardLocalConflict, onClose]);
 
   const reloadLatest = useCallback(async () => {
     const current = draftRef.current;
     if (!current || loading || submitInFlightRef.current) return;
-    desiredRef.current = null;
-    submitAttemptRef.current = null;
-    hydratedRef.current = false;
     setLoading(true); setError(null);
     try {
-      const latest = isRevisionDraft(current)
-        ? await getOfferRevision(current.offerId)
-        : await getOfferDraft(current.id);
-      hydrate(latest);
+      await reloadLatestOfferAfterConflict({
+        current,
+        discardLocal: discardLocalConflict,
+        loadDraft: getOfferDraft,
+        loadRevision: getOfferRevision,
+        hydrate,
+      });
     } catch (reason) {
       setSaveState('conflict');
       setError(reason instanceof Error ? reason.message : '暂时没能读取最新方案，请再试一次。');
     } finally {
       setLoading(false);
     }
-  }, [hydrate, loading]);
+  }, [discardLocalConflict, hydrate, loading]);
 
   const promptConflictResolution = useCallback(() => {
-    Alert.alert('这份方案已更新', '当前页面的内容不会自动覆盖最新版本。你可以重新读取，或者直接退出。', [
-      { text: '继续留在此页', style: 'cancel' },
-      { text: '退出不覆盖', style: 'destructive', onPress: exitWithoutSaving },
-      { text: '重新读取', onPress: () => { void reloadLatest(); } },
+    Alert.alert(offerConflictCopy.alertTitle, offerConflictCopy.alertBody, [
+      { text: offerConflictCopy.stayLabel, style: 'cancel' },
+      { text: offerConflictCopy.exitLabel, style: 'destructive', onPress: exitWithoutSaving },
+      { text: offerConflictCopy.reloadLabel, onPress: () => { void reloadLatest(); } },
     ]);
   }, [exitWithoutSaving, reloadLatest]);
 
   const closeSafely = useCallback(async () => {
     if (closing || submitInFlightRef.current) return;
     if (!draftRef.current || !hydratedRef.current) { onClose(); return; }
-    if (saveState === 'conflict') {
+    if (shouldPromptOfferConflictResolution(saveState)) {
       promptConflictResolution();
       return;
     }
@@ -541,8 +539,8 @@ export function OfferWizardSheet({ visible, resumeDraftId, initialResourceId, re
               <Text style={styles.conflictText}>为了不覆盖最新内容，当前页面已停止保存。重新读取会放弃本页未保存内容。</Text>
               {error ? <Text style={styles.conflictDetail}>{error}</Text> : null}
               <View style={styles.conflictActions}>
-                <Pressable accessibilityRole="button" accessibilityLabel="退出且不覆盖最新方案" onPress={exitWithoutSaving} style={styles.conflictExit}><Text style={styles.conflictExitText}>退出不覆盖</Text></Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="重新读取最新方案" disabled={loading} onPress={() => void reloadLatest()} style={[styles.conflictReload, loading && styles.buttonDisabled]}>{loading ? <ActivityIndicator size="small" color={colors.surface} /> : <Text style={styles.conflictReloadText}>重新读取</Text>}</Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="退出且不覆盖最新方案" onPress={exitWithoutSaving} style={styles.conflictExit}><Text style={styles.conflictExitText}>{offerConflictCopy.exitLabel}</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="重新读取最新方案" disabled={loading} onPress={() => void reloadLatest()} style={[styles.conflictReload, loading && styles.buttonDisabled]}>{loading ? <ActivityIndicator size="small" color={colors.surface} /> : <Text style={styles.conflictReloadText}>{offerConflictCopy.reloadLabel}</Text>}</Pressable>
               </View>
             </View> : null}
 

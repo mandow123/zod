@@ -3,8 +3,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
-import { spawnSync } from 'node:child_process';
-import { androidToolchainEnvironment } from './android-toolchain.mjs';
+import { androidToolchainEnvironment, platformExecutable, runGradle, runPlatformCommand } from './android-toolchain.mjs';
 import { frontendSourceDigest } from './frontend-source-digest.mjs';
 import { androidVersionEvidence, expoProjectBinding, validProjectId } from './android-release-identity.mjs';
 
@@ -21,8 +20,8 @@ async function readable(path) {
   try { await access(path, constants.R_OK); return true; } catch { return false; }
 }
 function command(binary, args, options = {}) {
-  const result = spawnSync(binary, args, { encoding: 'utf8', ...options });
-  return { ok: result.status === 0, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+  const result = runPlatformCommand(binary, args, { encoding: 'utf8', ...options });
+  return { ...result, ok: result.status === 0 };
 }
 
 function certificateFingerprint(pemOutput) {
@@ -38,10 +37,10 @@ function manifestAttribute(manifest, name) {
 
 const toolchainEnvironment = androidToolchainEnvironment();
 const javaHome = toolchainEnvironment.JAVA_HOME?.trim();
-const keytool = javaHome ? join(javaHome, 'bin/keytool') : 'keytool';
-const jarsigner = javaHome ? join(javaHome, 'bin/jarsigner') : 'jarsigner';
+const keytool = platformExecutable(javaHome, javaHome ? 'bin/keytool' : 'keytool');
+const jarsigner = platformExecutable(javaHome, javaHome ? 'bin/jarsigner' : 'jarsigner');
 const androidHome = toolchainEnvironment.ANDROID_HOME?.trim();
-const androidTool = androidHome ? join(androidHome, 'build-tools/36.0.0/aapt2') : undefined;
+const androidTool = androidHome ? platformExecutable(androidHome, 'build-tools/36.0.0/aapt2') : undefined;
 const propertiesPath = join(root, 'release-signing.properties');
 const properties = (await readable(propertiesPath))
   ? Object.fromEntries((await readFile(propertiesPath, 'utf8')).split(/\r?\n/u).flatMap((line) => {
@@ -122,18 +121,19 @@ if (await readable(aab)) {
   check('google_play_provider_workflow_embedded', embeddedBundle.ok && missingProviderMarkers.length === 0,
     missingProviderMarkers.length ? `missing: ${missingProviderMarkers.join(', ')}` : 'resource, audit, listing and fulfillment workflow');
   const bundleEnvironment = { ...toolchainEnvironment, CLOUDPAY_BUNDLE_PATH: aab };
-  const gradle = join(root, 'android/gradlew');
   const initScript = join(root, 'scripts/bundletool.init.gradle');
-  const validation = command(gradle, ['--no-daemon', '--quiet', '--init-script', initScript, 'cloudPayValidateBundle'], { cwd: join(root, 'android'), env: bundleEnvironment });
-  check('aab_structure_valid', validation.ok, validation.ok ? 'bundletool 1.18.3 validation passed' : validation.stderr.trim());
+  const validation = runGradle(root, ['--no-daemon', '--quiet', '--init-script', initScript, 'cloudPayValidateBundle'], { encoding: 'utf8', env: bundleEnvironment });
+  const validationOk = validation.status === 0;
+  check('aab_structure_valid', validationOk, validationOk ? 'bundletool 1.18.3 validation passed' : validation.stderr.trim());
 
-  const dump = command(gradle, ['--no-daemon', '--quiet', '--init-script', initScript, 'cloudPayDumpBundleManifest'], { cwd: join(root, 'android'), env: bundleEnvironment });
+  const dump = runGradle(root, ['--no-daemon', '--quiet', '--init-script', initScript, 'cloudPayDumpBundleManifest'], { encoding: 'utf8', env: bundleEnvironment });
+  const dumpOk = dump.status === 0;
   const manifest = /<manifest[\s\S]+<\/manifest>/u.exec(dump.stdout)?.[0] ?? '';
   const bundlePackage = manifestAttribute(manifest, 'package');
   const bundleVersionCode = manifestAttribute(manifest, 'versionCode');
   const bundleVersionName = manifestAttribute(manifest, 'versionName');
   const bundleTargetSdk = manifestAttribute(manifest, 'targetSdkVersion');
-  check('aab_manifest_readable', dump.ok && Boolean(manifest), dump.ok ? 'base manifest extracted' : dump.stderr.trim());
+  check('aab_manifest_readable', dumpOk && Boolean(manifest), dumpOk ? 'base manifest extracted' : dump.stderr.trim());
   check('aab_package_match', bundlePackage === app.android?.package, bundlePackage ?? 'missing');
   check('aab_version_code_match', bundleVersionCode === String(app.android?.versionCode), bundleVersionCode ?? 'missing');
   check('aab_version_name_match', bundleVersionName === app.version, bundleVersionName ?? 'missing');

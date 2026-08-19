@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-003",
+  "auditedAt": "2026-08-20T10:24:53+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准阶段 0 完整质量基线：跨平台 Android 工具链、backend、Windows 与逐提交审计 CI 门禁。",
+  "baseCommit": "ec03ecd67a4d475389ab426761286d675a1d43a9",
+  "stagedDiffSha256": "3f3c2fc24c526e1ff485be320186f0dc3ddd415b842384f8528fadb1f723bfab"
+}

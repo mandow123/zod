@@ -83,20 +83,46 @@ export function verifyStagedProductManagerAudit(root = defaultRoot, now = Date.n
 
 export function verifyCommittedProductManagerAudit(commit = 'HEAD', root = defaultRoot, now = Date.now()) {
   const resolvedCommit = git(root, ['rev-parse', `${commit}^{commit}`]);
-  const parents = git(root, ['rev-list', '--parents', '-n', '1', resolvedCommit]).split(' ');
-  const baseCommit = parents[1] ?? '0000000000000000000000000000000000000000';
+  const lineage = git(root, ['rev-list', '--parents', '-n', '1', resolvedCommit]).split(' ');
+  const parents = lineage.slice(1);
+  if (parents.length > 1) throw new Error(`产品经理审计不接受 merge commit，请先 rebase 或 squash。\n提交: ${resolvedCommit}`);
+  const baseCommit = parents[0] ?? '0000000000000000000000000000000000000000';
   const expected = { baseCommit, stagedDiffSha256: commitProductDigest(resolvedCommit, root) };
   const approved = matchingAudit(commitAuditRecords(resolvedCommit, root), expected, now);
   if (!approved) throw new Error(`提交缺少匹配的产品经理批准记录。\n提交: ${resolvedCommit}\n基线: ${baseCommit}\n差异摘要: ${expected.stagedDiffSha256}`);
   return approved;
 }
 
+export function verifyProductManagerAuditRange(base, head, root = defaultRoot, now = Date.now()) {
+  const resolvedBase = git(root, ['rev-parse', `${base}^{commit}`]);
+  const resolvedHead = git(root, ['rev-parse', `${head}^{commit}`]);
+  try {
+    git(root, ['merge-base', '--is-ancestor', resolvedBase, resolvedHead]);
+  } catch {
+    throw new Error(`审计范围不是线性祖先关系，请先 rebase 或 squash。\n基线: ${resolvedBase}\n提交: ${resolvedHead}`);
+  }
+  const listed = git(root, ['rev-list', '--reverse', '--topo-order', `${resolvedBase}..${resolvedHead}`]);
+  const commits = listed ? listed.split('\n').filter(Boolean) : [];
+  if (commits.length === 0) throw new Error('审计范围内没有提交。');
+  return commits.map((commit) => verifyCommittedProductManagerAudit(commit, root, now));
+}
+
 function main() {
   const commitFlag = process.argv.indexOf('--commit');
-  const approved = commitFlag >= 0
-    ? verifyCommittedProductManagerAudit(process.argv[commitFlag + 1] || 'HEAD')
-    : verifyStagedProductManagerAudit();
-  process.stdout.write(`产品经理代码审计通过：${approved.auditId}\n`);
+  const rangeFlag = process.argv.indexOf('--range');
+  if (commitFlag >= 0 && rangeFlag >= 0) throw new Error('--commit 与 --range 不能同时使用。');
+  let approved;
+  if (rangeFlag >= 0) {
+    const [base, head] = process.argv.slice(rangeFlag + 1, rangeFlag + 3);
+    if (!base || !head) throw new Error('用法：audit:product -- --range <base> <head>');
+    approved = verifyProductManagerAuditRange(base, head);
+  } else {
+    approved = commitFlag >= 0
+      ? verifyCommittedProductManagerAudit(process.argv[commitFlag + 1] || 'HEAD')
+      : verifyStagedProductManagerAudit();
+  }
+  const auditIds = (Array.isArray(approved) ? approved : [approved]).map((record) => record.auditId);
+  process.stdout.write(`产品经理代码审计通过：${auditIds.join(', ')}\n`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
