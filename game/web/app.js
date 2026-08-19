@@ -3,7 +3,9 @@ const app = document.querySelector('#app');
 const toastNode = document.querySelector('#toast');
 const LEGACY_TOKEN_KEY = 'doujoy.web.token';
 const TOKEN_KEY = 'kai.play.token';
-const state = { token: localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY), profile: null, view: 'lobby', game: null, room: null, history: null, selected: new Set(), busy: false, error: '' };
+const TURN_TIMEOUT_MS = 45_000;
+const DEAL_ANIMATION_MS = 3_750;
+const state = { token: localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY), profile: null, view: 'lobby', game: null, room: null, history: null, selected: new Set(), busy: false, error: '', dealingGameId: null, dealTimer: null, waitController: null };
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => new Intl.NumberFormat('zh-CN').format(value || 0);
@@ -36,7 +38,7 @@ async function bootstrap() {
       localStorage.setItem(TOKEN_KEY, state.token);
     }
     const resumed = await api('/v1/resume');
-    if (resumed.game) { state.game = resumed.game; state.view = 'game'; }
+    if (resumed.game) enterGame(resumed.game);
     else if (resumed.room) { state.room = resumed.room; state.view = 'room'; }
   } catch (e) { state.error = `无法连接后端：${e.message}`; }
   render();
@@ -110,20 +112,52 @@ function poker(c, selectable = true) {
   return `<button class="poker ${isRed(c)?'red':''} ${state.selected.has(c.id)?'selected':''}" data-card="${esc(c.id)}">${content}</button>`;
 }
 
+function turnRemaining(g) {
+  const updatedAt = Date.parse(g?.updatedAt || '');
+  if (!Number.isFinite(updatedAt) || g?.phase === 'finished') return 0;
+  return Math.max(0, Math.ceil((updatedAt + TURN_TIMEOUT_MS - Date.now()) / 1000));
+}
+
+function dealSequence() {
+  const flights = Array.from({length: 51}, (_, index) => `<i class="deal-card deal-seat-${index % 3}" style="--deal-index:${index}" aria-hidden="true"></i>`).join('');
+  const target = (position, label) => `<div class="deal-target ${position}" aria-hidden="true"><span><i></i><i></i><i></i></span><b>${label}</b><small>17 张</small></div>`;
+  return `<div class="deal-sequence" role="status" aria-live="polite" aria-label="开局发牌中，每位玩家十七张，预留三张增补牌">
+    <div class="deal-copy"><span>开局发牌</span><b>正在依次发给三位玩家</b><small>每人 17 张 · 预留 3 张增补牌</small><ol><li>准备牌组</li><li>安全发牌</li><li>牌局锁定</li></ol></div>
+    ${target('target-left','左侧牌友')}${target('target-right','右侧牌友')}${target('target-bottom','你的手牌')}
+    <div class="deal-deck" aria-hidden="true"><i></i><i></i><i></i><b>3</b><small>增补牌</small></div>${flights}
+  </div>`;
+}
+
+function turnFeedback(g, canAct) {
+  const remaining = turnRemaining(g);
+  const current = g.players.find(player => player.seat === g.currentSeat);
+  const urgent = remaining <= 10;
+  const progress = Math.round((remaining / (TURN_TIMEOUT_MS / 1000)) * 360);
+  const title = canAct ? '你的思考时间' : `${current?.name || '牌友'}正在思考`;
+  const detail = remaining > 0
+    ? (canAct ? '请在倒计时结束前完成操作' : '对方操作后牌桌会自动同步')
+    : '时间到，服务端正在自动托管';
+  return `<div class="turn-feedback ${canAct?'is-mine':'is-waiting'} ${urgent?'is-urgent':''}" role="timer" aria-live="${urgent?'polite':'off'}" aria-label="${esc(title)}，${remaining > 0 ? `剩余 ${remaining} 秒` : detail}">
+    <div class="turn-timer" style="--turn-progress:${progress}deg"><strong>${remaining || '··'}</strong><small>${remaining ? '秒' : '托管'}</small></div>
+    <div class="turn-copy"><b>${esc(title)}</b><small>${detail}</small></div>
+  </div>`;
+}
+
 function game() {
   const g=state.game; if(!g) return lobby();
+  const isDealing=state.dealingGameId===g.id;
   const viewer=g.players.find(p=>p.seat===g.viewerSeat) || g.players[0];
   const rivals=g.players.filter(p=>p.seat!==g.viewerSeat);
   const roleName=role=>role==='landlord'?'领队':role==='farmer'?'协作位':'定主位';
   const playerPod=(p,position)=>`<div class="player-pod ${position} ${p.seat===g.currentSeat?'turn':''}"><div class="pod-avatar">${esc(p.name.slice(0,1))}<span>${roleName(p.role)}</span></div><div class="pod-copy"><b>${esc(p.name)}</b><small>${p.isBot?'智能牌友':p.seat===g.viewerSeat?'我':'在线玩家'}</small></div><div class="pod-count"><b>${p.cardCount}</b><small>张</small></div></div>`;
   const lead=g.leadCards?.length?g.leadCards.map(c=>poker(c,false)).join(''):'<span class="table-prompt">等待出牌</span>';
-  const canAct=g.currentSeat===g.viewerSeat;
+  const viewerTurn=g.currentSeat===g.viewerSeat;
+  const canAct=!isDealing&&viewerTurn;
   const disabled=canAct?'':'disabled';
   const actions=g.phase==='bidding' ? [0,1,2,3].map(n=>`<button class="btn table-action ${n===3?'gold':''}" data-bid="${n}" ${disabled}>${n===0?'让先':n+' 档'}</button>`).join('') : g.phase==='playing' ? `<button class="btn table-action ghost" data-action="pass" ${disabled}>略过</button><button class="btn table-action primary" data-action="play" ${disabled}>出牌</button>` : `<button class="btn table-action primary" data-action="finish">回到大厅</button>`;
   const result=g.settlement?`<div class="card result-card"><span class="kicker">本局战报</span><h2>${g.settlement.winner==='landlord'?'领队获胜':'协作方获胜'}</h2><p class="muted">竞技系数 ${g.settlement.multiplier} · 公平承诺 ${esc(g.fairness.commitment.slice(0,12))}…</p></div>`:'';
-  const turnText = g.phase==='finished'?'本局已结束':g.currentSeat===g.viewerSeat?(g.phase==='bidding'?'轮到你定主位':'轮到你出牌'):'牌友正在思考';
-  const remaining=Math.max(0,45-Math.floor((Date.now()-new Date(g.updatedAt).getTime())/1000));
-  return `<div class="shell table"><header class="game-top"><div class="brand compact"><div class="logo"><span></span>K</div><div>KAI PLAY<small>三人争先</small></div></div><div class="round-state"><span>${turnText}</span><b>基础系数 ${g.baseStake} · 当前 ${Math.max(1,2**g.bombs)}</b></div><div class="score-pill compact-score"><small>竞技分</small><strong>${money(competitiveScore(state.profile))}</strong></div></header>${result}<section class="landscape-table"><div class="table-score"><b>基础 ${g.baseStake}</b><span>系数 ${Math.max(1,2**g.bombs)}</span></div>${playerPod(rivals[0]||viewer,'opponent-left')}${playerPod(rivals[1]||viewer,'opponent-right')}${playerPod(viewer,'viewer-pod')}${g.bottomCards?.length?`<div class="bottom-reveal"><small>增补牌</small>${g.bottomCards.map(c=>poker(c,false)).join('')}</div>`:''}<div class="play-zone"><div class="play-cards">${lead}</div><p>${g.lastEvent?`${esc(g.players.find(p=>p.seat===g.lastEvent.seat)?.name||'玩家')} ${g.lastEvent.kind==='pass'?'选择略过':'已出牌'}`:'牌局开始，祝你好运'}</p></div><div class="center-controls"><div class="turn-timer">${remaining}<small>秒</small></div><div class="game-actions">${actions}</div></div><footer class="hand-dock"><div class="hand">${g.hand.map(c=>poker(c,true)).join('')}</div><p>点击手牌选择 · 规则由服务端统一判定</p></footer></section></div>`;
+  const turnText = isDealing?'正在依次发牌':g.phase==='finished'?'本局已结束':g.currentSeat===g.viewerSeat?(g.phase==='bidding'?'轮到你选择争分':'轮到你出牌'):'牌友正在思考';
+  return `<div class="shell table"><header class="game-top"><div class="brand compact"><div class="logo"><span></span>K</div><div>KAI PLAY<small>三人争先</small></div></div><div class="round-state"><span>${turnText}</span><b>基础系数 ${g.baseStake} · 当前 ${Math.max(1,2**g.bombs)}</b></div><div class="score-pill compact-score"><small>竞技分</small><strong>${money(competitiveScore(state.profile))}</strong></div></header>${result}<section class="landscape-table ${isDealing?'is-dealing':''}"><div class="table-score"><b>基础 ${g.baseStake}</b><span>系数 ${Math.max(1,2**g.bombs)}</span></div>${playerPod(rivals[0]||viewer,'opponent-left')}${playerPod(rivals[1]||viewer,'opponent-right')}${playerPod(viewer,'viewer-pod')}${g.bottomCards?.length?`<div class="bottom-reveal"><small>增补牌</small>${g.bottomCards.map(c=>poker(c,false)).join('')}</div>`:''}<div class="play-zone"><div class="play-cards">${lead}</div><p>${g.lastEvent?`${esc(g.players.find(p=>p.seat===g.lastEvent.seat)?.name||'玩家')} ${g.lastEvent.kind==='pass'?'选择略过':'已出牌'}`:'牌局开始，祝你好运'}</p></div><div class="center-controls" ${isDealing?'aria-hidden="true"':''}>${g.phase==='finished'?'':turnFeedback(g,viewerTurn)}<div class="game-actions">${actions}</div></div><footer class="hand-dock" ${isDealing?'aria-hidden="true"':''}><div class="hand">${g.hand.map(c=>poker(c,true)).join('')}</div><p>点击手牌选择 · 规则由服务端统一判定</p></footer>${isDealing?dealSequence():''}</section></div>`;
 }
 
 function history() {
@@ -132,46 +166,93 @@ function history() {
   return `<div class="shell page-shell">${header()}<div class="section-head page-title"><div><span class="section-kicker">RECORD</span><h1>我的战绩</h1></div><div class="score-overview"><small>当前竞技分</small><strong>${money(competitiveScore(state.profile))}</strong></div></div><section class="card"><div class="history-list">${games}</div></section>${nav('history')}</div>`;
 }
 
-function rules() { return `<div class="shell page-shell">${header()}<div class="section-head page-title"><div><span class="section-kicker">FAIR PLAY</span><h1>规则与公平</h1></div><p>免费竞技，结果透明</p></div><section class="card"><div class="rules"><div class="rule"><span>01</span><div><h3>竞技分不是支付资产</h3><p class="muted">竞技分只用于段位、匹配与战绩展示，不可购买、提现、转让或兑换。</p></div></div><div class="rule"><span>02</span><div><h3>服务端统一判定</h3><p class="muted">发牌、定主位、牌型比较、回合与结算均由服务端执行，客户端不能指定结果。</p></div></div><div class="rule"><span>03</span><div><h3>牌序可以复核</h3><p class="muted">开局公布 SHA-256 承诺；结束后公开 nonce 与牌序，可核验对局过程中没有换牌。</p></div></div><div class="rule"><span>04</span><div><h3>卡时与输赢隔离</h3><p class="muted">未来 KAI 卡时仅用于明确的 AI 与云端服务，不会成为牌桌筹码，也不能通过对局赢取。</p></div></div></div></section>${nav('rules')}</div>`; }
+function rules() { return `<div class="shell page-shell">${header()}<div class="section-head page-title"><div><span class="section-kicker">FAIR PLAY</span><h1>规则与公平</h1></div><p>免费竞技，结果透明</p></div><section class="card"><div class="rules"><div class="rule"><span>01</span><div><h3>竞技分不是支付资产</h3><p class="muted">竞技分只用于段位、匹配与战绩展示，不可购买、提现、转让或兑换。</p></div></div><div class="rule"><span>02</span><div><h3>45 秒思考与自动托管</h3><p class="muted">每个真人回合有 45 秒思考时间；倒计时结束后由服务端按规则自动争分、略过或出牌。</p></div></div><div class="rule"><span>03</span><div><h3>系统自动发牌</h3><p class="muted">开局依次向三位玩家各发 17 张牌，并预留 3 张增补牌。玩家不需要手动点击“洗牌”。</p></div></div><div class="rule"><span>04</span><div><h3>牌序可以复核</h3><p class="muted">系统在开局时锁定牌序并公布 SHA-256 承诺；结束后公开校验信息，可核验对局过程中没有换牌。</p></div></div><div class="rule"><span>05</span><div><h3>卡时与输赢隔离</h3><p class="muted">未来 KAI 卡时仅用于明确的 AI 与云端服务，不会成为牌桌筹码，也不能通过对局赢取。</p></div></div></div></section>${nav('rules')}</div>`; }
 
 function render() { app.innerHTML = state.view==='game'?game():state.view==='room'?room():state.view==='history'?history():state.view==='rules'?rules():lobby(); }
 
 async function refreshProfile(){ state.profile=(await api('/v1/me')).profile; }
-async function loadGame(id){ state.game=(await api(`/v1/games/${id}`)).game; state.view='game'; state.selected.clear(); render(); }
+function stopGameSync() {
+  state.waitController?.abort();
+  state.waitController=null;
+}
+function finishDeal(gameId) {
+  if (state.dealingGameId!==gameId) return;
+  state.dealingGameId=null;
+  state.dealTimer=null;
+  render();
+}
+function enterGame(nextGame, {animateDeal=false}={}) {
+  if (state.dealTimer) clearTimeout(state.dealTimer);
+  state.game=nextGame;
+  state.view='game';
+  state.selected.clear();
+  const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  state.dealingGameId=animateDeal&&nextGame.phase==='bidding'&&!reducedMotion ? nextGame.id : null;
+  state.dealTimer=state.dealingGameId ? setTimeout(()=>finishDeal(nextGame.id),DEAL_ANIMATION_MS) : null;
+  startGameSync();
+}
+function startGameSync() {
+  stopGameSync();
+  if (state.view!=='game'||!state.game||state.game.phase==='finished') return;
+  const gameId=state.game.id;
+  const controller=new AbortController();
+  state.waitController=controller;
+  void (async()=>{
+    while (!controller.signal.aborted&&state.view==='game'&&state.game?.id===gameId&&state.game.phase!=='finished') {
+      const version=state.game.sequence;
+      const timeoutMs=Math.max(1_000,Math.min(20_000,turnRemaining(state.game)*1_000+250));
+      try {
+        const result=await api(`/v1/games/${gameId}/wait?version=${version}&timeoutMs=${timeoutMs}`,{signal:controller.signal});
+        if (controller.signal.aborted||state.game?.id!==gameId) return;
+        if (result.game.sequence>=state.game.sequence) {
+          if (result.game.sequence!==state.game.sequence) state.selected.clear();
+          state.game=result.game;
+          render();
+        }
+      } catch (error) {
+        if (controller.signal.aborted||error.name==='AbortError') return;
+        await new Promise(resolve=>setTimeout(resolve,1_500));
+      }
+    }
+  })();
+}
+async function loadGame(id,{animateDeal=false}={}){ enterGame((await api(`/v1/games/${id}`)).game,{animateDeal}); render(); }
 async function startQuickGame(){
+  const activeGameId=state.game?.phase!=='finished' ? state.game?.id : null;
+  let nextGame;
   try {
-    state.game=(await api('/v1/games/quick',{method:'POST',body:'{}'})).game;
+    nextGame=(await api('/v1/games/quick',{method:'POST',body:'{}'})).game;
   } catch (error) {
     if (error.code !== 'RELIEF_REQUIRED') throw error;
     const relief=await api('/v1/relief',{method:'POST',body:'{}'});
     state.profile=relief.profile;
-    state.game=(await api('/v1/games/quick',{method:'POST',body:'{}'})).game;
+    nextGame=(await api('/v1/games/quick',{method:'POST',body:'{}'})).game;
     toast('已领取免费竞技分补给');
   }
-  state.view='game';
+  enterGame(nextGame,{animateDeal:nextGame.id!==activeGameId});
 }
 async function act(fn){ if(state.busy)return; state.busy=true; try{await fn(); state.error='';}catch(e){toast(e.message);}finally{state.busy=false;render();} }
 
 app.addEventListener('click', e => {
   const el=e.target.closest('button'); if(!el)return;
   if(el.dataset.card){ const id=el.dataset.card; state.selected.has(id)?state.selected.delete(id):state.selected.add(id); render(); return; }
-  if(el.dataset.view){ state.view=el.dataset.view; if(state.view==='history') act(async()=>{state.history=await api('/v1/history');}); else render(); return; }
+  if(el.dataset.view){ state.view=el.dataset.view; if(state.view!=='game') stopGameSync(); if(state.view==='history') act(async()=>{state.history=await api('/v1/history');}); else render(); return; }
   if(el.dataset.bid!==undefined) act(async()=>{const body={score:Number(el.dataset.bid),expectedSequence:state.game.sequence};const r=await api(`/v1/games/${state.game.id}/bid`,{method:'POST',body:JSON.stringify(body),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;});
   const a=el.dataset.action;
   if(a==='quick') act(startQuickGame);
-  if(a==='resume') act(async()=>{const r=await api('/v1/resume');if(r.game){state.game=r.game;state.view='game';}else if(r.room){state.room=r.room;state.view='room';}else toast('没有待恢复的牌局');});
+  if(a==='resume') act(async()=>{const r=await api('/v1/resume');if(r.game){enterGame(r.game);}else if(r.room){state.room=r.room;state.view='room';}else toast('没有待恢复的牌局');});
   if(a==='create-room') act(async()=>{state.room=(await api('/v1/rooms',{method:'POST',body:'{}'})).room;state.view='room';});
   if(a==='join-room') act(async()=>{const code=document.querySelector('#room-code')?.value.trim();if(!/^\d{6}$/.test(code))throw new Error('请输入 6 位房号');state.room=(await api('/v1/rooms/join',{method:'POST',body:JSON.stringify({code})})).room;state.view='room';});
   if(a==='copy-room') {
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(state.room.code).then(()=>toast('房号已复制')).catch(()=>toast(`房号：${state.room.code}`));
     else toast(`房号：${state.room.code}`);
   }
-  if(a==='refresh-room') act(async()=>{state.room=(await api(`/v1/rooms/${state.room.id}`)).room;if(state.room.gameId)await loadGame(state.room.gameId);});
-  if(a==='start-room') act(async()=>{const r=await api(`/v1/rooms/${state.room.id}/start`,{method:'POST',body:'{}'});state.room=r.room;state.game=r.game;state.view='game';});
+  if(a==='refresh-room') act(async()=>{state.room=(await api(`/v1/rooms/${state.room.id}`)).room;if(state.room.gameId)await loadGame(state.room.gameId,{animateDeal:true});});
+  if(a==='start-room') act(async()=>{const r=await api(`/v1/rooms/${state.room.id}/start`,{method:'POST',body:'{}'});state.room=r.room;enterGame(r.game,{animateDeal:true});});
   if(a==='leave-room') act(async()=>{await api(`/v1/rooms/${state.room.id}/leave`,{method:'POST',body:'{}'});state.room=null;state.view='lobby';});
   if(a==='pass') act(async()=>{const r=await api(`/v1/games/${state.game.id}/pass`,{method:'POST',body:JSON.stringify({expectedSequence:state.game.sequence}),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;});
   if(a==='play') act(async()=>{if(!state.selected.size)throw new Error('请先选择要出的牌');const r=await api(`/v1/games/${state.game.id}/play`,{method:'POST',body:JSON.stringify({cardIds:[...state.selected],expectedSequence:state.game.sequence}),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;state.selected.clear();});
-  if(a==='finish') act(async()=>{await refreshProfile();state.game=null;state.view='lobby';});
+  if(a==='finish') act(async()=>{stopGameSync();await refreshProfile();state.game=null;state.view='lobby';});
   if(a?.startsWith('preview-')) {
     const messages = {
       'preview-xiangqi':'KAI 象棋正在设计中，当前页面只展示产品方向。',
