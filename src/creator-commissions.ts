@@ -1,4 +1,5 @@
 import { apiRequest } from './api-client';
+import { parseOwnedReferralToken } from './external-link-policy';
 
 export type CreatorCommissionStatus = 'attributed' | 'refund_observation' | 'pending' | 'available' | 'reversed' | 'transferred';
 export type CreatorCommission = Readonly<{
@@ -46,16 +47,7 @@ export type CreatorReferralAttribution = Readonly<{
 }>;
 
 export function parseCreatorReferralToken(url: string) {
-  try {
-    const parsed = new URL(url);
-    const isReferralRoute = parsed.pathname.replace(/\/$/, '') === '/referral'
-      || parsed.hostname === 'referral';
-    if (!isReferralRoute) return null;
-    const token = parsed.searchParams.get('token')?.trim();
-    return token || null;
-  } catch {
-    return null;
-  }
+  return parseOwnedReferralToken(url);
 }
 
 export async function loadCreatorCommissionSummary() {

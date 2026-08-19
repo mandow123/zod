@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { apiRequest } from './api-client';
+import { guardNewOrderRequest } from './distribution';
 
 export type VastOffer = Readonly<{
   offerId: string;
@@ -50,17 +51,21 @@ export async function loadVastOffers() {
 }
 
 export async function createVastQuote(offerId: string, durationHours: number) {
-  const response = await apiRequest<{ ok: true; quote: VastQuote }>('/mobile/v1/vast/quotes', {
-    method: 'POST', auth: 'required', retry: false, body: { offerId, durationHours },
+  return guardNewOrderRequest(async () => {
+    const response = await apiRequest<{ ok: true; quote: VastQuote }>('/mobile/v1/vast/quotes', {
+      method: 'POST', auth: 'required', retry: false, body: { offerId, durationHours },
+    });
+    return response.quote;
   });
-  return response.quote;
 }
 
 export async function createVastOrder(quoteId: string, idempotencyKey: string) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; order: VastOrder }>('/mobile/v1/vast/orders', {
-    method: 'POST', auth: 'required', retry: false, body: { quoteId }, headers: { 'idempotency-key': idempotencyKey },
+  return guardNewOrderRequest(async () => {
+    const response = await apiRequest<{ ok: true; replayed: boolean; order: VastOrder }>('/mobile/v1/vast/orders', {
+      method: 'POST', auth: 'required', retry: false, body: { quoteId }, headers: { 'idempotency-key': idempotencyKey },
+    });
+    return response.order;
   });
-  return response.order;
 }
 
 export async function loadVastOrders() {

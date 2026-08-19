@@ -6,6 +6,10 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "CLOUDPAY_BUILD_PLATFORM": "android",
+        "CLOUDPAY_DISTRIBUTION_CHANNEL": "direct-cn"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -15,8 +19,52 @@
       "credentialsSource": "remote",
       "environment": "production",
       "distribution": "store",
+      "env": {
+        "CLOUDPAY_BUILD_PLATFORM": "android",
+        "CLOUDPAY_DISTRIBUTION_CHANNEL": "google-play"
+      },
       "android": {
         "buildType": "app-bundle"
+      }
+    },
+    "ios-simulator": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "CLOUDPAY_BUILD_PLATFORM": "ios",
+        "CLOUDPAY_DISTRIBUTION_CHANNEL": "app-store",
+        "CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED": "0"
+      },
+      "ios": {
+        "simulator": true
+      }
+    },
+    "ios-preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "CLOUDPAY_BUILD_PLATFORM": "ios",
+        "CLOUDPAY_DISTRIBUTION_CHANNEL": "app-store",
+        "CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED": "1",
+        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "1"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    },
+    "ios-production": {
+      "autoIncrement": true,
+      "credentialsSource": "remote",
+      "environment": "production",
+      "distribution": "store",
+      "env": {
+        "CLOUDPAY_BUILD_PLATFORM": "ios",
+        "CLOUDPAY_DISTRIBUTION_CHANNEL": "app-store",
+        "CLOUDPAY_PUSH_NOTIFICATIONS_ENABLED": "1",
+        "CLOUDPAY_IOS_UNIVERSAL_AUTH_ENABLED": "1"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
       }
     }
   }

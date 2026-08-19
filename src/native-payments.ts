@@ -1,4 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
+import { guardNativeTopupRequest } from './distribution';
 
 type NativePaymentBridge = Readonly<{
   payAlipay: (orderInfo: string) => Promise<{ resultStatus: string; memo: string; result: string }>;
@@ -13,8 +14,10 @@ function available() {
 }
 
 export function launchNativeTopup(provider: 'alipay' | 'wechat', checkoutPayload: string) {
-  if (!checkoutPayload) throw new Error('充值参数尚未生成，请重新发起充值。');
-  return provider === 'alipay'
-    ? available().payAlipay(checkoutPayload)
-    : available().payWechat(checkoutPayload);
+  return guardNativeTopupRequest(() => {
+    if (!checkoutPayload) throw new Error('充值参数尚未生成，请重新发起充值。');
+    return provider === 'alipay'
+      ? available().payAlipay(checkoutPayload)
+      : available().payWechat(checkoutPayload);
+  });
 }

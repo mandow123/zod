@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { apiRequest } from './api-client';
+import { validExpoProjectId } from './project-id';
 
 export type AccountSession = Readonly<{
   id: string;
@@ -74,12 +75,15 @@ export async function loadPushStatus() {
 
 export function pushProjectId() {
   const configured = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
-  return typeof configured === 'string' && configured.trim() ? configured.trim() : null;
+  return validExpoProjectId(configured) ? configured.trim() : null;
 }
 
 export async function enablePushNotifications() {
+  if (Constants.expoConfig?.extra?.pushNotificationsEnabled !== true) {
+    throw new Error('此安装包未启用正式推送，不会申请系统通知权限。');
+  }
   const projectId = pushProjectId();
-  if (!projectId) throw new Error('正式推送项目尚未绑定，当前不会申请系统通知权限。');
+  if (!validExpoProjectId(projectId)) throw new Error('正式推送项目尚未正确绑定，当前不会申请系统通知权限。');
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('cloudpay-activity', {
       name: '订单与账户动态',

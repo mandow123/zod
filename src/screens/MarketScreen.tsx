@@ -91,15 +91,15 @@ export function MarketScreen({ snapshot, refreshing, onRefresh, onOpenPublish, o
       {marketUnavailable ? <View style={styles.outage}><Ionicons name="cloud-offline-outline" size={20} color={colors.amber} /><View style={styles.outageCopy}><Text style={styles.outageTitle}>市场数据暂时无法确认</Text><Text style={styles.outageText}>不会把断网当成库存为零。下拉刷新后再查看价格和购买状态。</Text></View></View> : null}
       <View style={styles.list}>{deviceProducts.map((product) => <DeviceProductRow key={product.id} product={product}
         blockedReason={deviceProductAvailability(deviceMarketState, product).reason}
-        onPress={() => onOpenSparkDetail(product)} />)}{vastFiltered.map((item) => <VastOfferRow key={item.offerId} offer={item} onPress={() => snapshot.authenticated ? setSelectedVastOffer(item) : onLogin()} />)}{visibleListings.map((item) => <MarketRow key={item.id} item={item}
+        onPress={() => onOpenSparkDetail(product)} />)}{vastFiltered.map((item) => <VastOfferRow key={item.offerId} offer={item} onPress={distributionPolicy.newOrders ? () => snapshot.authenticated ? setSelectedVastOffer(item) : onLogin() : undefined} />)}{visibleListings.map((item) => <MarketRow key={item.id} item={item}
         blockedReason={item.ownedByCurrentSubject ? null : listingAvailability(marketState, item, isDedicatedGpuHour(item)).reason}
         onPress={item.ownedByCurrentSubject ? () => onManageOwnListing(item) : listingAvailability(marketState, item, isDedicatedGpuHour(item)).allowed ? () => onBuy(item) : undefined} />)}</View>
       {visibleCount < filtered.length ? <Pressable onPress={() => setVisibleCount((count) => count + LISTING_PAGE_SIZE)} style={styles.loadMore}><Text style={styles.loadMoreText}>继续显示</Text></Pressable> : null}
       {section === '算力租用' && computeSource === 'Vast.ai 即时' && vastState === 'loading' ? <View style={styles.partnerEmpty}><ActivityIndicator color={colors.primary} /><View style={styles.partnerCopy}><Text style={styles.partnerTitle}>正在读取 Vast.ai</Text><Text style={styles.partnerText}>只接收可租用且已验证的即时资源。</Text></View></View> : null}
       {section === '算力租用' && computeSource === 'Vast.ai 即时' && vastState === 'available' && !vastFiltered.length ? <View style={styles.partnerEmpty}><Ionicons name="flash-outline" size={24} color={colors.primary} /><View style={styles.partnerCopy}><Text style={styles.partnerTitle}>当前没有匹配资源</Text><Text style={styles.partnerText}>Vast.ai 库存会实时变化，可稍后下拉刷新。</Text></View></View> : null}
-      {!marketUnavailable && computeSource !== 'Vast.ai 即时' && !filtered.length && !deviceProducts.length ? <View style={styles.empty}><Ionicons name="search-outline" size={28} color={colors.muted} /><Text style={styles.emptyTitle}>没找到匹配资源</Text><Text style={styles.emptyText}>换个型号或地区，也可以提交定向需求。</Text><Pressable onPress={onOpenPublish} style={styles.primary}><Text style={styles.primaryText}>发布算力需求</Text></Pressable></View> : null}
+      {!marketUnavailable && computeSource !== 'Vast.ai 即时' && !filtered.length && !deviceProducts.length ? <View style={styles.empty}><Ionicons name="search-outline" size={28} color={colors.muted} /><Text style={styles.emptyTitle}>没找到匹配资源</Text><Text style={styles.emptyText}>{distributionPolicy.newOrders ? '换个型号或地区，也可以提交定向需求。' : '换个型号或地区后再查看。'}</Text>{distributionPolicy.newOrders ? <Pressable onPress={onOpenPublish} style={styles.primary}><Text style={styles.primaryText}>发布算力需求</Text></Pressable> : null}</View> : null}
     </ScrollView>
-    <VastPurchaseSheet offer={selectedVastOffer} visible={Boolean(selectedVastOffer)} onClose={() => setSelectedVastOffer(null)} onOrdered={() => onRefresh()} />
+    {distributionPolicy.newOrders ? <VastPurchaseSheet offer={selectedVastOffer} visible={Boolean(selectedVastOffer)} onClose={() => setSelectedVastOffer(null)} onOrdered={() => onRefresh()} /> : null}
     <Modal visible={filterVisible} transparent animationType="slide" onRequestClose={() => setFilterVisible(false)}><Pressable onPress={() => setFilterVisible(false)} style={styles.backdrop}><Pressable onPress={() => undefined} style={styles.sheet}><View style={styles.handle} /><View style={styles.sheetHeading}><Text style={styles.sheetTitle}>筛选地区</Text><Pressable onPress={() => { setRegion(null); setFilterVisible(false); }}><Text style={styles.reset}>重置</Text></Pressable></View><View style={styles.regionGrid}><FilterChip label="全部地区" selected={!region} onPress={() => setRegion(null)} />{regions.map((item) => <FilterChip key={item} label={item} selected={region === item} onPress={() => setRegion(item)} />)}</View><Pressable onPress={() => setFilterVisible(false)} style={styles.primary}><Text style={styles.primaryText}>查看结果</Text></Pressable></Pressable></Pressable></Modal>
   </View>;
 }
@@ -113,12 +113,12 @@ function DeviceProductRow({ product, blockedReason, onPress }: Readonly<{ produc
   </View>;
 }
 
-function VastOfferRow({ offer, onPress }: Readonly<{ offer: VastOffer; onPress: () => void }>) {
+function VastOfferRow({ offer, onPress }: Readonly<{ offer: VastOffer; onPress?: () => void }>) {
   const reliability = `${Math.round(offer.reliability * 1000) / 10}%`;
   return <View style={styles.card}>
     <View style={styles.cardTop}><View style={styles.vastIcon}><Ionicons name="flash-outline" size={20} color={colors.primary} /></View><View style={styles.cardCopy}><View style={styles.typeRow}><Text style={styles.partnerTag}>Vast.ai 合作资源</Text><Text style={styles.verifiedTag}>已验证 · {reliability}</Text></View><Text numberOfLines={1} style={styles.cardTitle}>{offer.gpu.count} × {offer.gpu.name}</Text><Text style={styles.meta}>{offer.gpu.memoryGb} GB 显存 / 卡 · {offer.region}</Text></View></View>
     <Text style={styles.audit}>即时库存 · 提交前重新确认价格与可用状态</Text>
-    <View style={styles.cardBottom}><View><Text style={styles.price}>{creditAmount(offer.pricing.cardHoursPerHour)}</Text><Text style={styles.unit}>KAI 卡时 / 小时</Text></View><View style={styles.stock}><Text style={styles.stockLabel}>交付方式</Text><Text style={styles.stockValue}>自动部署</Text></View><Pressable onPress={onPress} style={styles.rowAction}><Text style={styles.rowActionText}>选择时长</Text><Ionicons name="arrow-forward" size={14} color={colors.surface} /></Pressable></View>
+    <View style={styles.cardBottom}><View><Text style={styles.price}>{creditAmount(offer.pricing.cardHoursPerHour)}</Text><Text style={styles.unit}>KAI 卡时 / 小时</Text></View><View style={styles.stock}><Text style={styles.stockLabel}>交付方式</Text><Text style={styles.stockValue}>自动部署</Text></View>{onPress ? <Pressable onPress={onPress} style={styles.rowAction}><Text style={styles.rowActionText}>选择时长</Text><Ionicons name="arrow-forward" size={14} color={colors.surface} /></Pressable> : <Text style={styles.unavailable}>暂未开放</Text>}</View>
   </View>;
 }
 

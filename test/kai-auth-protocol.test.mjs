@@ -15,6 +15,9 @@ test('KAI auth accepts only the registered exact App callback shape', () => {
   );
   assert.equal(parseKaiAuthCallback(`otherapp://auth/kai/callback?code=${'a'.repeat(64)}`).kind, 'ignored');
   assert.equal(parseKaiAuthCallback(`kaicloudpay://evil/kai/callback?code=${'a'.repeat(64)}`).kind, 'ignored');
+  assert.equal(parseKaiAuthCallback(`https://cloudpay.kai.com/mobile/auth/kai/callback?code=${'a'.repeat(64)}`).kind, 'code');
+  assert.equal(parseKaiAuthCallback(`https://evil.example/mobile/auth/kai/callback?code=${'a'.repeat(64)}`).kind, 'ignored');
+  assert.equal(parseKaiAuthCallback(`https://cloudpay.kai.com/other?code=${'a'.repeat(64)}`).kind, 'ignored');
   assert.equal(parseKaiAuthCallback(`${KAI_AUTH_APP_REDIRECT}?code=short`).kind, 'error');
   assert.equal(parseKaiAuthCallback(`${KAI_AUTH_APP_REDIRECT}?error=authentication_cancelled`).kind, 'error');
 });

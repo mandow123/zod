@@ -42,7 +42,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
   if (moduleName.endsWith('/native-payments') || moduleName === './native-payments') {
     const channel = process.env.CLOUDPAY_DISTRIBUTION_CHANNEL?.trim() || 'direct-cn';
-    if (channel !== 'direct-cn') {
+    if (platform !== 'android' || channel !== 'direct-cn') {
       return { type: 'sourceFile', filePath: path.resolve(__dirname, 'src/native-payments-disabled.ts') };
     }
   }

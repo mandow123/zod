@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { Linking } from 'react-native';
 import { apiRequest, API_BASE_URL, LOCAL_E2E_DEMO_ENABLED } from './api-client';
+import { getKaiAuthBrowserPolicy, openKaiAuthBrowser } from './kai-auth-browser';
 import {
   createKaiAuthStartUrl,
   parseKaiAuthCallback,
@@ -47,7 +47,15 @@ export async function startKaiAuth(consents: Readonly<{ termsVersion: string; pr
     createdAt: new Date().toISOString(),
   } satisfies PendingKaiAuth), secureOptions);
   try {
-    await Linking.openURL(createKaiAuthStartUrl(API_BASE_URL, challenge, consents));
+    const browserPolicy = getKaiAuthBrowserPolicy();
+    const startUrl = createKaiAuthStartUrl(
+      API_BASE_URL,
+      challenge,
+      consents,
+      browserPolicy.redirectUrl,
+    );
+    const callbackUrl = await openKaiAuthBrowser(startUrl, browserPolicy);
+    return callbackUrl ? completeKaiAuth(callbackUrl) : false;
   } catch (error) {
     await SecureStore.deleteItemAsync(PENDING_KEY, secureOptions);
     throw error;

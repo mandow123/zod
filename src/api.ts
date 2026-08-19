@@ -11,6 +11,7 @@ import { loadProviderReadCache, saveProviderWorkspaceCache } from './provider-re
 import { mergeLocalDemoListings } from './demo-market';
 import { ensureSparkCampaignProduct } from './campaign';
 import type { DeviceAsset, DeviceOrder, DeviceProduct } from './device-commerce';
+import { guardNativeTopupRequest, guardNewOrderRequest } from './distribution';
 export * from './device-commerce';
 
 export type ResourceKind = 'gpu' | 'token_capacity' | 'token_usage' | 'rack' | 'storage' | 'apple_silicon';
@@ -857,11 +858,13 @@ export async function createCloudPayOrder(
   quantity: string,
   idempotencyKey: string,
 ) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; order: CloudPayOrder }>('/mobile/v1/orders', {
-    method: 'POST', auth: 'required', retry: false, body: { listingId, quantity },
-    headers: { 'idempotency-key': idempotencyKey },
+  return guardNewOrderRequest(async () => {
+    const response = await apiRequest<{ ok: true; replayed: boolean; order: CloudPayOrder }>('/mobile/v1/orders', {
+      method: 'POST', auth: 'required', retry: false, body: { listingId, quantity },
+      headers: { 'idempotency-key': idempotencyKey },
+    });
+    return response.order;
   });
-  return response.order;
 }
 
 export async function loadCreditPayoutProfile() {
@@ -910,12 +913,14 @@ export async function loadCreditTopup(topupId: string) {
 }
 
 export async function createCreditTopup(amountCents: number, provider: 'alipay' | 'wechat', idempotencyKey: string) {
-  const response = await apiRequest<{ ok: true; replayed: boolean; topup: CreditTopup }>('/mobile/v1/credits/topups', {
-    method: 'POST', auth: 'required', retry: false,
-    body: { amountCents, provider, channel: 'app' },
-    headers: { 'idempotency-key': idempotencyKey },
+  return guardNativeTopupRequest(async () => {
+    const response = await apiRequest<{ ok: true; replayed: boolean; topup: CreditTopup }>('/mobile/v1/credits/topups', {
+      method: 'POST', auth: 'required', retry: false,
+      body: { amountCents, provider, channel: 'app' },
+      headers: { 'idempotency-key': idempotencyKey },
+    });
+    return response.topup;
   });
-  return response.topup;
 }
 
 function orderAction(

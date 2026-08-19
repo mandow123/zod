@@ -21,13 +21,7 @@
       "expo-font",
       "expo-secure-store",
       "./plugins/with-android-release-signing",
-      [
-        "expo-notifications",
-        {
-          "color": "#1769E0",
-          "defaultChannel": "cloudpay-activity"
-        }
-      ]
+      "expo-notifications"
     ],
     "ios": {
       "supportsTablet": false,
@@ -72,9 +66,11 @@
     "extra": {
       "cloudPayBaseUrl": "https://cloudpay.kai.com",
       "accountDeletionUrl": "https://cloudpay.kai.com/account/delete",
-      "distributionChannel": "direct-cn",
-      "nativeTopupsEnabled": true,
-      "newOrdersEnabled": true
+      "privacyPolicyUrl": "https://cloudpay.kai.com/privacy",
+      "termsOfServiceUrl": "https://cloudpay.kai.com/terms",
+      "eas": {
+        "projectId": "bca92f3d-6aaa-4d33-b6d2-e9c7676ad06e"
+      }
     }
   }
 }

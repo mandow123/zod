@@ -17,6 +17,7 @@ type Props = Readonly<{
   onOpenDemand: () => void;
   onOpenCredits: () => void;
   onOpenSparkDetail: (product: DeviceProduct) => void;
+  newOrdersEnabled: boolean;
 }>;
 
 const shortcuts = [
@@ -26,7 +27,7 @@ const shortcuts = [
   { label: '订单进度', icon: 'receipt-outline' as const },
 ];
 
-export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpenDemand, onOpenCredits, onOpenSparkDetail }: Props) {
+export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpenDemand, onOpenCredits, onOpenSparkDetail, newOrdersEnabled }: Props) {
   const spark = snapshot.deviceProducts.find(isSparkCampaignProduct) ?? null;
   const resources = snapshot.listings.filter((item) => !isSparkCampaignListing(item)).slice(0, 3);
   const pending = snapshot.orders.filter((order) => order.side === 'buyer' && order.requiresAttention).length;
@@ -45,7 +46,7 @@ export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpen
       <Pressable onPress={() => onNavigate('assets')} style={styles.accountItem}><Text style={styles.accountLabel}>待处理</Text><Text style={styles.accountValue}>{pending}</Text></Pressable>
     </View>
 
-    <View style={styles.shortcuts}>{shortcuts.map((item, index) => <Pressable key={item.label} onPress={() => index === 2 ? onOpenDemand() : index === 3 ? onNavigate('assets') : onNavigate('market')} style={styles.shortcut}><View style={styles.shortcutIcon}><Ionicons name={item.icon} size={20} color={colors.ink} /></View><Text style={styles.shortcutText}>{item.label}</Text></Pressable>)}</View>
+    <View style={styles.shortcuts}>{shortcuts.filter((_, index) => newOrdersEnabled || index !== 2).map((item) => <Pressable key={item.label} onPress={() => item.label === '定向需求' ? onOpenDemand() : item.label === '订单进度' ? onNavigate('assets') : onNavigate('market')} style={styles.shortcut}><View style={styles.shortcutIcon}><Ionicons name={item.icon} size={20} color={colors.ink} /></View><Text style={styles.shortcutText}>{item.label}</Text></Pressable>)}</View>
 
     {spark ? <ImageBackground source={sparkArtwork} resizeMode="cover" imageStyle={styles.sparkImage} style={styles.sparkCard}>
         <View style={styles.sparkScrim} /><View style={styles.sparkCopy}><Text style={styles.sparkSupplier}>{spark.supplier.displayName}·上海特供</Text><Text style={styles.sparkTitle}>{spark.title}</Text><Text style={styles.sparkMeta}>{spark.inventory.total} 台 · {spark.pricing.discountPercent === 20 ? '8 折' : `优惠 ${spark.pricing.discountPercent}%`} · {spark.expectedDelivery.label}</Text><Pressable onPress={() => onOpenSparkDetail(spark)} style={styles.sparkAction}><Text style={styles.sparkActionText}>查看商品</Text><Ionicons name="arrow-forward" size={16} color={colors.surface} /></Pressable></View>

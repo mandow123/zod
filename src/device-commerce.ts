@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { apiRequest } from './api-client';
+import { guardNewOrderRequest } from './distribution';
 
 export type DeviceProduct = Readonly<{
   id: string; sku: string; title: string; productType: 'physical_delivery'; campaignKey: string;
@@ -35,7 +36,7 @@ const actionKey = (prefix: string) => `${prefix}:${Crypto.randomUUID()}`;
 
 export async function loadDeviceProducts() { const response = await apiRequest<{ ok: true; products: DeviceProduct[] }>('/mobile/v1/device-products', { auth: 'optional', retry: false }); return response.products; }
 export async function loadDeviceProduct(productId: string) { const response = await apiRequest<{ ok: true; product: DeviceProduct }>(`/mobile/v1/device-products/${encodeURIComponent(productId)}`, { auth: 'optional', retry: false }); return response.product; }
-export async function createDeviceOrder(input: Readonly<{ productId: string; quantity: number; shippingAddressReference: string; idempotencyKey: string }>) { const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>('/mobile/v1/device-orders', { method: 'POST', auth: 'required', retry: false, body: { productId: input.productId, quantity: input.quantity, shippingAddressReference: input.shippingAddressReference }, headers: { 'idempotency-key': input.idempotencyKey } }); return response.order; }
+export function createDeviceOrder(input: Readonly<{ productId: string; quantity: number; shippingAddressReference: string; idempotencyKey: string }>) { return guardNewOrderRequest(async () => { const response = await apiRequest<{ ok: true; replayed: boolean; order: DeviceOrder }>('/mobile/v1/device-orders', { method: 'POST', auth: 'required', retry: false, body: { productId: input.productId, quantity: input.quantity, shippingAddressReference: input.shippingAddressReference }, headers: { 'idempotency-key': input.idempotencyKey } }); return response.order; }); }
 export async function loadDeviceOrders() { const response = await apiRequest<{ ok: true; orders: DeviceOrder[] }>('/mobile/v1/device-orders', { auth: 'required', retry: false }); return response.orders; }
 export async function loadDeviceOrder(orderId: string) { const response = await apiRequest<{ ok: true; order: DeviceOrder }>(`/mobile/v1/device-orders/${encodeURIComponent(orderId)}`, { auth: 'required', retry: false }); return response.order; }
 export async function loadDeviceAssets() { const response = await apiRequest<{ ok: true; assets: DeviceAsset[] }>('/mobile/v1/device-assets', { auth: 'required', retry: false }); return response.assets; }

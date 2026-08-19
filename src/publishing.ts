@@ -1,4 +1,5 @@
 import { apiRequest } from './api-client';
+import { guardNewOrderRequest } from './distribution';
 import type { ResourceKind } from './api';
 import type { ResourceDeliveryReadiness } from './resource-delivery-readiness';
 export type SupplierProfile = Readonly<{
@@ -329,10 +330,12 @@ export async function createDemand(input: Readonly<{
   deadlineAt: string;
   description: string;
 }>) {
-  const response = await apiRequest<{ ok: true; demand: ComputeDemand }>('/mobile/v1/demands', {
-    method: 'POST', auth: 'required', retry: false, body: input,
+  return guardNewOrderRequest(async () => {
+    const response = await apiRequest<{ ok: true; demand: ComputeDemand }>('/mobile/v1/demands', {
+      method: 'POST', auth: 'required', retry: false, body: input,
+    });
+    return response.demand;
   });
-  return response.demand;
 }
 
 export async function listDemands() {

@@ -394,7 +394,7 @@ function CloudPayApp() {
       case 'credits':
         return <CreditScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
           onLogin={() => setAuthVisible(true)} onOpenWallet={() => setCreditWalletVisible(true)}
-          onOpenPayout={() => setPayoutVisible(true)} />;
+          onOpenPayout={() => setPayoutVisible(true)} topupsEnabled={distributionPolicy.nativeTopups} />;
       case 'orders':
         return <OrdersScreen snapshot={snapshot} side={orderSide} refreshing={refreshing} onRefresh={refresh}
           onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)} onOpenOrder={setSelectedOrder}
@@ -454,7 +454,7 @@ function CloudPayApp() {
       default:
         return <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}
             onOpenDemand={() => setDemandComposerVisible(true)} onOpenSparkDetail={openSparkDetail}
-            onOpenCredits={() => navigate('credits')} />;
+            onOpenCredits={() => navigate('credits')} newOrdersEnabled={distributionPolicy.newOrders} />;
     }
   })();
 
@@ -478,17 +478,23 @@ function CloudPayApp() {
         kaiAuthError={kaiAuthError}
         onKaiAuthStart={async (documents) => {
           setKaiAuthError(null);
-          try { await startKaiAuth({
+          try {
+            const completed = await startKaiAuth({
             termsVersion: documents.terms.version,
             privacyVersion: documents.privacy.version,
-          }); }
+            });
+            if (completed) {
+              await refreshAfterAuthentication();
+              setAuthVisible(false);
+            }
+          }
           catch (reason) {
             setKaiAuthError(reason instanceof Error ? reason.message : '无法打开统一身份登录。');
           }
         }}
       />
       <PublishFlowSheet
-        mode={demandComposerVisible ? 'buy' : null}
+        mode={demandComposerVisible && distributionPolicy.newOrders ? 'buy' : null}
         authenticated={snapshot.authenticated}
         onModeChange={() => undefined}
         onClose={() => setDemandComposerVisible(false)}

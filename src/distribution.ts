@@ -1,6 +1,18 @@
 import Constants from 'expo-constants';
+import {
+  createCommercePolicy,
+  guardCommerceRequest,
+  type BuildPlatform,
+  type DistributionChannel,
+} from './commerce-policy';
 
-export type DistributionChannel = 'direct-cn' | 'google-play' | 'app-store';
+export type { BuildPlatform, DistributionChannel } from './commerce-policy';
+
+const configuredPlatform = Constants.expoConfig?.extra?.buildPlatform;
+if (!['android', 'ios'].includes(String(configuredPlatform))) {
+  throw new Error('KAI CloudPay build platform is invalid.');
+}
+export const buildPlatform = configuredPlatform as BuildPlatform;
 
 const configuredChannel = Constants.expoConfig?.extra?.distributionChannel;
 if (!['direct-cn', 'google-play', 'app-store'].includes(String(configuredChannel))) {
@@ -8,8 +20,24 @@ if (!['direct-cn', 'google-play', 'app-store'].includes(String(configuredChannel
 }
 
 export const distributionChannel = configuredChannel as DistributionChannel;
+const validCombination = (buildPlatform === 'ios' && distributionChannel === 'app-store')
+  || (buildPlatform === 'android' && ['direct-cn', 'google-play'].includes(distributionChannel));
+if (!validCombination) throw new Error('KAI CloudPay platform and distribution channel combination is invalid.');
+const commercePolicy = createCommercePolicy({
+  buildPlatform,
+  distributionChannel,
+  nativeTopupsEnabled: Constants.expoConfig?.extra?.nativeTopupsEnabled === true,
+  newOrdersEnabled: Constants.expoConfig?.extra?.newOrdersEnabled === true,
+});
 export const distributionPolicy = Object.freeze({
-  nativeTopups: Constants.expoConfig?.extra?.nativeTopupsEnabled === true && distributionChannel === 'direct-cn',
-  newOrders: Constants.expoConfig?.extra?.newOrdersEnabled === true && distributionChannel === 'direct-cn',
+  ...commercePolicy,
   providerPublishing: Constants.expoConfig?.extra?.providerPublishingEnabled === true,
 });
+
+export function guardNewOrderRequest<T>(request: () => T) {
+  return guardCommerceRequest(distributionPolicy, 'newOrders', request);
+}
+
+export function guardNativeTopupRequest<T>(request: () => T) {
+  return guardCommerceRequest(distributionPolicy, 'nativeTopups', request);
+}

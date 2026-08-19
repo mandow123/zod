@@ -64,6 +64,7 @@ const result = spawnSync(join(root, 'android/gradlew'), [`${kind === 'aab' ? 'bu
     CLOUDPAY_UPLOAD_KEY_ALIAS: alias,
     CLOUDPAY_UPLOAD_KEY_PASSWORD: keyPassword,
     CLOUDPAY_DISTRIBUTION_CHANNEL: distributionChannel,
+    CLOUDPAY_BUILD_PLATFORM: 'android',
     CLOUDPAY_FRONTEND_SOURCE_DIGEST: currentSource.digest,
   },
 });

@@ -35,7 +35,7 @@ test('红包只由真实未消费事件触发且市场按钮不重复转账', as
   assert.doesNotMatch(reward, /transferCreatorCommission|Math\.random|fixture|demo/u);
   assert.match(api, /status: 'unconsumed' \| 'consumed'/u);
   assert.match(api, /parseCreatorReferralToken/u);
-  assert.match(api, /parsed\.hostname === 'referral'/u);
+  assert.match(api, /parseOwnedReferralToken/u);
 });
 
 test('用户可见卡时与 Spark 活动价不暴露折前或法币参考价', async () => {
