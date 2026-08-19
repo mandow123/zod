@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { creditAmount } from '../src/format.ts';
+import { brand } from '../src/theme.ts';
 
 async function source(path) {
   return readFile(new URL(path, import.meta.url), 'utf8');
@@ -14,19 +15,19 @@ async function pngInfo(path) {
 }
 
 test('user-visible application identity is consistently Zod', async () => {
-  const [configText, strings, app, components, profile, auth, security] = await Promise.all([
+  const [configText, app, components, profile, auth, security] = await Promise.all([
     source('../app.json'),
-    source('../android/app/src/main/res/values/strings.xml'),
     source('../App.tsx'),
     source('../src/components.tsx'),
     source('../src/screens/ProfileScreen.tsx'),
     source('../src/AuthSheet.local-e2e.tsx'),
     source('../src/AccountSecuritySheet.tsx'),
   ]);
-  assert.equal(JSON.parse(configText).expo.name, 'Zod');
-  assert.equal(JSON.parse(configText).expo.icon, './assets/icon.png');
-  assert.equal(JSON.parse(configText).expo.android.adaptiveIcon.foregroundImage, './assets/android-icon-foreground.png');
-  assert.match(strings, /<string name="app_name">Zod<\/string>/u);
+  const config = JSON.parse(configText).expo;
+  assert.equal(config.name, 'Zod');
+  assert.equal(brand.name, config.name);
+  assert.equal(config.icon, './assets/icon.png');
+  assert.equal(config.android.adaptiveIcon.foregroundImage, './assets/android-icon-foreground.png');
   for (const visibleSource of [app, components, profile, auth, security]) {
     assert.doesNotMatch(visibleSource, /登录 CloudPay|进入 CloudPay|注销 CloudPay|>K<|>KAI Cloud</u);
   }

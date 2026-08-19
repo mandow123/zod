@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { loadLegalDocuments, type LegalDocuments } from './api';
+import { authSubmissionDisabled, startFreshLegalDocumentLoad } from './auth-legal-documents';
 import { brand, colors } from './theme';
 
 type AuthSheetProps = Readonly<{
@@ -40,17 +41,20 @@ export function AuthSheet({
 
   useEffect(() => {
     if (!visible) return;
-    let active = true;
-    setDocuments(null);
-    setConsented(false);
-    setError(null);
-    setLegalError(null);
-    void loadLegalDocuments()
-      .then((nextDocuments) => { if (active) setDocuments(nextDocuments); })
-      .catch((reason: unknown) => {
-        if (active) setLegalError(reason instanceof Error ? reason.message : '暂时无法读取协议。');
-      });
-    return () => { active = false; };
+    const request = startFreshLegalDocumentLoad({
+      reset: () => {
+        setDocuments(null);
+        setConsented(false);
+        setError(null);
+        setLegalError(null);
+      },
+      load: loadLegalDocuments,
+      accept: setDocuments,
+      reject: (reason: unknown) => {
+        setLegalError(reason instanceof Error ? reason.message : '暂时无法读取协议。');
+      },
+    });
+    return request.cancel;
   }, [visible]);
 
   const openDocument = async (url: string | null | undefined) => {
@@ -75,7 +79,13 @@ export function AuthSheet({
   };
 
   const unifiedError = error ?? kaiAuthError ?? legalError;
-  const disabled = busy || kaiAuthBusy || !onKaiAuthStart || !documents || !consented;
+  const disabled = authSubmissionDisabled({
+    busy,
+    externalBusy: kaiAuthBusy,
+    canStart: Boolean(onKaiAuthStart),
+    hasDocuments: Boolean(documents),
+    consented,
+  });
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

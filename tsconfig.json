@@ -3,5 +3,19 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "strict": true
-  }
+  },
+  "include": [
+    "App.tsx",
+    "index.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "backend",
+    "h100-sidecar",
+    "scripts",
+    "test",
+    "node_modules"
+  ]
 }

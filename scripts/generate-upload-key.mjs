@@ -2,8 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { discoverJavaHome } from './android-toolchain.mjs';
+import { discoverJavaHome, platformExecutable, runPlatformCommand } from './android-toolchain.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const privateDirectory = join(homedir(), '.cloudpay-release');
@@ -18,13 +17,13 @@ async function exists(path) {
 
 function tool(name) {
   const javaHome = discoverJavaHome();
-  return javaHome ? join(javaHome, 'bin', name) : name;
+  return platformExecutable(javaHome, javaHome ? join('bin', name) : name);
 }
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: 'utf8', stdio: options.capture ? 'pipe' : 'inherit' });
+  const result = runPlatformCommand(command, args, { encoding: 'utf8', stdio: options.capture ? 'pipe' : 'inherit' });
   if (result.status !== 0) throw new Error(result.stderr || `${command} failed.`);
-  return result.stdout ?? '';
+  return result.stdout;
 }
 
 await mkdir(privateDirectory, { recursive: true, mode: 0o700 });

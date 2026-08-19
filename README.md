@@ -38,6 +38,8 @@ CLOUDPAY_ANDROID_PACKAGE_NEVER_PUBLISHED=1 npm run release:preflight
 npm run release:smoke:android
 ```
 
+PowerShell 使用 `$env:CLOUDPAY_ANDROID_PACKAGE_NEVER_PUBLISHED='1'` 设置同一项版本历史证明；构建脚本会自行选择 `gradlew` 或 `gradlew.bat`，渠道也不再依赖 shell 环境变量语法。
+
 如果同包名曾在任一商店或测试轨道上传过，构建和预检都必须传入已用最高版本码；候选 `versionCode` 不高于该值时自动失败。若确认这个包名从未上传过，改为显式传入 `CLOUDPAY_ANDROID_PACKAGE_NEVER_PUBLISHED=1`。两项必须且只能选择一项，不能靠缺省值猜测。
 
 `release:key` 首次执行会在 `~/.cloudpay-release` 创建 CloudPay 专用上传密钥。私钥和口令始终位于项目外，不进入源码仓库；仓库只保留可公开的上传证书。两个发布命令都强制使用该密钥。华为和国内 Android 构建不依赖 Expo/EAS；只有准备启用 Expo 推送时才传入 `CLOUDPAY_EAS_PROJECT_ID`，届时脚本会校验当前登录账号与项目绑定。正式签名和版本历史证明仍是发布门禁。本地 E2E 预览不要求这些正式身份。

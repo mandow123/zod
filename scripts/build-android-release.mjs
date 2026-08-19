@@ -4,12 +4,15 @@ import { constants } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { androidToolchainEnvironment } from './android-toolchain.mjs';
+import { androidToolchainEnvironment, runGradle } from './android-toolchain.mjs';
 import { frontendSourceDigest } from './frontend-source-digest.mjs';
 import { androidVersionEvidence, expoProjectBinding, optionalExpoProjectId, validProjectId } from './android-release-identity.mjs';
 
 const kind = process.argv[2];
-if (!['apk', 'aab'].includes(kind)) throw new Error('Usage: build-android-release.mjs <apk|aab>');
+if (!['apk', 'aab'].includes(kind)) throw new Error('Usage: build-android-release.mjs <apk|aab> [--channel=direct-cn|google-play]');
+const channelArguments = process.argv.slice(3).filter((value) => value.startsWith('--channel='));
+if (channelArguments.length > 1) throw new Error('Android release channel may be provided only once.');
+const requestedChannel = channelArguments[0]?.slice('--channel='.length).trim();
 const root = resolve(import.meta.dirname, '..');
 const toolchainEnvironment = androidToolchainEnvironment();
 const app = JSON.parse(await readFile(join(root, 'app.json'), 'utf8')).expo;
@@ -29,7 +32,8 @@ if (!localE2e) {
     if (!binding.ok) throw new Error(`Expo push was requested but its project binding could not be verified. ${binding.evidence}`);
   }
 }
-const distributionChannel = process.env.CLOUDPAY_DISTRIBUTION_CHANNEL?.trim() || (kind === 'aab' ? 'google-play' : 'direct-cn');
+const distributionChannel = requestedChannel || process.env.CLOUDPAY_DISTRIBUTION_CHANNEL?.trim()
+  || (kind === 'aab' ? 'google-play' : 'direct-cn');
 const allowStoreLocalE2e = process.env.CLOUDPAY_ALLOW_STORE_LOCAL_E2E === '1';
 if (!['direct-cn', 'google-play'].includes(distributionChannel)) {
   throw new Error('Android release channel must be direct-cn or google-play.');
@@ -49,12 +53,11 @@ const contract = spawnSync(process.execPath, [join(root, 'scripts/verify-mobile-
   cwd: root, stdio: 'inherit', env: toolchainEnvironment,
 });
 if (contract.status !== 0) process.exit(contract.status ?? 1);
-const clean = spawnSync(join(root, 'android/gradlew'), ['clean'], {
-  cwd: join(root, 'android'), stdio: 'inherit', env: { ...toolchainEnvironment, NODE_ENV: 'production' },
+const clean = runGradle(root, ['clean'], {
+  stdio: 'inherit', env: { ...toolchainEnvironment, NODE_ENV: 'production' },
 });
 if (clean.status !== 0) process.exit(clean.status ?? 1);
-const result = spawnSync(join(root, 'android/gradlew'), [`${kind === 'aab' ? 'bundle' : 'assemble'}${flavor}Release`], {
-  cwd: join(root, 'android'),
+const result = runGradle(root, [`${kind === 'aab' ? 'bundle' : 'assemble'}${flavor}Release`], {
   stdio: 'inherit',
   env: {
     ...toolchainEnvironment,

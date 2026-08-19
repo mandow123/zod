@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -10,6 +10,7 @@ import {
   validAuditRecord,
   verifyCommittedProductManagerAudit,
   verifyStagedProductManagerAudit,
+  verifyProductManagerAuditRange,
 } from '../scripts/verify-product-manager-audit.mjs';
 
 function git(root, ...args) {
@@ -47,7 +48,7 @@ test('only a staged approval bound to the exact staged diff can pass', () => {
   git(root, 'add', 'change.txt');
   const audit = record(root);
   const auditPath = join(root, 'docs/product-audits/PM-20260817-001.json');
-  execFileSync('mkdir', ['-p', join(root, 'docs/product-audits')]);
+  mkdirSync(join(root, 'docs/product-audits'), { recursive: true });
   writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`);
   assert.deepEqual(stagedAuditRecords(root), []);
   assert.throws(() => verifyStagedProductManagerAudit(root), /尚未批准/u);
@@ -74,4 +75,47 @@ test('invalid decisions, identities, timestamps, hashes and summaries are reject
     { baseCommit: 'bad' }, { stagedDiffSha256: 'bad' }, { auditedAt: 'invalid' },
     { auditedAt: '2026-08-17T05:00:00.000Z' },
   ]) assert.equal(validAuditRecord({ ...valid, ...invalid }, expected, now), false);
+});
+
+function auditedCommit(root, auditId, fileName) {
+  writeFileSync(join(root, fileName), `${auditId}\n`);
+  git(root, 'add', fileName);
+  const audit = record(root, { auditId, auditedAt: '2026-08-19T08:00:00.000Z', summary: `产品经理已批准提交 ${auditId} 的完整差异。` });
+  const auditPath = join(root, `docs/product-audits/${auditId}.json`);
+  mkdirSync(join(root, 'docs/product-audits'), { recursive: true });
+  writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`);
+  git(root, 'add', `docs/product-audits/${auditId}.json`);
+  git(root, 'commit', '-m', auditId);
+  return git(root, 'rev-parse', 'HEAD');
+}
+
+test('range verification validates every audited commit in order', () => {
+  const root = repository();
+  const base = git(root, 'rev-parse', 'HEAD');
+  auditedCommit(root, 'PM-20260819-101', 'first.txt');
+  const head = auditedCommit(root, 'PM-20260819-102', 'second.txt');
+  const approvals = verifyProductManagerAuditRange(base, head, root);
+  assert.deepEqual(approvals.map((approval) => approval.auditId), ['PM-20260819-101', 'PM-20260819-102']);
+});
+
+test('range verification rejects an unaudited commit', () => {
+  const root = repository();
+  const base = git(root, 'rev-parse', 'HEAD');
+  writeFileSync(join(root, 'missing.txt'), 'missing audit\n');
+  git(root, 'add', 'missing.txt');
+  git(root, 'commit', '-m', 'missing audit');
+  const head = git(root, 'rev-parse', 'HEAD');
+  assert.throws(() => verifyProductManagerAuditRange(base, head, root), /缺少匹配的产品经理批准记录/u);
+});
+
+test('range verification rejects merge commits', () => {
+  const root = repository();
+  const base = git(root, 'rev-parse', 'HEAD');
+  git(root, 'checkout', '-b', 'left');
+  auditedCommit(root, 'PM-20260819-103', 'left.txt');
+  git(root, 'checkout', '-b', 'right', base);
+  auditedCommit(root, 'PM-20260819-104', 'right.txt');
+  git(root, 'merge', '--no-ff', 'left', '-m', 'merge');
+  const head = git(root, 'rev-parse', 'HEAD');
+  assert.throws(() => verifyProductManagerAuditRange(base, head, root), /merge commit.*rebase.*squash/iu);
 });
