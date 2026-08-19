@@ -141,7 +141,7 @@ PostgreSQL admin_* tables
 1. `verify-admin-boundary.mjs` 全绿；
 2. 管理员认证、路由、Session 并发和日志脱敏测试全绿；
 3. 移动 OIDC 和移动后端合同回归全绿；
-4. 0058 在全迁移链和备份恢复演练中通过；
+4. 0060 在全迁移链和备份恢复演练中通过；
 5. 生产 OIDC Client 的 redirect URI、scope 和 Group 映射经双人复核；
 6. 日志捕获证明 callback code/state 和原始 Group 不出现；
 7. 生产 Secret 仅由 Secret Manager 注入；

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-002",
+  "auditedAt": "2026-08-19T15:20:00+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准在生产部署前消除管理员迁移编号冲突，并同步发布门禁、测试与运行文档。",
+  "baseCommit": "8552093e0902aa9a092705cdebf85e1e552407f9",
+  "stagedDiffSha256": "43b32f38fdde68874ae675ab9e9a0feeb62f2e5620aeb95f4e513282ae767d43"
+}
