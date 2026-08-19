@@ -1,0 +1,8 @@
+.git
+mobile/node_modules
+mobile/.expo
+mobile/.expo-export-test
+mobile/dist
+web/node_modules
+server/data/state.json
+**/*.log
