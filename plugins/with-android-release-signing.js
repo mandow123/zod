@@ -6,7 +6,7 @@ const {
 
 const marker = '// KAI_CLOUDPAY_RELEASE_SIGNING';
 const flavorsMarker = '// KAI_CLOUDPAY_DISTRIBUTION_FLAVORS';
-const authPlaceholdersMarker = '// KAI_CLOUDPAY_AUTH_MANIFEST_PLACEHOLDERS';
+const referralPlaceholdersMarker = '// KAI_CLOUDPAY_REFERRAL_MANIFEST_PLACEHOLDER';
 const stagingSourceFiles = Object.freeze({
   'app/src/staging/AndroidManifest.xml': `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -87,6 +87,25 @@ function insertSigningConfig(contents) {
   let next = contents.includes(marker) ? contents : `${block}\n${contents}`;
   const debugConfig = `        debug {\n            storeFile file('debug.keystore')\n            storePassword 'android'\n            keyAlias 'androiddebugkey'\n            keyPassword 'android'\n        }`;
   const releaseConfig = `${debugConfig}\n        release {\n            if (cloudPayHasReleaseSigning) {\n                storeFile file(cloudPayStoreFile)\n                storePassword cloudPayStorePassword\n                keyAlias cloudPayKeyAlias\n                keyPassword cloudPayKeyPassword\n                enableV1Signing false\n                enableV2Signing true\n                enableV3Signing true\n                enableV4Signing true\n            }\n        }`;
+  const formalPlaceholders = `${referralPlaceholdersMarker}\n        manifestPlaceholders = [\n            cloudPayReferralScheme: "kaicloudpay"\n        ]`;
+  if (next.includes(referralPlaceholdersMarker)) {
+    next = next.replace(
+      new RegExp(`${referralPlaceholdersMarker}\\n\\s*manifestPlaceholders = \\[\\n[\\s\\S]*?\\n\\s*\\]`, 'u'),
+      formalPlaceholders,
+    );
+  }
+  next = next.replace(
+    /\/\/ KAI_CLOUDPAY_AUTH_MANIFEST_PLACEHOLDERS\n\s*manifestPlaceholders = \[\n[\s\S]*?\n\s*\]/u,
+    formalPlaceholders,
+  );
+  next = next.replace(
+    /manifestPlaceholders = \[\n\s*cloudPayCustomScheme: "zod-staging",\n\s*cloudPayAuthHost: "zod-staging\.invalid",\n\s*cloudPayAuthPath: "\/disabled"\n\s*\]/u,
+    'manifestPlaceholders = [\n                cloudPayReferralScheme: "zod-staging"\n            ]',
+  );
+  next = next.replace(
+    /manifestPlaceholders = \[\n\s*cloudPayCustomScheme: "zod-staging\.invalid",\n\s*cloudPayAuthPath: "\/disabled"\n\s*\]/u,
+    'manifestPlaceholders = [\n                cloudPayReferralScheme: "zod-staging"\n            ]',
+  );
   if (!contents.includes(marker)) {
     if (!next.includes(debugConfig)) throw new Error('Unable to locate generated debug signing config.');
     next = next.replace(debugConfig, releaseConfig);
@@ -95,11 +114,10 @@ function insertSigningConfig(contents) {
       `release {\n            signingConfig signingConfigs.release`,
     );
   }
-  if (!next.includes(authPlaceholdersMarker)) {
+  if (!next.includes(referralPlaceholdersMarker)) {
     const defaultConfigAnchor = '    defaultConfig {';
     if (!next.includes(defaultConfigAnchor)) throw new Error('Unable to locate Android default configuration.');
-    const placeholders = `${authPlaceholdersMarker}\n        manifestPlaceholders = [\n            cloudPayCustomScheme: "kaicloudpay",\n            cloudPayAuthHost: "cloud.kai.com",\n            cloudPayAuthPath: "/zod/oauth2redirect/kai"\n        ]`;
-    next = next.replace(defaultConfigAnchor, `${defaultConfigAnchor}\n        ${placeholders}`);
+    next = next.replace(defaultConfigAnchor, `${defaultConfigAnchor}\n        ${formalPlaceholders}`);
   }
   const signingAnchor = '    signingConfigs {';
   if (!next.includes(flavorsMarker)) {
@@ -107,10 +125,24 @@ function insertSigningConfig(contents) {
     const generatedApplicationId = next.match(/applicationId\s+['"]([^'"]+)['"]/u)?.[1];
     if (!generatedApplicationId) throw new Error('Unable to locate generated Android application ID.');
     const stagingSuffix = generatedApplicationId.endsWith('.staging') ? '' : '\n            applicationIdSuffix ".staging"';
-    const flavors = `${flavorsMarker}\n    flavorDimensions += "distribution"\n    productFlavors {\n        directCn {\n            dimension "distribution"\n        }\n        store {\n            dimension "distribution"\n        }\n        staging {\n            dimension "distribution"${stagingSuffix}\n            resValue "string", "app_name", "Zod 测试版"\n            manifestPlaceholders = [\n                cloudPayCustomScheme: "zod-staging",\n                cloudPayAuthHost: "zod-staging.invalid",\n                cloudPayAuthPath: "/disabled"\n            ]\n        }\n    }\n`;
+    const flavors = `${flavorsMarker}\n    flavorDimensions += "distribution"\n    productFlavors {\n        directCn {\n            dimension "distribution"\n        }\n        store {\n            dimension "distribution"\n        }\n        staging {\n            dimension "distribution"${stagingSuffix}\n            resValue "string", "app_name", "Zod 测试版"\n            manifestPlaceholders = [\n                cloudPayReferralScheme: "zod-staging"\n            ]\n        }\n    }\n`;
     next = next.replace(signingAnchor, `${flavors}\n${signingAnchor}`);
   }
   return next;
+}
+
+function pinReferralManifest(manifest) {
+  const application = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
+  for (const activity of application.activity ?? []) {
+    for (const filter of activity['intent-filter'] ?? []) {
+      for (const data of filter.data ?? []) {
+        if (data.$?.['android:scheme'] === 'kaicloudpay' && !data.$?.['android:path']) {
+          data.$['android:scheme'] = '${cloudPayReferralScheme}';
+        }
+      }
+    }
+  }
+  return manifest;
 }
 
 async function writeStagingSourceSet(platformProjectRoot) {
@@ -127,6 +159,7 @@ module.exports = function withAndroidReleaseSigning(config) {
     return gradle;
   });
   const withManifest = withAndroidManifest(withSigning, (manifest) => {
+    pinReferralManifest(manifest.modResults);
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest.modResults);
     const localE2eBaseUrl = process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim();
     if (localE2eBaseUrl) application.$['android:usesCleartextTraffic'] = 'true';
@@ -144,3 +177,4 @@ module.exports = function withAndroidReleaseSigning(config) {
 module.exports.insertSigningConfig = insertSigningConfig;
 module.exports.stagingSourceFiles = stagingSourceFiles;
 module.exports.writeStagingSourceSet = writeStagingSourceSet;
+module.exports.pinReferralManifest = pinReferralManifest;

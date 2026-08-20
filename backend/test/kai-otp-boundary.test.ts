@@ -20,7 +20,24 @@ describe('production unified-identity boundary', () => {
       mode: 'auth-kai-native',
       issuer: 'https://auth.kai.com/api/auth',
       clientId: 'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
-      redirectUri: 'https://cloud.kai.com/zod/oauth2redirect/kai',
+      redirect: {
+        mode: 'native-ipv4-loopback-pool',
+        host: '127.0.0.1',
+        path: '/oauth2redirect/kai',
+        ports: [52711, 53419, 54127, 54833, 55603, 56311, 57119, 57901, 58687],
+        registeredUris: [
+          'http://127.0.0.1:52711/oauth2redirect/kai',
+          'http://127.0.0.1:53419/oauth2redirect/kai',
+          'http://127.0.0.1:54127/oauth2redirect/kai',
+          'http://127.0.0.1:54833/oauth2redirect/kai',
+          'http://127.0.0.1:55603/oauth2redirect/kai',
+          'http://127.0.0.1:56311/oauth2redirect/kai',
+          'http://127.0.0.1:57119/oauth2redirect/kai',
+          'http://127.0.0.1:57901/oauth2redirect/kai',
+          'http://127.0.0.1:58687/oauth2redirect/kai',
+        ],
+        selection: 'random-order-first-bind',
+      },
       resourceAccess: { ready: false, tokenFormat: null, audience: null },
     } });
     expect(readiness.json().deployment.blockers).toContain('UNIFIED_IDENTITY');

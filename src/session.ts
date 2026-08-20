@@ -3,8 +3,10 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { clearProviderReadCache } from './provider-read-cache';
+import { parsePreservingStoredValue } from './kai-auth-flow-policy';
 
 const SESSION_KEY = 'kai.cloudpay.session.v1';
+const VERIFIED_IDENTITY_KEY = 'kai.cloudpay.auth.verified-identity.v1';
 const DEVICE_KEY = 'kai.cloudpay.device.v1';
 const secureOptions: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -34,6 +36,24 @@ export type StoredSession = Readonly<{
   user: CloudPayUser;
 }>;
 
+export type VerifiedKaiIdentity = Readonly<{
+  status: 'verified_pending_consent';
+  attemptId: string;
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  tokenType: 'Bearer';
+  scope: string;
+  oidcSubject: string;
+  accessExpiresAt: string;
+  verifiedAt: string;
+}>;
+
+export class VerifiedKaiIdentityIntegrityError extends Error {
+  readonly name = 'VerifiedKaiIdentityIntegrityError';
+  constructor() { super('本机保存的 KAI 验证状态无法安全读取，原始状态已保留，请联系支持。'); }
+}
+
 function validSession(value: unknown): value is StoredSession {
   if (!value || typeof value !== 'object') return false;
   const session = value as Partial<StoredSession>;
@@ -47,6 +67,20 @@ function validSession(value: unknown): value is StoredSession {
     && session.refreshExpiresAt === null
     && typeof session.deviceId === 'string' && session.deviceId.length >= 8
     && Boolean(session.user && typeof session.user.id === 'string' && typeof session.user.displayName === 'string');
+}
+
+function validVerifiedIdentity(value: unknown): value is VerifiedKaiIdentity {
+  if (!value || typeof value !== 'object') return false;
+  const identity = value as Partial<VerifiedKaiIdentity>;
+  return identity.status === 'verified_pending_consent'
+    && typeof identity.attemptId === 'string' && /^[0-9a-f-]{36}$/iu.test(identity.attemptId)
+    && typeof identity.accessToken === 'string' && identity.accessToken.length > 20
+    && typeof identity.refreshToken === 'string' && identity.refreshToken.length > 20
+    && typeof identity.idToken === 'string' && identity.idToken.length > 40
+    && identity.tokenType === 'Bearer' && typeof identity.scope === 'string'
+    && typeof identity.oidcSubject === 'string' && identity.oidcSubject.length > 0
+    && typeof identity.accessExpiresAt === 'string' && Number.isFinite(Date.parse(identity.accessExpiresAt))
+    && typeof identity.verifiedAt === 'string' && Number.isFinite(Date.parse(identity.verifiedAt));
 }
 
 export async function deviceDescriptor() {
@@ -76,6 +110,45 @@ export async function loadSession() {
     await clearSession();
     return null;
   }
+}
+
+export async function loadVerifiedKaiIdentity() {
+  const raw = await SecureStore.getItemAsync(VERIFIED_IDENTITY_KEY, secureOptions);
+  if (!raw) return null;
+  try {
+    return parsePreservingStoredValue(raw, validVerifiedIdentity);
+  } catch {
+    throw new VerifiedKaiIdentityIntegrityError();
+  }
+}
+
+export async function saveVerifiedKaiIdentity(input: Readonly<{
+  attemptId: string;
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  scope: string;
+  oidcSubject: string;
+  accessExpiresInSeconds: number;
+}>) {
+  const identity: VerifiedKaiIdentity = {
+    status: 'verified_pending_consent',
+    attemptId: input.attemptId,
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+    idToken: input.idToken,
+    tokenType: 'Bearer',
+    scope: input.scope,
+    oidcSubject: input.oidcSubject,
+    accessExpiresAt: new Date(Date.now() + input.accessExpiresInSeconds * 1_000).toISOString(),
+    verifiedAt: new Date().toISOString(),
+  };
+  await SecureStore.setItemAsync(VERIFIED_IDENTITY_KEY, JSON.stringify(identity), secureOptions);
+  return identity;
+}
+
+export async function clearVerifiedKaiIdentity() {
+  await SecureStore.deleteItemAsync(VERIFIED_IDENTITY_KEY, secureOptions);
 }
 
 export async function saveSession(input: Readonly<{
@@ -145,6 +218,7 @@ export async function updateSessionUser(user: CloudPayUser) {
 export async function clearSession() {
   await Promise.all([
     SecureStore.deleteItemAsync(SESSION_KEY, secureOptions),
+    SecureStore.deleteItemAsync(VERIFIED_IDENTITY_KEY, secureOptions),
     clearProviderReadCache(),
   ]);
 }

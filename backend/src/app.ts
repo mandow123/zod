@@ -50,7 +50,8 @@ import type { CreatorCommissionService } from './creator-commissions/service.js'
 import { registerResourceInquiryRoutes } from './resource-inquiries/routes.js';
 import type { ResourceInquiryService } from './resource-inquiries/service.js';
 import {
-  KAI_AUTH_ISSUER, KAI_AUTH_PUBLIC_CLIENT_ID, KAI_AUTH_REDIRECT_URI,
+  KAI_AUTH_ISSUER, KAI_AUTH_LOOPBACK_HOST, KAI_AUTH_LOOPBACK_PATH,
+  KAI_AUTH_LOOPBACK_PORTS, KAI_AUTH_PUBLIC_CLIENT_ID, KAI_AUTH_REDIRECT_URIS,
 } from './account/kai-access.js';
 
 type BuildAppOptions = Readonly<{
@@ -188,7 +189,14 @@ export async function buildApp({ config, database, accountService, subjectServic
         mode: 'auth-kai-native',
         issuer: KAI_AUTH_ISSUER,
         clientId: KAI_AUTH_PUBLIC_CLIENT_ID,
-        redirectUri: KAI_AUTH_REDIRECT_URI,
+        redirect: {
+          mode: 'native-ipv4-loopback-pool',
+          host: KAI_AUTH_LOOPBACK_HOST,
+          path: KAI_AUTH_LOOPBACK_PATH,
+          ports: KAI_AUTH_LOOPBACK_PORTS,
+          registeredUris: KAI_AUTH_REDIRECT_URIS,
+          selection: 'random-order-first-bind',
+        },
         resourceAccess: {
           ready: config.readiness.capabilities.kaiResourceAccess.available,
           tokenFormat: config.KAI_RESOURCE_ACCESS_TOKEN_FORMAT ?? null,

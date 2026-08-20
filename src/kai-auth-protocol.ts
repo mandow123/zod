@@ -1,6 +1,9 @@
 export const KAI_OIDC_ISSUER = 'https://auth.kai.com/api/auth';
 export const KAI_OIDC_CLIENT_ID = 'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K';
-export const KAI_AUTH_APP_REDIRECT = 'https://cloud.kai.com/zod/oauth2redirect/kai';
+export const KAI_AUTH_LOOPBACK_PORTS = [
+  52711, 53419, 54127, 54833, 55603, 56311, 57119, 57901, 58687,
+] as const;
+export const KAI_AUTH_LOOPBACK_PATH = '/oauth2redirect/kai';
 export const KAI_OIDC_SCOPES = ['openid', 'profile', 'email', 'offline_access'] as const;
 export const KAI_AUTH_CALLBACK_MAX_AGE_MILLISECONDS = 10 * 60 * 1_000;
 
@@ -11,11 +14,31 @@ export type KaiAuthCallback =
 
 const safeOpaque = /^[A-Za-z0-9._~-]{32,256}$/u;
 
+export function kaiAuthLoopbackRedirect(port: number) {
+  if (!(KAI_AUTH_LOOPBACK_PORTS as readonly number[]).includes(port)) {
+    throw new Error('KAI 登录回调端口未登记。');
+  }
+  return `http://127.0.0.1:${port}${KAI_AUTH_LOOPBACK_PATH}` as const;
+}
+
+export function validKaiAuthRedirectUri(value: string) {
+  let url: URL;
+  try { url = new URL(value); } catch { return false; }
+  return url.protocol === 'http:' && url.hostname === '127.0.0.1'
+    && !url.username && !url.password && !url.search && !url.hash
+    && url.pathname === KAI_AUTH_LOOPBACK_PATH
+    && KAI_AUTH_LOOPBACK_PORTS.some((port) => url.port === String(port));
+}
+
 export function parseKaiAuthCallback(value: string): KaiAuthCallback {
   let url: URL;
   try { url = new URL(value); } catch { return { kind: 'ignored' }; }
-  if (url.protocol !== 'https:' || url.hostname !== 'cloud.kai.com'
-    || url.pathname !== '/zod/oauth2redirect/kai' || url.username || url.password || url.port) {
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1'
+    || url.pathname !== KAI_AUTH_LOOPBACK_PATH || url.username || url.password
+    || !KAI_AUTH_LOOPBACK_PORTS.some((port) => url.port === String(port)) || url.hash) {
+    return { kind: 'ignored' };
+  }
+  if (['state', 'iss', 'code', 'error'].some((name) => url.searchParams.getAll(name).length > 1)) {
     return { kind: 'ignored' };
   }
   const state = url.searchParams.get('state');
@@ -29,6 +52,28 @@ export function parseKaiAuthCallback(value: string): KaiAuthCallback {
   }
   if (error && /^[a-z_]{3,80}$/u.test(error) && !code) return { kind: 'error', error, state };
   return { kind: 'error', error: 'invalid_callback', state };
+}
+
+export function parseKaiAuthCallbackFields(value: Readonly<{
+  kind: 'code' | 'error';
+  state: string;
+  issuer: string;
+  code?: string;
+  error?: string;
+}>): KaiAuthCallback {
+  if (!safeOpaque.test(value.state) || value.issuer !== KAI_OIDC_ISSUER) {
+    return { kind: 'error', error: 'invalid_callback', state: value.state };
+  }
+  if (value.kind === 'code' && typeof value.code === 'string' && value.error === undefined
+    && value.code.length >= 20 && value.code.length <= 2_048
+    && !/[\u0000-\u001f\u007f]/u.test(value.code)) {
+    return { kind: 'code', code: value.code, state: value.state };
+  }
+  if (value.kind === 'error' && typeof value.error === 'string' && value.code === undefined
+    && /^[a-z_]{3,80}$/u.test(value.error)) {
+    return { kind: 'error', error: value.error, state: value.state };
+  }
+  return { kind: 'error', error: 'invalid_callback', state: value.state };
 }
 
 export function validKaiAuthPending(createdAt: string, now = Date.now()) {

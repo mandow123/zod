@@ -28,14 +28,19 @@ test('offer conflict lets the provider reload or leave without overwriting serve
   assert.match(source, /onRequestClose=\{handleRequestClose\}/u);
 });
 
-test('production login never reuses legal documents from an earlier sheet opening', async () => {
-  const source = await readFile(new URL('../src/AuthSheet.tsx', import.meta.url), 'utf8');
-  const effect = section(source, 'useEffect(() => {', '\n\n  const openDocument');
-  assert.ok(effect.indexOf('setDocuments(null)') < effect.indexOf('loadLegalDocuments()'));
-  assert.match(effect, /let active = true/u);
-  assert.match(effect, /if \(active\) setDocuments\(nextDocuments\)/u);
-  assert.match(effect, /return \(\) => \{ active = false; \}/u);
-  assert.match(source, /!documents \|\| !consented/u);
+test('production login loads legal only after KAI verification and resets consent on every document change', async () => {
+  const [sheet, auth] = await Promise.all([
+    readFile(new URL('../src/AuthSheet.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.doesNotMatch(sheet, /loadLegalDocuments/u);
+  assert.match(sheet, /onKaiAuthStart\(\)/u);
+  assert.match(sheet, /documents\?\.privacy\.version/u);
+  assert.match(sheet, /documents\?\.terms\.version/u);
+  assert.match(sheet, /setConsented\(false\)/u);
+  assert.ok(auth.indexOf("'/mobile/v1/me'") < auth.indexOf("'/mobile/v1/legal'"));
+  assert.match(auth, /KaiLegalDocumentsChangedError\(bootstrap\.documents\)/u);
+  assert.match(sheet, /!consented \|\| !onKaiConsent/u);
 });
 
 test('listing initial-load failure exposes a retry that reruns the loading effect', async () => {

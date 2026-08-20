@@ -2,30 +2,37 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
-  KAI_AUTH_APP_REDIRECT,
+  KAI_AUTH_LOOPBACK_PORTS,
   KAI_OIDC_CLIENT_ID,
   KAI_OIDC_ISSUER,
+  kaiAuthLoopbackRedirect,
   parseKaiAuthCallback,
+  validKaiAuthRedirectUri,
   validKaiAuthPending,
   validateKaiIdTokenClaims,
 } from '../src/kai-auth-protocol.ts';
 
 const state = 's'.repeat(48);
 const callback = (parameters) => {
-  const url = new URL(KAI_AUTH_APP_REDIRECT);
+  const url = new URL(kaiAuthLoopbackRedirect(KAI_AUTH_LOOPBACK_PORTS[0]));
   url.searchParams.set('state', state);
   url.searchParams.set('iss', KAI_OIDC_ISSUER);
   for (const [key, value] of Object.entries(parameters)) url.searchParams.set(key, value);
   return url.toString();
 };
 
-test('KAI auth accepts only the registered HTTPS App Link, state and issuer', () => {
+test('KAI auth accepts only an exact registered IPv4 loopback callback, state and issuer', () => {
   const code = 'a'.repeat(64);
   assert.deepEqual(parseKaiAuthCallback(callback({ code })), { kind: 'code', code, state });
+  for (const port of KAI_AUTH_LOOPBACK_PORTS) assert.equal(validKaiAuthRedirectUri(kaiAuthLoopbackRedirect(port)), true);
+  assert.equal(KAI_AUTH_LOOPBACK_PORTS.length, 9);
+  assert.equal(validKaiAuthRedirectUri('http://localhost:52711/oauth2redirect/kai'), false);
+  assert.equal(validKaiAuthRedirectUri('http://127.0.0.1:52712/oauth2redirect/kai'), false);
+  assert.equal(validKaiAuthRedirectUri('http://[::1]:52711/oauth2redirect/kai'), false);
   assert.equal(parseKaiAuthCallback(`kaicloudpay://auth/kai/callback?code=${code}&state=${state}`).kind, 'ignored');
-  assert.equal(parseKaiAuthCallback(`https://cloud.kai.com/zod/oauth2redirect/other?code=${code}&state=${state}`).kind, 'ignored');
-  assert.equal(parseKaiAuthCallback(`https://evil.example/zod/oauth2redirect/kai?code=${code}&state=${state}`).kind, 'ignored');
-  assert.equal(parseKaiAuthCallback(`${KAI_AUTH_APP_REDIRECT}?code=${code}`).kind, 'error');
+  assert.equal(parseKaiAuthCallback(`com.kaicloud.marketplace:/oauth2redirect/other?code=${code}&state=${state}`).kind, 'ignored');
+  assert.equal(parseKaiAuthCallback(`com.kaicloud.marketplace://evil.example/oauth2redirect/kai?code=${code}&state=${state}`).kind, 'ignored');
+  assert.equal(parseKaiAuthCallback(`${kaiAuthLoopbackRedirect(KAI_AUTH_LOOPBACK_PORTS[0])}?code=${code}`).kind, 'error');
   assert.equal(parseKaiAuthCallback(callback({ code, iss: 'https://evil.example' })).kind, 'error');
   assert.equal(parseKaiAuthCallback(callback({ code: 'short' })).kind, 'error');
   assert.deepEqual(parseKaiAuthCallback(callback({ error: 'access_denied' })), {
@@ -57,9 +64,18 @@ test('pending App PKCE is accepted only inside its bounded callback window', () 
 });
 
 test('production KAI login is direct public-client Authorization Code plus PKCE', async () => {
-  const [auth, oidc, apiClient, session, metro, localAuth, appJson, manifest, gradle, assetLinks, fallback] = await Promise.all([
+  const [auth, oidc, protocol, loopback, keepAlive, formalManifest, stagingManifest, formalPorts, stagingPorts, moduleGradle,
+    apiClient, session, metro, localAuth, appJson, manifest, gradle] = await Promise.all([
     readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/kai-oidc-client.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/kai-auth-protocol.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/LoopbackSessionManager.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/LoopbackKeepAliveService.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/formal/AndroidManifest.xml', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/staging/AndroidManifest.xml', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/formal/java/expo/modules/kaiauthloopback/LoopbackPortBinder.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/staging/java/expo/modules/kaiauthloopback/LoopbackPortBinder.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/build.gradle', import.meta.url), 'utf8'),
     readFile(new URL('../src/api-client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/session.ts', import.meta.url), 'utf8'),
     readFile(new URL('../metro.config.js', import.meta.url), 'utf8'),
@@ -67,14 +83,37 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
     readFile(new URL('../app.json', import.meta.url), 'utf8'),
     readFile(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8'),
     readFile(new URL('../android/app/build.gradle', import.meta.url), 'utf8'),
-    readFile(new URL('../deploy/cloud.kai.com/.well-known/assetlinks.json', import.meta.url), 'utf8'),
-    readFile(new URL('../deploy/cloud.kai.com/zod/oauth2redirect/kai/index.html', import.meta.url), 'utf8'),
   ]);
   const formalSource = `${auth}\n${oidc}`;
   assert.match(formalSource, /ResponseType\.Code/u);
   assert.match(formalSource, /CodeChallengeMethod\.S256/u);
   assert.match(formalSource, /usePKCE:\s*true/u);
   assert.match(formalSource, /extraParams:\s*\{ nonce \}/u);
+  assert.match(auth, /startKaiAuthLoopbackAsync/u);
+  assert.match(auth, /SecureStore\.setItemAsync[\s\S]*redirectUri: listener\.redirectUri/u);
+  assert.match(oidc, /redirectUri: input\.redirectUri/u);
+  assert.match(protocol, /52711, 53419, 54127, 54833, 55603, 56311, 57119, 57901, 58687/u);
+  assert.match(formalPorts, /52711, 53419, 54127, 54833, 55603, 56311, 57119, 57901, 58687/u);
+  assert.doesNotMatch(stagingPorts, /52711|53419|54127|54833|55603|56311|57119|57901|58687/u);
+  assert.match(stagingPorts, /emptyList<Int>\(\)/u);
+  assert.match(moduleGradle, /CLOUDPAY_STAGING_DEMO/u);
+  assert.match(moduleGradle, /kaiAuthLoopbackStaging \? 'src\/staging\/java' : 'src\/formal\/java'/u);
+  assert.match(moduleGradle, /kaiAuthLoopbackStaging \? 'src\/staging\/AndroidManifest\.xml' : 'src\/formal\/AndroidManifest\.xml'/u);
+  assert.match(loopback, /Collections\.shuffle\(shuffled, SecureRandom\(\)\)/u);
+  assert.match(loopback, /SystemClock::elapsedRealtime/u);
+  assert.doesNotMatch(loopback, /System\.currentTimeMillis/u);
+  assert.match(loopback, /remainingMilliseconds\(\)/u);
+  assert.match(keepAlive, /FOREGROUND_SERVICE_TYPE_SHORT_SERVICE/u);
+  assert.match(keepAlive, /START_NOT_STICKY/u);
+  assert.match(keepAlive, /ready\.get\(5, TimeUnit\.SECONDS\)/u);
+  assert.match(keepAlive, /STOP_FOREGROUND_REMOVE/u);
+  assert.match(keepAlive, /override fun onTimeout\(startId: Int, fgsType: Int\)/u);
+  assert.match(await readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/KaiAuthLoopbackModule.kt', import.meta.url), 'utf8'), /Lifecycle\.State\.RESUMED/u);
+  assert.match(loopback, /LoopbackKeepAliveService\.stop\(\)/u);
+  assert.match(formalManifest, /android:permission="android\.permission\.FOREGROUND_SERVICE"|android\.permission\.FOREGROUND_SERVICE/u);
+  assert.match(formalManifest, /android:exported="false"/u);
+  assert.match(formalManifest, /android:foregroundServiceType="shortService"/u);
+  assert.doesNotMatch(stagingManifest, /FOREGROUND_SERVICE|LoopbackKeepAliveService/u);
   assert.match(formalSource, /exchangeCodeAsync/u);
   assert.match(formalSource, /refreshAsync/u);
   assert.match(formalSource, /revokeAsync/u);
@@ -87,7 +126,7 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.match(apiClient, /updateKaiOidcSessionTokens/u);
   assert.match(apiClient, /'X-KAI-ID-Token': idToken/u);
   assert.match(apiClient, /return session\?\.idToken/u);
-  assert.match(auth, /tokens\.accessToken, tokens\.idToken/u);
+  assert.match(auth, /identity\.accessToken, identity\.idToken/u);
   assert.doesNotMatch(formalSource, /\/mobile\/v1\/auth\/kai\/(?:start|exchange)/u);
   assert.doesNotMatch(formalSource, /kaicloudpay:\/\/auth\/kai\/callback/u);
   assert.doesNotMatch(formalSource, /clientSecret|client_secret|Authorization:\s*[`'"]Basic/iu);
@@ -96,22 +135,12 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.match(session, /authProvider:\s*'kai_oidc'/u);
   assert.match(metro, /kai-auth\.local-e2e\.ts/u);
   assert.doesNotMatch(localAuth, /expo-auth-session|auth\.kai\.com|exchangeCodeAsync|refreshAsync/u);
-  assert.match(appJson, /"host":\s*"cloud\.kai\.com"/u);
-  assert.match(appJson, /"path":\s*"\/zod\/oauth2redirect\/kai"/u);
-  assert.match(manifest, /android:autoVerify="true"/u);
-  assert.match(manifest, /android:host="\$\{cloudPayAuthHost\}"/u);
-  assert.match(manifest, /android:path="\$\{cloudPayAuthPath\}"/u);
-  assert.match(gradle, /cloudPayAuthHost:\s*"cloud\.kai\.com"/u);
-  assert.match(gradle, /cloudPayAuthPath:\s*"\/zod\/oauth2redirect\/kai"/u);
-  const association = JSON.parse(assetLinks)[0];
-  assert.equal(association.target.package_name, 'com.kaicloud.marketplace');
-  assert.deepEqual(association.relation, ['delegate_permission/common.handle_all_urls']);
-  assert.deepEqual(association.target.sha256_cert_fingerprints, [
-    '20:44:1F:6B:59:3C:4F:19:C0:5A:C6:69:75:E2:84:69:DA:A8:4B:36:F1:8A:41:20:E0:DC:DA:66:1C:F1:99:6A',
-  ]);
-  assert.match(fallback, /name="referrer" content="no-referrer"/u);
-  assert.match(fallback, /default-src 'none'/u);
-  assert.doesNotMatch(fallback, /<script|<form|location|searchParams|code=|state=/iu);
+  assert.match(appJson, /"scheme":\s*"kaicloudpay"/u);
+  assert.doesNotMatch(appJson, /com\.kaicloud\.marketplace.*oauth2redirect|kaiAuthAppRedirect/u);
+  assert.match(manifest, /android:scheme="\$\{cloudPayReferralScheme\}"/u);
+  assert.doesNotMatch(manifest, /oauth2redirect|cloudPayAuth|android:autoVerify="true"/u);
+  assert.match(gradle, /cloudPayReferralScheme:\s*"kaicloudpay"/u);
+  assert.doesNotMatch(gradle, /cloudPayAuth(?:Scheme|Host|Path)/u);
 });
 
 test('all account entry copy says login happens in the system browser', async () => {
@@ -136,16 +165,22 @@ test('all account entry copy says login happens in the system browser', async ()
   assert.doesNotMatch(profile, /logoutCloudPay\(\)\.then\(onSessionChanged\)\.catch\(\(\) => onSessionChanged\(\)\)/u);
 });
 
-test('legal versions are bound to pending state and recorded before the OIDC session is saved', async () => {
+test('verified KAI identity remains isolated until current legal consent succeeds', async () => {
   const auth = await readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8');
-  assert.match(auth, /termsVersion: consents\.termsVersion\.trim\(\)/u);
-  assert.match(auth, /privacyVersion: consents\.privacyVersion\.trim\(\)/u);
+  const session = await readFile(new URL('../src/session.ts', import.meta.url), 'utf8');
+  assert.match(auth, /saveVerifiedKaiIdentity/u);
+  assert.match(session, /verified_pending_consent/u);
+  assert.match(session, /VERIFIED_IDENTITY_KEY/u);
+  const verifiedType = session.slice(session.indexOf('export type VerifiedKaiIdentity'), session.indexOf('function validSession'));
+  assert.doesNotMatch(verifiedType, /user:\s*CloudPayUser/u);
+  assert.match(auth, /platformBootstrap\(identity\)/u);
+  assert.match(auth, /requireLegalDocuments/u);
   assert.match(auth, /\/mobile\/v1\/auth\/kai\/consents/u);
-  assert.match(auth, /attemptId: pending\.attemptId/u);
+  assert.match(auth, /attemptId: identity\.attemptId/u);
   assert.ok(auth.indexOf('/mobile/v1/auth/kai/consents') < auth.indexOf('saveKaiOidcSession({'));
-  assert.match(auth, /tokens\.accessToken, tokens\.idToken/u);
-  assert.match(auth, /consent\.accepted\.termsVersion !== pending\.termsVersion/u);
-  assert.match(auth, /if \(tokens\) await revokeKaiOidcTokens\(tokens\)/u);
+  assert.match(auth, /identity\.accessToken, identity\.idToken/u);
+  assert.match(auth, /consent\.accepted\.termsVersion !== documents\.terms\.version/u);
+  assert.ok(auth.indexOf('saveKaiOidcSession({') < auth.lastIndexOf('clearVerifiedKaiIdentity()'));
 });
 
 test('production auth is OIDC-only while old session endpoints are physically local-E2E', async () => {

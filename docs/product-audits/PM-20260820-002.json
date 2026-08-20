@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-002",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-20T03:59:40Z",
+  "baseCommit": "4d45dbb68b3ed8edf5d54cf1ec2e1eb81fb07932",
+  "stagedDiffSha256": "703d07e3e3c2f59a60f0965451af4022ffae334ac3d8e23f9d4134b83bac181e",
+  "summary": "已逐文件复核本次 39 个暂存文件。Zod Android 正式 App 改为直接使用 auth.kai.com 公共客户端完成 Authorization Code + PKCE 登录，不包含客户端密钥，也不依赖网页 broker、HTTPS App Link 或自定义 scheme 回跳。原生模块只在正式包中使用九个已登记的 127.0.0.1 精确端口，随机选择首个可绑定端口；严格校验 GET、Host、路径、issuer、state、code/error 与请求大小，并使用单调时钟将监听硬限制为 120 秒。Android shortService 仅在用户主动登录期间保持回环监听可调度，服务不导出、无 intent-filter、固定无敏感通知，取消、超时、任务移除和合法终态都会关闭服务、通知及全部端口。App 在打开系统浏览器前保存与动态 redirect 绑定的 PKCE、state、nonce 和 verifier；同一 redirect 用于兑码。身份验证成功后先进入加密 verified-pending 状态，只有真实 /me、法务文件及同意落库成功后才形成业务会话；失败凭证仍遵守可靠撤销队列和本地会话失败关闭规则。后端 readiness 已真实公开 native-ipv4-loopback-pool 的 host、path、九端口、九个 registeredUris 与 random-order-first-bind，不再报告已经废弃的回调。正式包保留原五栏和既有 referral 入口，不注册 auth 回跳 intent 或正式明文网络；staging 包物理移除回环服务、FOREGROUND_SERVICE 权限和九端口。已核对最新正式 APK SHA-256 为 5eb0a5e34a025c0d4b6ace78ccc5a09a03dc89565ff290815fc4d83f603aa129；API 36 全新安装真实打开 auth.kai.com，access_denied 回调被消费后服务、通知和端口全部清理。根 TypeScript 检查、前端 203 项测试、原生单元测试、175 个前端调用与 153 个后端路由契约、后端 TypeScript、统一身份边界测试、正式/测试构建隔离扫描及暂存差异检查均通过。该批准只覆盖代码与 API 36 取消链；真实账号成功授权、兑码、userinfo、/me、法务同意、业务会话以及华为真机仍是上架前必须完成的独立验收，不能据此声称真实成功链已经跑通。"
+}

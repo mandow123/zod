@@ -79,7 +79,7 @@ const embeddedExtra = embeddedConfig?.extra ?? {};
 const requiredFrontendMarkers = [
   'KAI_CLOUD_UNIFIED_ASSETS_V2',
   'UnifiedAssetsScreen',
-  'ProviderHomeScreen',
+  'ProviderWorkspaceScreen',
   'PublishScreen',
 ];
 const commerceWorkflowMarkers = [
@@ -94,7 +94,8 @@ const providerWorkflowMarkers = [
 const unifiedIdentityMarkers = [
   'https://auth.kai.com/api/auth',
   'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
-  'https://cloud.kai.com/zod/oauth2redirect/kai',
+  'http://127.0.0.1:',
+  '/oauth2redirect/kai',
 ];
 const productionIdentityMarkers = [
   'X-KAI-ID-Token', '/mobile/v1/auth/kai/consents', 'kai.zod.auth.pending-revocations.v1',
@@ -102,6 +103,8 @@ const productionIdentityMarkers = [
 const retiredIdentityMarkers = [
   '/mobile/v1/auth/refresh', '/mobile/v1/auth/logout', '/mobile/v1/auth/sessions',
   'kaicloudpay://auth/kai/callback',
+  'com.kaicloud.marketplace:/oauth2redirect/kai',
+  'https://cloud.kai.com/zod/oauth2redirect/kai',
 ];
 const missingFrontendMarkers = requiredFrontendMarkers.filter(
   (marker) => !embeddedBundle.includes(Buffer.from(marker)),

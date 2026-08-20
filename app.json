@@ -38,20 +38,6 @@
     "android": {
       "package": "com.kaicloud.marketplace",
       "versionCode": 1,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "cloud.kai.com",
-              "path": "/zod/oauth2redirect/kai"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -88,7 +74,6 @@
       "cloudPayBaseUrl": "https://cloudpay.kai.com",
       "kaiOidcIssuer": "https://auth.kai.com/api/auth",
       "kaiOidcClientId": "xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K",
-      "kaiAuthAppRedirect": "https://cloud.kai.com/zod/oauth2redirect/kai",
       "accountDeletionUrl": "https://cloudpay.kai.com/account/delete",
       "distributionChannel": "direct-cn",
       "nativeTopupsEnabled": true,

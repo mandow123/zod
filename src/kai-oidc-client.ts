@@ -1,10 +1,10 @@
 import * as AuthSession from 'expo-auth-session';
 import { TokenTypeHint, type TokenResponse } from 'expo-auth-session';
 import {
-  KAI_AUTH_APP_REDIRECT,
   KAI_OIDC_CLIENT_ID,
   KAI_OIDC_ISSUER,
   KAI_OIDC_SCOPES,
+  validKaiAuthRedirectUri,
   validateKaiIdTokenClaims,
 } from './kai-auth-protocol';
 
@@ -84,12 +84,16 @@ export async function exchangeKaiAuthorizationCode(input: Readonly<{
   code: string;
   codeVerifier: string;
   nonce: string;
+  redirectUri: string;
 }>) {
+  if (!validKaiAuthRedirectUri(input.redirectUri)) {
+    throw new Error('本机登录回调地址未通过安全校验。');
+  }
   const discovery = await loadKaiOidcDiscovery();
   const response = await AuthSession.exchangeCodeAsync({
     clientId: KAI_OIDC_CLIENT_ID,
     code: input.code,
-    redirectUri: KAI_AUTH_APP_REDIRECT,
+    redirectUri: input.redirectUri,
     extraParams: { code_verifier: input.codeVerifier },
   }, discovery);
   validateBaseResponse(response);

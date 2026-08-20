@@ -137,7 +137,7 @@ if (!localE2e) {
 const requiredFrontendMarkers = [
   'KAI_CLOUD_UNIFIED_ASSETS_V2',
   'UnifiedAssetsScreen',
-  'ProviderHomeScreen',
+  'ProviderWorkspaceScreen',
   'PublishScreen',
   '/mobile/v1/provider/bootstrap',
   '/mobile/v1/provider/resources',
@@ -150,7 +150,8 @@ const requiredFrontendMarkers = [
   '/refund/approve',
   'https://auth.kai.com/api/auth',
   'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
-  'https://cloud.kai.com/zod/oauth2redirect/kai',
+  'http://127.0.0.1:',
+  '/oauth2redirect/kai',
   '/mobile/v1/device-products',
   '/mobile/v1/device-orders',
   '/mobile/v1/device-assets',
@@ -181,6 +182,8 @@ if (!localE2e) {
     '/mobile/v1/auth/kai/start', '/mobile/v1/auth/kai/exchange',
     '/mobile/v1/auth/refresh', '/mobile/v1/auth/logout', '/mobile/v1/auth/sessions',
     'kaicloudpay://auth/kai/callback',
+    'com.kaicloud.marketplace:/oauth2redirect/kai',
+    'https://cloud.kai.com/zod/oauth2redirect/kai',
   ];
   const found = forbiddenMarkers.filter((marker) => embeddedBundle.stdout.includes(Buffer.from(marker)));
   if (found.length > 0) {

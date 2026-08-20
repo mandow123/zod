@@ -5,7 +5,7 @@ import { join, relative, resolve } from 'node:path';
 const fixedFiles = [
   'App.tsx', 'index.ts', 'app.json', 'app.config.js', 'metro.config.js', 'package.json', 'package-lock.json',
 ];
-const sourceDirectories = ['src', 'plugins', 'android/app/src'];
+const sourceDirectories = ['src', 'plugins', 'modules', 'android/app/src'];
 
 async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

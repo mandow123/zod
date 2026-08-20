@@ -7,7 +7,7 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 const {
-  insertSigningConfig, stagingSourceFiles, writeStagingSourceSet,
+  insertSigningConfig, pinReferralManifest, stagingSourceFiles, writeStagingSourceSet,
 } = require('../plugins/with-android-release-signing.js');
 
 const generatedGradle = `android {
@@ -42,9 +42,22 @@ test('Android prebuild always restores signed direct and store release variants'
   assert.match(once, /staging \{/u);
   assert.match(once, /applicationIdSuffix "\.staging"/u);
   assert.match(once, /resValue "string", "app_name", "Zod 测试版"/u);
+  assert.match(once, /cloudPayReferralScheme: "kaicloudpay"/u);
+  assert.match(once, /cloudPayReferralScheme: "zod-staging"/u);
+  assert.doesNotMatch(once, /cloudPayAuth(?:Scheme|Host|Path)/u);
   assert.doesNotMatch(once, /Zod 演示版/u);
   assert.match(once, /signingConfig signingConfigs\.release/u);
   assert.equal(twice, once);
+});
+
+test('Android prebuild pins only the referral scheme and creates no auth intent entry', () => {
+  const manifest = { manifest: { application: [{ $: { 'android:name': '.MainApplication' }, activity: [{ 'intent-filter': [
+    { data: [{ $: { 'android:scheme': 'kaicloudpay' } }] },
+  ] }] }] } };
+  pinReferralManifest(manifest);
+  const filters = manifest.manifest.application[0].activity[0]['intent-filter'];
+  assert.equal(filters[0].data[0].$['android:scheme'], '${cloudPayReferralScheme}');
+  assert.equal(filters.length, 1);
 });
 
 test('staging prebuild never creates a duplicated staging application ID', () => {

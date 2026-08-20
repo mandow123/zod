@@ -41,8 +41,8 @@ test('staging keeps its own package and API while rendering the original five-ta
   assert.match(gradle, /applicationIdSuffix "\.staging"/u);
   assert.match(config, /Zod 测试版/u);
   assert.match(gradle, /resValue "string", "app_name", "Zod 测试版"/u);
-  assert.match(gradle, /cloudPayCustomScheme: "zod-staging"/u);
-  assert.match(gradle, /cloudPayAuthHost: "zod-staging\.invalid"/u);
+  assert.match(gradle, /cloudPayReferralScheme: "zod-staging"/u);
+  assert.doesNotMatch(gradle, /cloudPayAuth(?:Scheme|Host|Path)/u);
   assert.doesNotMatch(metro, /StagingDemoShell\.staging\.tsx/u);
   assert.match(shell, /return children;/u);
   assert.match(app, /<StagingDemoShell><CloudPayApp \/><\/StagingDemoShell>/u);

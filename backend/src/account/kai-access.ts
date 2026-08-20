@@ -8,7 +8,14 @@ import { LEGAL_VERSIONS, type AccountPrincipal } from './types.js';
 
 export const KAI_AUTH_ISSUER = 'https://auth.kai.com/api/auth';
 export const KAI_AUTH_PUBLIC_CLIENT_ID = 'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K';
-export const KAI_AUTH_REDIRECT_URI = 'https://cloud.kai.com/zod/oauth2redirect/kai';
+export const KAI_AUTH_LOOPBACK_HOST = '127.0.0.1';
+export const KAI_AUTH_LOOPBACK_PATH = '/oauth2redirect/kai';
+export const KAI_AUTH_LOOPBACK_PORTS = [
+  52711, 53419, 54127, 54833, 55603, 56311, 57119, 57901, 58687,
+] as const;
+export const KAI_AUTH_REDIRECT_URIS = KAI_AUTH_LOOPBACK_PORTS.map(
+  (port) => `http://${KAI_AUTH_LOOPBACK_HOST}:${port}${KAI_AUTH_LOOPBACK_PATH}`,
+);
 export const KAI_AUTH_JWKS_URI = `${KAI_AUTH_ISSUER}/jwks`;
 export const KAI_AUTH_USERINFO_ENDPOINT = `${KAI_AUTH_ISSUER}/oauth2/userinfo`;
 

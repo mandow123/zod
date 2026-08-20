@@ -45,7 +45,16 @@ import { refreshAfterPendingAuthentication } from './src/auth-refresh';
 import {
   providerNextNavigation, providerOfferMessageDestination, type ProviderPublishIntent,
 } from './src/provider-next-navigation';
-import { completeKaiAuth, isKaiAuthCallback, startKaiAuth } from './src/kai-auth';
+import {
+  acceptVerifiedKaiConsents,
+  cancelVerifiedKaiAuth,
+  completeKaiAuth,
+  isKaiAuthCallback,
+  resumeVerifiedKaiAuth,
+  startKaiAuth,
+  KaiLegalDocumentsChangedError,
+  type KaiAuthProgress,
+} from './src/kai-auth';
 import { SparkProductDetailSheet } from './src/SparkProductDetailSheet';
 import { DeviceOrderSheet } from './src/DeviceOrderSheet';
 import { DeviceOrderDetailSheet } from './src/DeviceOrderDetailSheet';
@@ -76,6 +85,8 @@ function CloudPayApp() {
   const [authVisible, setAuthVisible] = useState(false);
   const [kaiAuthBusy, setKaiAuthBusy] = useState(false);
   const [kaiAuthError, setKaiAuthError] = useState<string | null>(null);
+  const [kaiAuthProgress, setKaiAuthProgress] = useState<KaiAuthProgress | null>(null);
+  const [kaiAuthRestoring, setKaiAuthRestoring] = useState(false);
   const [demandComposerVisible, setDemandComposerVisible] = useState(false);
   const [resourceToOpenId, setResourceToOpenId] = useState<string | null>(null);
   const [offerWizard, setOfferWizard] = useState<null | Readonly<{
@@ -146,10 +157,8 @@ function CloudPayApp() {
       setKaiAuthBusy(true);
       setKaiAuthError(null);
       try {
-        if (await completeKaiAuth(url)) {
-          await refreshAfterAuthentication();
-          if (active) setAuthVisible(false);
-        }
+        const progress = await completeKaiAuth(url);
+        if (active && progress) setKaiAuthProgress(progress);
       } catch (reason) {
         if (active) setKaiAuthError(reason instanceof Error ? reason.message : '统一身份登录失败，请重试。');
       } finally {
@@ -160,6 +169,18 @@ function CloudPayApp() {
     const subscription = Linking.addEventListener('url', ({ url }) => { void handleUrl(url); });
     return () => { active = false; subscription.remove(); };
   }, [refreshAfterAuthentication]);
+
+  useEffect(() => {
+    if (!authVisible || kaiAuthBusy) return;
+    let active = true;
+    setKaiAuthRestoring(true);
+    void resumeVerifiedKaiAuth().then((progress) => {
+      if (active && progress) setKaiAuthProgress(progress);
+    }).catch((reason) => {
+      if (active) setKaiAuthError(reason instanceof Error ? reason.message : '账号验证状态无法恢复。');
+    }).finally(() => { if (active) setKaiAuthRestoring(false); });
+    return () => { active = false; };
+  }, [authVisible, kaiAuthBusy]);
 
   useEffect(() => {
     if (!pendingReferralToken) return;
@@ -494,22 +515,43 @@ function CloudPayApp() {
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}
         onSignedIn={refreshAfterAuthentication}
-        kaiAuthBusy={kaiAuthBusy}
+        kaiAuthBusy={kaiAuthBusy || kaiAuthRestoring}
         kaiAuthError={kaiAuthError}
-        onKaiAuthStart={async (documents) => {
+        kaiAuthProgress={kaiAuthProgress}
+        onKaiAuthStart={async () => {
           setKaiAuthError(null);
           try {
-            if (await startKaiAuth({
-              termsVersion: documents.terms.version,
-              privacyVersion: documents.privacy.version,
-            })) {
-              await refreshAfterAuthentication();
-              setAuthVisible(false);
-            }
+            const progress = await startKaiAuth();
+            if (progress) setKaiAuthProgress(progress);
           }
           catch (reason) {
             setKaiAuthError(reason instanceof Error ? reason.message : '无法打开统一身份登录。');
           }
+        }}
+        onKaiPlatformRetry={async () => {
+          setKaiAuthError(null);
+          const progress = await resumeVerifiedKaiAuth();
+          if (!progress) throw new Error('KAI 账号验证已过期，请重新登录。');
+          setKaiAuthProgress(progress);
+        }}
+        onKaiConsent={async (documents) => {
+          setKaiAuthError(null);
+          try {
+            await acceptVerifiedKaiConsents(documents);
+            await refreshAfterAuthentication();
+            setKaiAuthProgress(null);
+            setAuthVisible(false);
+          } catch (reason) {
+            if (reason instanceof KaiLegalDocumentsChangedError) {
+              setKaiAuthProgress({ kind: 'consent_required', documents: reason.documents });
+            }
+            throw reason;
+          }
+        }}
+        onKaiAuthCancel={async () => {
+          setKaiAuthError(null);
+          await cancelVerifiedKaiAuth();
+          setKaiAuthProgress(null);
         }}
       />
       <PublishFlowSheet
