@@ -2,16 +2,17 @@ import { useCallback } from 'react';
 import { adminApi } from '../api/client';
 import { ErrorState, EmptyState, formatDateTime, LoadingRows, StatusBadge } from '../components/States';
 import { useResource } from '../components/useResource';
+import { isAdminDemo } from '../demo';
 
 export function DashboardPage() {
-  const isDemo = import.meta.env.MODE === 'demo';
+  const isDemo = isAdminDemo;
   const loader = useCallback((signal: AbortSignal) => adminApi.dashboard(signal), []);
   const state = useResource(loader, 'dashboard');
   return (
     <section className="content-page">
       <header className="page-heading">
         <div><span className="eyebrow">SYSTEM PULSE</span><h1>运行总览</h1><p>关键业务状态与近期业务活动。</p></div>
-        <span className="as-of">{isDemo ? '本地演示数据 · 不写入' : '实时读取 · 不缓存'}</span>
+        <span className="as-of">{isDemo ? '在线演示数据 · 不连接生产' : '实时读取 · 不缓存'}</span>
       </header>
       {state.status === 'loading' ? <><div className="metric-grid skeleton-metrics"><span/><span/><span/><span/></div><LoadingRows /></> : null}
       {state.status === 'error' ? <ErrorState detail={state.error} onRetry={state.retry} /> : null}
