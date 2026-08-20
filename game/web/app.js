@@ -67,11 +67,21 @@ function tierName(profile) {
 function gameCard({kind, eyebrow, title, description, meta, action, tone, badge}) {
   const playable = ['quick', 'open-three', 'open-mahjong', 'open-slots'].includes(action);
   return `<article class="game-card ${tone} ${playable ? 'is-live' : 'is-preview'}">
-    <div class="game-visual" aria-hidden="true"><span class="visual-grid"></span><b>${kind}</b><i></i></div>
+    ${gameVisual(action, kind)}
     <div class="game-content"><div class="game-heading"><span class="eyebrow">${eyebrow}</span><span class="status-badge ${playable ? 'live' : ''}">${badge}</span></div>
       <h3>${title}</h3><p>${description}</p><div class="game-meta">${meta.map(item => `<span>${item}</span>`).join('')}</div>
-      <button class="btn ${playable ? 'primary' : 'preview-button'}" data-action="${action}">${playable ? '立即开局' : '查看预告'} <b>→</b></button>
+      <button class="btn ${playable ? 'primary' : 'preview-button'}" data-action="${action}">${playable ? '现在就玩' : '查看预告'} <b>→</b></button>
     </div></article>`;
+}
+
+function gameVisual(action, fallback) {
+  const scenes = {
+    quick: `<span class="visual-live"><i></i>三人实时桌</span><div class="visual-poker-fan"><i>J<small>♠</small></i><i>Q<small>♥</small></i><i>K<small>♣</small></i></div><b>斗地主</b>`,
+    'open-three': `<span class="visual-live"><i></i>免费训练</span><div class="visual-three-cards"><i>9<small>♦</small></i><i>9<small>♣</small></i><i>A<small>♥</small></i></div><b>三张定胜负</b>`,
+    'open-mahjong': `<span class="visual-live"><i></i>136 张牌墙</span><div class="visual-mahjong-tiles"><i>一<small>万</small></i><i>發</i><i>●<small>筒</small></i><i>三<small>条</small></i></div><b>摸一张 · 打一张</b>`,
+    'open-slots': `<span class="visual-live"><i></i>零消耗娱乐</span><div class="visual-mini-reels"><i>7</i><i>KAI</i><i>⚡</i></div><b>转出你的组合</b>`,
+  };
+  return `<div class="game-visual visual-${action}" aria-hidden="true"><span class="visual-glow"></span>${scenes[action] || `<strong>${fallback}</strong>`}</div>`;
 }
 
 function lobby() {
@@ -80,11 +90,11 @@ function lobby() {
     gameCard({kind:'斗',eyebrow:'实时牌局',title:'斗地主',description:'经典三人出牌体验，与两位智能牌友对局，也可以邀请好友同桌。',meta:['服务端判定','好友房','公平牌序'],action:'quick',tone:'game-green',badge:'现在可玩'}),
     gameCard({kind:'三',eyebrow:'免费训练',title:'炸金花',description:'三张牌快速比大小，体验看牌、比牌与三人揭晓，不使用现金筹码。',meta:['单局 30 秒','两位 AI','不计积分'],action:'open-three',tone:'game-violet',badge:'试玩开放'}),
     gameCard({kind:'麻',eyebrow:'单人练习',title:'麻将',description:'完整 136 张牌墙，练习摸牌、打牌与四组面子加一对将的胡牌结构。',meta:['真实牌墙','胡牌检测','不计积分'],action:'open-mahjong',tone:'game-orange',badge:'试玩开放'}),
-    gameCard({kind:'KAI',eyebrow:'轻量娱乐',title:'算力老虎机',description:'KAI、AI、GPU 与能量符号组成的免费转轮，不支付、不扣卡时。',meta:['免费旋转','动效反馈','无付费下注'],action:'open-slots',tone:'game-cyan',badge:'试玩开放'})
+    gameCard({kind:'KAI',eyebrow:'轻量娱乐',title:'算力老虎机',description:'按一次让三个转轮停下：三枚相同是三连共振，两枚相同是双核同频。',meta:['规则清晰','免费旋转','无付费下注'],action:'open-slots',tone:'game-cyan',badge:'试玩开放'})
   ].join('');
   return `<div class="shell lobby-shell">${header()}${state.error ? `<div class="banner">${esc(state.error)}　游戏服务暂时离线，请稍后刷新。</div>`:''}
-    <section class="kai-hero"><div class="kai-hero-copy"><span class="kicker"><i class="live-dot"></i> KAI 算力驱动</span><h1>四种玩法，<br><em>随时开局。</em></h1><p>斗地主、炸金花、麻将和算力老虎机都能直接体验。竞技与免费娱乐明确分区，卡时不参与输赢。</p><div class="actions"><button class="btn primary play-now" data-action="quick">进入斗地主 <b>→</b></button><button class="btn glass" data-action="resume">继续上次对局</button></div></div><div class="compute-orbit" aria-hidden="true"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="compute-core"><span>KAI</span><small>PLAY</small></div><div class="data-node node-a">♠</div><div class="data-node node-b">麻</div><div class="data-node node-c">AI</div></div></section>
-    <section class="section-block"><div class="section-head"><div><span class="section-kicker">PLAYGROUND / 01</span><h2>选择你的下一局</h2></div><p>四个入口都能直接开始，试玩场不计竞技分</p></div><div class="game-grid">${games}</div></section>
+    <section class="kai-hero"><div class="kai-hero-copy"><span class="kicker"><i class="live-dot"></i> 4 款游戏现在可玩</span><h1>今晚，<br><em>开一局。</em></h1><p>斗地主和两位智能牌友实时过招，也可以轻松玩炸金花、麻将训练与免费转轮。没有充值诱导，点开就玩。</p><div class="hero-points"><span>真人思考时间</span><span>智能牌友</span><span>手机可玩</span></div><div class="actions"><button class="btn primary play-now" data-action="quick">快速开一桌 <b>→</b></button><button class="btn glass" data-action="scroll-games">看看其他游戏</button></div></div><div class="hero-game-stage" aria-hidden="true"><span class="hero-stage-label"><i></i>斗地主 · 三人桌</span><div class="hero-seat hero-seat-left">阿</div><div class="hero-seat hero-seat-right">禾</div><div class="hero-card-fan"><i>J<small>♠</small></i><i>Q<small>♥</small></i><i>K<small>♣</small></i><i class="hero-joker">JOKER</i></div><div class="hero-turn"><b>15</b><span>思考中</span></div><div class="hero-mode-dock"><span><i>三</i>炸金花</span><span><i>麻</i>麻将</span><span><i>7</i>转轮</span></div></div></section>
+    <section class="section-block" id="game-selection"><div class="section-head"><div><span class="section-kicker">PLAYGROUND / 01</span><h2>想玩什么，直接开局</h2></div><p>四个入口都能直接开始，试玩场不计竞技分</p></div><div class="game-grid">${games}</div></section>
     <section class="dashboard-grid"><article class="card room-panel"><div><span class="section-kicker">FRIEND ROOM</span><h2>好友同桌</h2><p class="muted">创建六位房号分享给朋友，人数不足时可由智能牌友补位。</p></div><div class="room-actions"><button class="btn primary" data-action="create-room">＋ 创建房间</button><div class="friend-row"><input class="input" id="room-code" maxlength="6" inputmode="numeric" aria-label="六位房号" placeholder="输入 6 位房号"><button class="btn" data-action="join-room">加入</button></div></div></article>
     <article class="card player-panel"><div class="profile-line"><div class="player-avatar large">${esc((p.name||'玩').slice(0,1))}</div><div><span class="section-kicker">MY SEASON</span><h2>${tierName(p)}</h2></div></div><div class="stats"><div class="stat"><b>${competitiveScore(p)}</b><span>竞技分</span></div><div class="stat"><b>${p.games}</b><span>对局</span></div><div class="stat"><b>${winRatePercent(p)}%</b><span>胜率</span></div></div><button class="text-link" data-view="history">查看完整战绩 →</button></article></section>
     ${computeServices()}${nav('lobby')}</div>`;
@@ -109,16 +119,19 @@ function room() {
 }
 
 function poker(c, selectable = true) {
-  const label = rank(c.rank);
+  const rawLabel = rank(c.rank);
   const symbol = suit(c.suit);
-  const portrait = [11,12,13].includes(c.rank)
-    ? `<i class="card-portrait face-${String(label).toLowerCase()}"><em>✦</em><b>${label}</b><strong>${symbol}</strong></i>`
-    : c.suit === 'joker'
-      ? `<i class="card-portrait face-joker"><em>KAI</em><b>★</b></i>`
-      : `<i class="card-pip">${symbol}</i>`;
-  const content = `<span class="card-index"><b>${label}</b><small>${symbol}</small></span>${portrait}<span class="card-corner"><b>${label}</b><small>${symbol}</small></span>`;
-  if (!selectable) return `<span class="poker ${isRed(c)?'red':''}" aria-hidden="true">${content}</span>`;
-  return `<button class="poker ${isRed(c)?'red':''} ${state.selected.has(c.id)?'selected':''}" data-card="${esc(c.id)}" aria-label="${esc(`${label}${symbol}`)}">${content}</button>`;
+  const joker = c.suit === 'joker';
+  const bigJoker = joker && c.rank === 17;
+  const classes = [isRed(c)?'red':'', joker?'joker-card':'', joker?(bigJoker?'joker-red':'joker-gray'):''].filter(Boolean).join(' ');
+  const content = joker
+    ? `<span class="joker-index">${bigJoker?'大王':'小王'}</span><i class="joker-face"><em>${bigJoker?'RED':'GREY'}</em><b>JOKER</b><strong>♛</strong></i>`
+    : `<span class="card-index"><b>${rawLabel}</b><small>${symbol}</small></span>${[11,12,13].includes(c.rank)
+      ? `<i class="card-court face-${String(rawLabel).toLowerCase()}"><em>${rawLabel}</em><b>${symbol}</b><strong>KAI</strong></i>`
+      : `<i class="card-pip">${symbol}</i>`}`;
+  const aria = joker ? `${bigJoker?'大王':'小王'} ${bigJoker?'红色':'灰色'} JOKER` : `${rawLabel}${symbol}`;
+  if (!selectable) return `<span class="poker ${classes}" aria-hidden="true">${content}</span>`;
+  return `<button class="poker ${classes} ${state.selected.has(c.id)?'selected':''}" data-card="${esc(c.id)}" aria-label="${esc(aria)}">${content}</button>`;
 }
 
 function turnRemaining(g) {
@@ -201,7 +214,7 @@ function threeCardGame() {
   const winner = ranked[0];
   const result = revealed ? `<div class="training-result ${winner.index===0?'win':'lose'}"><span>${winner.index===0?'本轮获胜':'本轮结果'}</span><b>${esc(winner.player.name)} · ${esc(winner.score.label)}</b><small>免费训练局，不影响竞技分</small></div>` : '';
   const seats = round.players.slice(1).map((player) => `<article class="three-opponent"><div class="training-avatar">${esc(player.name.slice(0,1))}</div><b>${esc(player.name)}</b><div class="three-hand">${revealed ? player.hand.map((card) => poker(card,false)).join('') : player.hand.map(cardBack).join('')}</div>${revealed?`<span>${esc(evaluateThreeCard(player.hand).label)}</span>`:'<span>等待比牌</span>'}</article>`).join('');
-  return `<div class="shell casual-shell">${casualHeader('炸金花','THREE CARD','免费训练 · 不计竞技分')}<section class="casual-stage three-stage">${result}<div class="three-opponents">${seats}</div><div class="three-center"><span>KAI PLAY</span><b>${state.casual.thinking?'AI 正在判断牌型…':revealed?'本轮已揭晓':'三张牌，一次比牌'}</b></div><article class="three-player"><div class="training-avatar">你</div><div><b>你的手牌</b><span>${esc(evaluateThreeCard(round.players[0].hand).label)}</span></div><div class="three-hand">${round.players[0].hand.map((card) => poker(card,false)).join('')}</div></article><div class="casual-actions"><button class="btn primary" data-action="three-reveal" ${state.casual.thinking||revealed?'disabled':''}>${state.casual.thinking?'思考中…':'立即比牌'}</button><button class="btn" data-action="three-new">重新发牌</button></div></section><p class="casual-disclaimer">牌型顺序：豹子 ＞ 顺金 ＞ 金花 ＞ 顺子 ＞ 对子 ＞ 高牌。当前为单机训练，不使用现金、Token 或卡时。</p></div>`;
+  return `<div class="shell casual-shell">${casualHeader('炸金花','THREE CARD','免费训练 · 不计竞技分')}<section class="casual-stage three-stage">${result}<div class="three-how"><span>1 看自己的三张牌</span><i>→</i><span>2 点击翻开并比牌</span><i>→</i><span>3 最大牌型获胜</span></div><div class="three-opponents">${seats}</div><div class="three-center"><span>本局免费</span><b>${state.casual.thinking?'两位牌友正在思考…':revealed?'三家牌面已揭晓':'三张牌，一次定胜负'}</b><small>无筹码 · 无下注</small></div><article class="three-player"><div class="training-avatar">你</div><div><b>你的手牌</b><span>${esc(evaluateThreeCard(round.players[0].hand).label)}</span></div><div class="three-hand">${round.players[0].hand.map((card) => poker(card,false)).join('')}</div></article><div class="casual-actions"><button class="btn primary" data-action="three-reveal" ${state.casual.thinking||revealed?'disabled':''}>${state.casual.thinking?'牌友思考中…':'翻开并比牌'}</button><button class="btn" data-action="three-new">换一手牌</button></div></section><p class="casual-disclaimer">牌型顺序：豹子 ＞ 顺金 ＞ 金花 ＞ 顺子 ＞ 对子 ＞ 高牌。当前为单机训练，不使用现金、Token 或卡时。</p></div>`;
 }
 
 function mahjongTile(tile) {
@@ -216,14 +229,17 @@ function mahjongGame() {
   const canDraw = round.hand.length === 13 && round.wall.length > 0;
   const canDiscard = round.hand.length === 14;
   const notice = round.won ? '<div class="training-result win"><span>牌型完成</span><b>胡牌</b><small>四组面子加一对将</small></div>' : '';
-  return `<div class="shell casual-shell">${casualHeader('麻将','MAHJONG LAB',`牌墙 ${round.wall.length} 张`)}<section class="casual-stage mahjong-stage">${notice}<div class="mahjong-wall" aria-hidden="true">${Array.from({length:Math.min(18,Math.ceil(round.wall.length/8))},()=>'<i></i>').join('')}</div><div class="discard-river"><span>牌河</span><div>${round.discards.slice(-24).map((tile)=>`<i class="river-tile">${esc(tile.label)}</i>`).join('')||'<small>摸牌后选择一张打出</small>'}</div></div><div class="mahjong-hand">${sortMahjong(round.hand).map(mahjongTile).join('')}</div><div class="casual-actions"><button class="btn primary" data-action="mahjong-draw" ${canDraw&&!round.won?'':'disabled'}>摸一张</button><button class="btn" data-action="mahjong-discard" ${canDiscard&&state.casual.selectedTileId&&!round.won?'':'disabled'}>打出所选</button><button class="btn" data-action="mahjong-new">重开牌局</button></div></section><p class="casual-disclaimer">完整 136 张基础牌墙，练习摸打与常规胡牌结构；暂不包含吃碰杠、花牌和多人计番。</p></div>`;
+  const wall = Array.from({length:Math.min(18,Math.ceil(round.wall.length/8))},()=>'<i></i>').join('');
+  const turnHint = canDraw ? '轮到你摸牌' : state.casual.selectedTileId ? '点击“打出所选”' : '请选择一张牌';
+  return `<div class="shell casual-shell">${casualHeader('麻将','MAHJONG LAB',`牌墙 ${round.wall.length} 张`)}<section class="casual-stage mahjong-stage">${notice}<div class="mahjong-wall wall-top" aria-hidden="true">${wall}</div><div class="mahjong-wall wall-left" aria-hidden="true">${wall}</div><div class="mahjong-wall wall-right" aria-hidden="true">${wall}</div><div class="mahjong-wall wall-bottom" aria-hidden="true">${wall}</div><div class="mahjong-counter"><small>牌墙剩余</small><b>${round.wall.length}</b><span>${turnHint}</span></div><div class="discard-river"><span>牌河</span><div>${round.discards.slice(-24).map((tile)=>`<i class="river-tile">${esc(tile.label)}</i>`).join('')||`<small>${canDraw?'第一步：点击下方“摸一张”':'第二步：确认高亮牌，再点击“打出所选”'}</small>`}</div></div><div class="mahjong-hand">${sortMahjong(round.hand).map(mahjongTile).join('')}</div><div class="casual-actions"><button class="btn primary" data-action="mahjong-draw" ${canDraw&&!round.won?'':'disabled'}>① 摸一张</button><button class="btn" data-action="mahjong-discard" ${canDiscard&&state.casual.selectedTileId&&!round.won?'':'disabled'}>② 打出所选</button><button class="btn" data-action="mahjong-new">重新开局</button></div></section><p class="casual-disclaimer">完整 136 张基础牌墙，练习摸打与常规胡牌结构；暂不包含吃碰杠、花牌和多人计番。</p></div>`;
 }
 
 function slotsGame() {
   const casual = state.casual;
   if (!casual) return lobby();
   const result = casual.last?.result;
-  return `<div class="shell casual-shell">${casualHeader('算力老虎机','COMPUTE REELS',`已旋转 ${casual.spins} 次`)}<section class="casual-stage slots-stage"><div class="slot-machine"><div class="slot-brand"><span>KAI</span><b>COMPUTE × 3</b><small>免费娱乐模式</small></div><div class="slot-reels ${casual.spinning?'spinning':''}">${casual.reels.map((symbol,index)=>`<div class="slot-reel" style="--reel:${index}"><span>${esc(symbol)}</span></div>`).join('')}</div><div class="slot-result ${result?.tier||''}"><b>${casual.spinning?'算力调度中…':result?.label||'点击开始旋转'}</b><small>${result?.tier==='jackpot'?'三枚同图标':result?.tier==='pair'?'出现一组相同图标':'不扣竞技分，也不产生奖励资产'}</small></div><button class="slot-lever" data-action="slots-spin" ${casual.spinning?'disabled':''}><i></i><span>${casual.spinning?'旋转中':'免费旋转'}</span></button></div></section><p class="casual-disclaimer">纯视觉娱乐，不支付、不下注、不发放可兑换奖励，不会扣除竞技分、Token 或 KAI 卡时。</p></div>`;
+  const resultCopy = result?.tier==='jackpot' ? '三个图标完全相同' : result?.tier==='pair' ? '其中两个图标相同' : result ? '三个图标各不相同' : '点击按钮，等待三个转轮依次停止';
+  return `<div class="shell casual-shell">${casualHeader('算力老虎机','COMPUTE REELS',`已旋转 ${casual.spins} 次`)}<section class="casual-stage slots-stage"><div class="slot-guide"><b>怎么玩？</b><span><i>1</i>点击免费旋转</span><span><i>2</i>三个转轮停止</span><span><i>3</i>查看图标组合</span></div><div class="slot-machine"><div class="slot-crown"><span>KAI PLAY</span><b>算力转轮</b><small>免费娱乐 · 零消耗</small></div><div class="slot-reels ${casual.spinning?'spinning':''}">${casual.reels.map((symbol,index)=>`<div class="slot-reel" style="--reel:${index}"><small>◆</small><span class="slot-symbol symbol-${symbol==='7'?'seven':'kai'}">${esc(symbol)}</span><small>★</small></div>`).join('')}</div><div class="slot-paytable"><span><b>三枚相同</b><small>三连共振</small></span><span><b>两枚相同</b><small>双核同频</small></span><span><b>各不相同</b><small>继续挑战</small></span></div><div class="slot-result ${result?.tier||''}"><b>${casual.spinning?'转轮依次停止中…':result?.label||'准备好了吗？'}</b><small>${resultCopy}</small></div><button class="slot-lever" data-action="slots-spin" ${casual.spinning?'disabled':''}><i></i><span>${casual.spinning?'正在旋转…':'免费旋转一次'}</span></button></div></section><p class="casual-disclaimer">纯视觉娱乐，不支付、不下注、不发放可兑换奖励，不会扣除竞技分、Token 或 KAI 卡时。</p></div>`;
 }
 
 function history() {
@@ -248,7 +264,7 @@ function openMahjong() {
 }
 function openSlots() {
   stopGameSync();
-  state.casual = { kind: 'slots', reels: ['KAI', 'AI', 'GPU'], last: null, spins: 0, spinning: false };
+  state.casual = { kind: 'slots', reels: ['7', 'KAI', '⚡'], last: null, spins: 0, spinning: false };
   state.view = 'slots';
 }
 
@@ -324,13 +340,14 @@ app.addEventListener('click', e => {
   if(el.dataset.bid!==undefined) act(async()=>{const body={score:Number(el.dataset.bid),expectedSequence:state.game.sequence};const r=await api(`/v1/games/${state.game.id}/bid`,{method:'POST',body:JSON.stringify(body),headers:{'x-request-id':requestId()}});state.game=r.game;state.profile=r.profile;});
   const a=el.dataset.action;
   if(a==='quick') act(startQuickGame);
+  if(a==='scroll-games') document.querySelector('#game-selection')?.scrollIntoView({behavior:'smooth',block:'start'});
   if(a==='open-three'){openThreeCard();render();}
   if(a==='open-mahjong'){openMahjong();render();}
   if(a==='open-slots'){openSlots();render();}
   if(a==='casual-home'){state.casual=null;state.view='lobby';render();}
   if(a==='three-new'){state.casual={kind:'three',round:newThreeCardRound(),revealed:false,thinking:false};render();}
   if(a==='three-reveal'&&state.view==='three'&&!state.casual?.thinking&&!state.casual?.revealed){
-    state.casual.thinking=true;render();setTimeout(()=>{if(state.view!=='three'||!state.casual)return;state.casual.thinking=false;state.casual.revealed=true;render();},900);
+    state.casual.thinking=true;render();setTimeout(()=>{if(state.view!=='three'||!state.casual)return;state.casual.thinking=false;state.casual.revealed=true;render();},1_400);
   }
   if(a==='mahjong-new'){state.casual={kind:'mahjong',round:newMahjongRound(),selectedTileId:null};render();}
   if(a==='mahjong-draw'&&state.view==='mahjong'){

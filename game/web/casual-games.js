@@ -131,13 +131,13 @@ export function newMahjongRound(random = Math.random) {
   return { hand: sortMahjong(wall.splice(0, 13)), wall, discards: [], drawnId: null, won: false };
 }
 
-export const SLOT_SYMBOLS = Object.freeze(['KAI', 'AI', 'GPU', '⚡', '☁']);
+export const SLOT_SYMBOLS = Object.freeze(['7', 'KAI', '⚡', 'AI', '★']);
 
 export function spinSlots(random = Math.random) {
   const reels = Array.from({ length: 3 }, () => SLOT_SYMBOLS[Math.floor(random() * SLOT_SYMBOLS.length)]);
   const unique = new Set(reels).size;
-  const result = unique === 1 ? { tier: 'jackpot', label: '算力全开' }
-    : unique === 2 ? { tier: 'pair', label: '双核联动' }
-      : { tier: 'none', label: '再试一次' };
+  const result = unique === 1 ? { tier: 'jackpot', label: '三连共振' }
+    : unique === 2 ? { tier: 'pair', label: '双核同频' }
+      : { tier: 'none', label: '继续挑战' };
   return { reels, result };
 }

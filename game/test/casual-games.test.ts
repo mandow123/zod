@@ -30,5 +30,5 @@ test('mahjong win detector accepts four melds and one pair', () => {
 });
 
 test('slot result is deterministic with an injected random source', () => {
-  assert.deepEqual(spinSlots(() => 0), { reels: ['KAI', 'KAI', 'KAI'], result: { tier: 'jackpot', label: '算力全开' } });
+  assert.deepEqual(spinSlots(() => 0), { reels: ['7', '7', '7'], result: { tier: 'jackpot', label: '三连共振' } });
 });
