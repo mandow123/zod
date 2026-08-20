@@ -1,0 +1,352 @@
+openapi: 3.1.0
+info:
+  title: KAI Cloud Partner Resource Verification API
+  version: 1.0.0-sandbox
+  description: Server-to-server contract required by KAI CloudPay. This is not the KAI Cloud website API.
+servers:
+  - url: https://sandbox-api.cloud.kai.com
+    description: Non-production sandbox
+paths:
+  /api/public/v1/resource-verifications:
+    post:
+      operationId: createResourceVerification
+      security:
+        - oauthClient: [resource:read, verification:write]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateVerification' }
+      responses:
+        '201': { $ref: '#/components/responses/Verification' }
+        '200': { $ref: '#/components/responses/Verification' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/resource-verifications/{verificationId}:
+    get:
+      operationId: getResourceVerification
+      security:
+        - oauthClient: [resource:read]
+      parameters:
+        - $ref: '#/components/parameters/VerificationId'
+      responses:
+        '200': { $ref: '#/components/responses/Verification' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/resource-verifications/{verificationId}/revoke:
+    post:
+      operationId: revokeResourceVerification
+      security:
+        - oauthClient: [resource:read, verification:write]
+      parameters:
+        - $ref: '#/components/parameters/VerificationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '200': { $ref: '#/components/responses/Verification' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/devices/{deviceId}:
+    get:
+      operationId: getDeviceStatus
+      security:
+        - oauthClient: [resource:read]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/OpaqueId' }
+      responses:
+        '200':
+          description: Device status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [record]
+                properties:
+                  record: { $ref: '#/components/schemas/Device' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/agent-challenges:
+    post:
+      operationId: createAgentChallenge
+      security:
+        - oauthClient: [agent:write]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [organizationReference, resourceReference]
+              properties:
+                organizationReference: { $ref: '#/components/schemas/OpaqueId' }
+                resourceReference: { $ref: '#/components/schemas/OpaqueId' }
+      responses:
+        '201':
+          description: Short-lived, single-use challenge
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [record]
+                properties:
+                  record: { $ref: '#/components/schemas/AgentChallenge' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/agent-challenges/{challengeId}/revoke:
+    post:
+      operationId: revokeAgentChallenge
+      security:
+        - oauthClient: [agent:write]
+      parameters:
+        - { name: challengeId, in: path, required: true, schema: { $ref: '#/components/schemas/OpaqueId' } }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '204': { description: Revoked or already revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/devices/register:
+    post:
+      operationId: registerDevice
+      security:
+        - oauthClient: [agent:write]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [challengeId, publicKey, observedAt, signature]
+              properties:
+                challengeId: { $ref: '#/components/schemas/OpaqueId' }
+                publicKey: { type: string, minLength: 32, maxLength: 512 }
+                observedAt: { type: string, format: date-time }
+                signature: { type: string, minLength: 64, maxLength: 1024 }
+      responses:
+        '201':
+          description: Registered trusted device
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [record]
+                properties:
+                  record: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /api/public/v1/devices/{deviceId}/heartbeats:
+    post:
+      operationId: recordDeviceHeartbeat
+      security:
+        - oauthClient: [agent:write]
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { $ref: '#/components/schemas/OpaqueId' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [bootId, sequence, observedAt, inventoryDigest, runtimeDigest, policyDigest, signature]
+              properties:
+                bootId: { $ref: '#/components/schemas/OpaqueId' }
+                sequence: { type: integer, format: int64, minimum: 1 }
+                observedAt: { type: string, format: date-time }
+                inventoryDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
+                runtimeDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
+                policyDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
+                signature: { type: string, minLength: 64, maxLength: 1024 }
+      responses:
+        '202': { description: Accepted; duplicate or out-of-order sequence returns 409 }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+webhooks:
+  resourceVerificationUpdated:
+    post:
+      security: []
+      parameters:
+        - { name: x-kai-delivery-id, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 160 } }
+        - { name: x-kai-timestamp, in: header, required: true, schema: { type: string, pattern: '^\\d{10}$' } }
+        - { name: x-kai-signature, in: header, required: true, schema: { type: string, pattern: '^sha256=[a-f0-9]{64}$' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [id, version, type, occurredAt, data]
+              properties:
+                id: { $ref: '#/components/schemas/OpaqueId' }
+                version: { const: 1 }
+                type: { const: resource.verification.updated }
+                occurredAt: { type: string, format: date-time }
+                data:
+                  type: object
+                  additionalProperties: false
+                  required: [verification]
+                  properties:
+                    verification: { $ref: '#/components/schemas/Verification' }
+      responses:
+        '202': { description: Accepted or exact replay }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    oauthClient:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://sandbox-auth.cloud.kai.com/oauth/token
+          scopes:
+            resource:read: Read partner-owned resources and verification status
+            verification:write: Create and revoke verification runs
+            agent:write: Register and observe trusted devices
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, pattern: '^[A-Za-z0-9._:-]{16,128}$' }
+    VerificationId:
+      name: verificationId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/OpaqueId' }
+  responses:
+    Verification:
+      description: Current resource verification
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [record]
+            properties:
+              record: { $ref: '#/components/schemas/Verification' }
+    Error:
+      description: Stable error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: object
+                additionalProperties: false
+                required: [code, message, requestId]
+                properties:
+                  code: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,79}$' }
+                  message: { type: string, minLength: 1, maxLength: 240 }
+                  requestId: { type: string, minLength: 1, maxLength: 160 }
+  schemas:
+    OpaqueId: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{2,199}$' }
+    CreateVerification:
+      type: object
+      additionalProperties: false
+      required: [organizationReference, resourceReference, resource]
+      properties:
+        organizationReference: { $ref: '#/components/schemas/OpaqueId' }
+        resourceReference: { $ref: '#/components/schemas/OpaqueId' }
+        resource:
+          type: object
+          additionalProperties: false
+          required: [productCode, region, specifications]
+          properties:
+            productCode: { type: string, minLength: 1, maxLength: 120 }
+            region: { type: string, minLength: 1, maxLength: 120 }
+            specifications: { type: object, maxProperties: 100 }
+    Failure:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,79}$' }
+        message: { type: string, minLength: 1, maxLength: 240 }
+    Verification:
+      type: object
+      required: [id, version, status, updatedAt, failure]
+      properties:
+        id: { $ref: '#/components/schemas/OpaqueId' }
+        version: { type: integer, format: int64, minimum: 1 }
+        status: { enum: [pending, running, passed, failed, revoked] }
+        updatedAt: { type: string, format: date-time }
+        failure:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/Failure' }
+    Device:
+      type: object
+      required: [id, status, lastHeartbeatAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/OpaqueId' }
+        status: { enum: [registering, checking, ready, offline, revoked] }
+        lastHeartbeatAt:
+          oneOf:
+            - { type: 'null' }
+            - { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AgentChallenge:
+      type: object
+      additionalProperties: false
+      required: [id, nonce, expiresAt, status]
+      properties:
+        id: { $ref: '#/components/schemas/OpaqueId' }
+        nonce: { type: string, minLength: 32, maxLength: 512 }
+        expiresAt: { type: string, format: date-time }
+        status: { enum: [pending, consumed, expired, revoked] }
+        allowedClockSkewSeconds:
+          type: integer
+          minimum: 0
+          maximum: 300

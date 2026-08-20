@@ -88,6 +88,11 @@ const environmentSchema = z.object({
   KAI_OIDC_SUBJECT_PEPPER: optionalText,
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: optionalText,
   KAI_OIDC_APP_REDIRECT_URIS: optionalText,
+  KAI_CLOUD_PUBLIC_API_URL: optionalUntrimmedText,
+  KAI_CLOUD_PUBLIC_TOKEN_URL: optionalUntrimmedText,
+  KAI_CLOUD_PUBLIC_CLIENT_ID: optionalUntrimmedText,
+  KAI_CLOUD_PUBLIC_CLIENT_SECRET: optionalUntrimmedText,
+  KAI_CLOUD_PUBLIC_WEBHOOK_SECRET: optionalUntrimmedText,
   ADMIN_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
   ADMIN_WEB_ORIGIN: optionalUntrimmedText,
   ADMIN_API_ORIGIN: optionalUntrimmedText,
@@ -598,6 +603,37 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       (value) => value !== 'kaicloudpay://auth/kai/callback',
     ) ? ['KAI_OIDC_APP_REDIRECT_URIS(registered exact app redirects)'] : []),
   ]);
+  const kaiCloudPublicBase = capability(environment, [
+    'KAI_CLOUD_PUBLIC_API_URL', 'KAI_CLOUD_PUBLIC_TOKEN_URL', 'KAI_CLOUD_PUBLIC_CLIENT_ID',
+    'KAI_CLOUD_PUBLIC_CLIENT_SECRET', 'KAI_CLOUD_PUBLIC_WEBHOOK_SECRET',
+  ]);
+  const kaiCloudPublicInvalid: string[] = [];
+  for (const [name, value] of [
+    ['KAI_CLOUD_PUBLIC_API_URL', parsed.KAI_CLOUD_PUBLIC_API_URL],
+    ['KAI_CLOUD_PUBLIC_TOKEN_URL', parsed.KAI_CLOUD_PUBLIC_TOKEN_URL],
+  ] as const) {
+    if (!value) continue;
+    try {
+      const url = new URL(value);
+      const localhost = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+      if (value !== value.trim() || url.username || url.password || url.hash || url.search
+        || !['http:', 'https:'].includes(url.protocol)
+        || (parsed.NODE_ENV === 'production' && url.protocol !== 'https:')
+        || (url.protocol === 'http:' && !localhost)) throw new Error('unsafe URL');
+    } catch { kaiCloudPublicInvalid.push(`${name}(secure URL)`); }
+  }
+  if (parsed.KAI_CLOUD_PUBLIC_CLIENT_ID
+    && !/^[A-Za-z0-9._:-]{3,200}$/u.test(parsed.KAI_CLOUD_PUBLIC_CLIENT_ID)) {
+    kaiCloudPublicInvalid.push('KAI_CLOUD_PUBLIC_CLIENT_ID(valid confidential client id)');
+  }
+  const kaiCloudSecrets = [parsed.KAI_CLOUD_PUBLIC_CLIENT_SECRET, parsed.KAI_CLOUD_PUBLIC_WEBHOOK_SECRET]
+    .filter((value): value is string => Boolean(value));
+  if (kaiCloudSecrets.some((value) => value.length < 32 || value !== value.trim()
+    || CONTROL_CHARACTER_PATTERN.test(value)) || new Set(kaiCloudSecrets).size !== kaiCloudSecrets.length
+    || kaiCloudSecrets.some((secret) => otherSecuritySecrets.includes(secret))) {
+    kaiCloudPublicInvalid.push('KAI_CLOUD_PUBLIC_SECRETS(independent >=32 chars)');
+  }
+  const kaiCloudPublicApi = mergeCapability(kaiCloudPublicBase, kaiCloudPublicInvalid);
   let vastPricingPolicy: z.infer<typeof vastPricingPolicySchema> | null = null;
   const vastInvalid: string[] = [];
   if (parsed.VAST_PRICING_POLICY_JSON) {
@@ -720,6 +756,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
         database, tokenSecurity, kaiOidc, adminAuth: adminConfiguration.adminAuth,
         sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
         publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
+        kaiCloudPublicApi,
       },
     },
   } as const;

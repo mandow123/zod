@@ -7,6 +7,7 @@ import {
 import type { CloudPaySnapshot } from '../api';
 import { Card } from '../components';
 import { gpuNodeSummary } from '../compute-product';
+import { KaiCloudVerificationSheet } from '../KaiCloudVerificationSheet';
 import { NodeEnrollmentSheet } from '../NodeEnrollmentSheet';
 import {
   filterProviderAssets, loadProviderAsset, loadProviderAssets, providerAssetActionAllowed, providerAssetLifecycleLabel,
@@ -65,6 +66,7 @@ export function ProviderResourcesScreen({
   const [expanded, setExpanded] = useState<DetailSection | null>(null);
   const [evidenceResource, setEvidenceResource] = useState<ComputeResource | null>(null);
   const [nodeAsset, setNodeAsset] = useState<ProviderAsset | null>(null);
+  const [kaiCloudAsset, setKaiCloudAsset] = useState<ProviderAsset | null>(null);
   const [busyAction, setBusyAction] = useState(false);
   const requestKeys = useRef(new Map<string, string>());
   const assetRequestGeneration = useRef(0);
@@ -87,6 +89,9 @@ export function ProviderResourcesScreen({
       setNodeAsset((current) => current
         ? result.assets.find((asset) => asset.id === current.id) ?? current
         : null);
+      setKaiCloudAsset((current) => current
+        ? result.assets.find((asset) => asset.id === current.id) ?? current
+        : null);
     } catch (caught) {
       if (generation !== assetRequestGeneration.current) return;
       setError(caught instanceof Error ? caught.message : '资产加载失败，请重试。');
@@ -98,7 +103,8 @@ export function ProviderResourcesScreen({
   useEffect(() => {
     const generation = ++assetRequestGeneration.current;
     detailRequestGeneration.current += 1;
-    setAssets([]); setSummary(emptySummary); setLoaded(false); setFilter('all'); setSelectedAsset(null); setNodeAsset(null);
+    setAssets([]); setSummary(emptySummary); setLoaded(false); setFilter('all'); setSelectedAsset(null);
+    setNodeAsset(null); setKaiCloudAsset(null);
     void loadAssets(generation);
     return () => {
       if (assetRequestGeneration.current === generation) assetRequestGeneration.current += 1;
@@ -247,8 +253,10 @@ export function ProviderResourcesScreen({
         onClose={() => { if (!busyAction) { detailRequestGeneration.current += 1; setSelectedAsset(null); } }}
         onAction={() => selectedAsset ? void runAction(selectedAsset) : undefined}
         onNodeAction={() => selectedAsset ? openNodeEnrollment(selectedAsset) : undefined}
+        onKaiCloudAction={() => { if (selectedAsset) { setKaiCloudAsset(selectedAsset); setSelectedAsset(null); } }}
       />
       <NodeEnrollmentSheet asset={nodeAsset} onClose={() => setNodeAsset(null)} onChanged={loadAssets} />
+      <KaiCloudVerificationSheet asset={kaiCloudAsset} onClose={() => setKaiCloudAsset(null)} onChanged={loadAssets} />
       <ResourceEvidenceSheet resource={evidenceResource} canManage={Boolean(snapshot.providerWorkspace?.canManage)} onClose={() => setEvidenceResource(null)} onChanged={refreshAll} />
     </View>
   );
@@ -280,9 +288,10 @@ function AssetCard({ asset, canManage, busy, onOpen, onAction, onNodeAction }: R
   </Pressable>;
 }
 
-function AssetDetailSheet({ asset, canManage, loading, error, expanded, busy, onToggle, onClose, onAction, onNodeAction }: Readonly<{
+function AssetDetailSheet({ asset, canManage, loading, error, expanded, busy, onToggle, onClose, onAction, onNodeAction, onKaiCloudAction }: Readonly<{
   asset: ProviderAsset | null; canManage: boolean; loading: boolean; error: string | null; expanded: DetailSection | null; busy: boolean;
   onToggle: (section: DetailSection) => void; onClose: () => void; onAction: () => void; onNodeAction: () => void;
+  onKaiCloudAction: () => void;
 }>) {
   if (!asset) return null;
   const tone = statusTone[asset.status];
@@ -309,6 +318,7 @@ function AssetDetailSheet({ asset, canManage, loading, error, expanded, busy, on
           <DetailLine label="节点状态" value={asset.deliveryReadiness.label} />
           <DetailLine label="最近在线" value={timeLabel(asset.deliveryReadiness.nodeLastSeenAt)} />
           {nodeAction ? <Pressable disabled={busy} onPress={onNodeAction} style={nodeAction.key === 'revoke_node_enrollment' ? styles.nodeDangerButton : styles.nodeButton}><Text style={nodeAction.key === 'revoke_node_enrollment' ? styles.nodeDangerText : styles.nodeButtonText}>{nodeAction.label}</Text></Pressable> : null}
+          {canManage ? <Pressable disabled={busy} onPress={onKaiCloudAction} style={styles.nodeButton}><Text style={styles.nodeButtonText}>KAI Cloud 在线验证</Text></Pressable> : null}
         </DetailSectionRow>
         <DetailSectionRow title="运营与上架" open={expanded === 'operation'} onPress={() => onToggle('operation')}>
           <Text style={styles.sectionBody}>{asset.statusDetail}</Text>
