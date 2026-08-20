@@ -151,11 +151,18 @@ export async function buildApp({ config, database, accountService, subjectServic
       ...(config.readiness.capabilities.publicHttps ? [] : ['PUBLIC_HTTPS']),
     ];
     const deploymentReady = config.readiness.serviceReady && databaseReady;
+    const rewardConfigurationBlockers = [
+      ...(config.streamerRewardsMode === 'off' ? [] : config.readiness.capabilities.streamerRewards.missing),
+      ...(config.inviteRewardsMode === 'off' ? [] : config.readiness.capabilities.inviteRewards.missing),
+      ...(config.legacyCreatorCommissionMode === 'drain' ? config.readiness.capabilities.legacyCreatorMode.missing : []),
+    ];
     const commerceBlockers = [
       ...deploymentBlockers,
       ...config.readiness.capabilities.creditCommerce.blockers,
+      ...rewardConfigurationBlockers,
     ];
-    const commerceReady = deploymentReady && config.readiness.capabilities.creditCommerce.available;
+    const commerceReady = deploymentReady && config.readiness.capabilities.creditCommerce.available
+      && rewardConfigurationBlockers.length === 0;
     return reply.status(deploymentReady ? 200 : 503).send({
       ok: deploymentReady,
       service: 'kai-cloudpay-backend',
@@ -183,6 +190,27 @@ export async function buildApp({ config, database, accountService, subjectServic
         computeFulfillment: config.readiness.capabilities.computeFulfillment.available,
         vastAi: config.readiness.capabilities.vastAi.available,
         creatorCommissions: config.readiness.capabilities.creatorCommissions.available,
+        legacyCreatorMode: {
+          mode: config.legacyCreatorCommissionMode,
+          ready: databaseReady && config.readiness.capabilities.legacyCreatorMode.available,
+          blockers: config.readiness.capabilities.legacyCreatorMode.missing,
+        },
+        streamerRewards: {
+          mode: config.streamerRewardsMode,
+          ready: databaseReady && config.readiness.capabilities.streamerRewards.available,
+          blockers: [
+            ...config.readiness.capabilities.streamerRewards.missing,
+            ...(config.streamerRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0061'] : []),
+          ],
+        },
+        inviteRewards: {
+          mode: config.inviteRewardsMode,
+          ready: databaseReady && config.readiness.capabilities.inviteRewards.available,
+          blockers: [
+            ...config.readiness.capabilities.inviteRewards.missing,
+            ...(config.inviteRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0061'] : []),
+          ],
+        },
       },
       database: { connected: databaseConnected, schema },
       authentication: {

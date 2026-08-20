@@ -1,5 +1,6 @@
 package expo.modules.kaiauthloopback
 
+import android.content.Context
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.core.os.bundleOf
@@ -28,6 +29,7 @@ private data class ActiveSession(
   val port: Int,
   val server: ServerSocket,
   val lifetime: LoopbackLifetime,
+  val recoveryStore: LoopbackCallbackRecoveryStore,
   val closed: AtomicBoolean = AtomicBoolean(false),
   var promise: Promise? = null,
 )
@@ -50,12 +52,18 @@ private data class TerminalSession(
   val errorMessage: String?,
 )
 
+internal fun loopbackTerminalMessage(result: ParsedLoopbackRequest): String? = when (result) {
+  is ParsedLoopbackRequest.Code -> "授权结果已返回 Zod，请回到 App 继续完成登录。"
+  is ParsedLoopbackRequest.Error -> "KAI 登录未完成，请回到 Zod 查看原因。"
+  ParsedLoopbackRequest.Ignored -> null
+}
+
 internal object LoopbackSessionManager {
   private val lock = Any()
   private var active: ActiveSession? = null
   private val terminalMailbox = SingleUseTerminalMailbox<TerminalSession>()
 
-  fun start(attemptId: String, state: String, issuer: String): Bundle {
+  fun start(context: Context, attemptId: String, state: String, issuer: String): Bundle {
     if (!safeAttemptId.matches(attemptId) || !state.matches(Regex("^[A-Za-z0-9._~-]{32,256}$"))
       || issuer != "https://auth.kai.com/api/auth") {
       throw LoopbackSessionException("ERR_KAI_LOOPBACK_INPUT", "Invalid loopback authentication input.")
@@ -64,6 +72,8 @@ internal object LoopbackSessionManager {
       if (active != null) {
         throw LoopbackSessionException("ERR_KAI_LOOPBACK_ACTIVE", "A loopback authentication session is already active.")
       }
+      val recoveryStore = LoopbackCallbackRecoveryStore(context.applicationContext)
+      recoveryStore.clearExpired()
       val shuffled = REGISTERED_LOOPBACK_PORTS.toMutableList()
       Collections.shuffle(shuffled, SecureRandom())
       val selected = bindLoopbackPortCandidates(shuffled)
@@ -78,6 +88,7 @@ internal object LoopbackSessionManager {
         port = selected.port,
         server = selected.server,
         lifetime = LoopbackLifetime(SystemClock::elapsedRealtime),
+        recoveryStore = recoveryStore,
       )
       active = session
       Thread({ acceptLoop(session) }, "kai-auth-loopback").apply {
@@ -167,17 +178,39 @@ internal object LoopbackSessionManager {
     )) {
       ParsedLoopbackRequest.Ignored -> writeResponse(client, 400, "请求未被接受。")
       is ParsedLoopbackRequest.Code -> {
+        val receivedAt = System.currentTimeMillis()
         val result = bundleOf(
           "kind" to "code", "code" to parsed.code, "state" to parsed.state, "issuer" to parsed.issuer,
+          "receivedAt" to receivedAt,
         )
-        writeResponse(client, 200, "KAI 验证已完成，请返回 Zod App。")
+        try {
+          session.recoveryStore.persist(PersistedLoopbackCallback(
+            session.attemptId, "code", parsed.state, parsed.issuer, parsed.code, receivedAt,
+          ))
+        } catch (_: Throwable) {
+          writeResponse(client, 500, "授权结果未能安全保存，请返回 Zod 重试。")
+          terminate(session, null, "ERR_KAI_LOOPBACK_RECOVERY", "KAI callback recovery storage is unavailable.")
+          return
+        }
+        writeResponse(client, 200, requireNotNull(loopbackTerminalMessage(parsed)))
         terminate(session, result, null, null)
       }
       is ParsedLoopbackRequest.Error -> {
+        val receivedAt = System.currentTimeMillis()
         val result = bundleOf(
           "kind" to "error", "error" to parsed.error, "state" to parsed.state, "issuer" to parsed.issuer,
+          "receivedAt" to receivedAt,
         )
-        writeResponse(client, 200, "KAI 验证已完成，请返回 Zod App。")
+        try {
+          session.recoveryStore.persist(PersistedLoopbackCallback(
+            session.attemptId, "error", parsed.state, parsed.issuer, parsed.error, receivedAt,
+          ))
+        } catch (_: Throwable) {
+          writeResponse(client, 500, "授权结果未能安全保存，请返回 Zod 重试。")
+          terminate(session, null, "ERR_KAI_LOOPBACK_RECOVERY", "KAI callback recovery storage is unavailable.")
+          return
+        }
+        writeResponse(client, 200, requireNotNull(loopbackTerminalMessage(parsed)))
         terminate(session, result, null, null)
       }
     }
@@ -205,7 +238,12 @@ internal object LoopbackSessionManager {
   private fun writeResponse(client: Socket, status: Int, message: String) {
     val body = "<!doctype html><html lang=\"zh-CN\"><meta charset=\"utf-8\"><title>Zod</title><body><p>$message</p></body></html>"
       .toByteArray(Charsets.UTF_8)
-    val reason = if (status == 200) "OK" else if (status == 403) "Forbidden" else "Bad Request"
+    val reason = when (status) {
+      200 -> "OK"
+      403 -> "Forbidden"
+      500 -> "Internal Server Error"
+      else -> "Bad Request"
+    }
     val headers = buildString {
       append("HTTP/1.1 $status $reason\r\n")
       append("Content-Type: text/html; charset=utf-8\r\n")

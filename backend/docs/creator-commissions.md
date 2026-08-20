@@ -1,5 +1,7 @@
 # 达人返佣独立账本
 
+> 这是 0057 旧域说明。自 0061 起缺省 `LEGACY_CREATOR_COMMISSION_MODE=off`；只有显式 `drain` 才能收口已存在订单、转入已有可用余额及读取/消费已有奖励。创建链接、绑定新归因和发现新订单均已永久关闭。主播与普通邀请的新实现见 `dual-rewards-core.md`，不会迁移或复用本账本。
+
 达人返佣与用户 KAI 卡时钱包、供应商收益、托管收益完全分账。订单完成后，返佣先进入观察期；观察期内发生退款或取消会原路冲正。观察期结束后进入“可转入”，只有用户主动转入时才会形成一笔真实的 KAI 卡时账本交易。
 
 所有公开金额字段均使用 `KAI_CARD_HOUR`，以字符串固定保留两位小数，且只返回卡时相关字段。
@@ -30,8 +32,9 @@
 ## 服务端配置
 
 ```dotenv
+LEGACY_CREATOR_COMMISSION_MODE=drain
 CREATOR_REFERRAL_SIGNING_SECRET=<至少 32 个字符的独立密钥>
 CREATOR_COMMISSION_POLICY_JSON={"version":"creator-v1","commissionBasisPoints":1000,"attributionTtlDays":30,"refundObservationDays":7}
 ```
 
-缺少任一配置时，达人返佣能力保持关闭，不影响其他交易服务。
+未显式设置 `drain` 或缺少任一配置时，旧达人返佣能力保持关闭，不影响其他交易服务。

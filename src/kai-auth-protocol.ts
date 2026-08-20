@@ -6,6 +6,7 @@ export const KAI_AUTH_LOOPBACK_PORTS = [
 export const KAI_AUTH_LOOPBACK_PATH = '/oauth2redirect/kai';
 export const KAI_OIDC_SCOPES = ['openid', 'profile', 'email', 'offline_access'] as const;
 export const KAI_AUTH_CALLBACK_MAX_AGE_MILLISECONDS = 10 * 60 * 1_000;
+export const KAI_AUTH_EXCHANGE_RECOVERY_MAX_AGE_MILLISECONDS = 5 * 60 * 1_000;
 
 export type KaiAuthCallback =
   | Readonly<{ kind: 'code'; code: string; state: string }>
@@ -80,6 +81,12 @@ export function validKaiAuthPending(createdAt: string, now = Date.now()) {
   const timestamp = Date.parse(createdAt);
   return Number.isFinite(timestamp) && timestamp <= now
     && now - timestamp <= KAI_AUTH_CALLBACK_MAX_AGE_MILLISECONDS;
+}
+
+export function validKaiAuthExchangeRecovery(receivedAt: string, now = Date.now()) {
+  const timestamp = Date.parse(receivedAt);
+  return Number.isFinite(timestamp) && timestamp <= now
+    && now - timestamp <= KAI_AUTH_EXCHANGE_RECOVERY_MAX_AGE_MILLISECONDS;
 }
 
 export type KaiIdTokenClaims = Readonly<{

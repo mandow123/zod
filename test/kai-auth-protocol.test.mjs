@@ -7,6 +7,7 @@ import {
   KAI_OIDC_ISSUER,
   kaiAuthLoopbackRedirect,
   parseKaiAuthCallback,
+  validKaiAuthExchangeRecovery,
   validKaiAuthRedirectUri,
   validKaiAuthPending,
   validateKaiIdTokenClaims,
@@ -63,14 +64,52 @@ test('pending App PKCE is accepted only inside its bounded callback window', () 
   assert.equal(validKaiAuthPending('2026-08-15T04:00:01.000Z', now), false);
 });
 
+test('received authorization is recoverable for only five minutes', () => {
+  const now = Date.parse('2026-08-20T04:00:00.000Z');
+  assert.equal(validKaiAuthExchangeRecovery('2026-08-20T03:55:00.000Z', now), true);
+  assert.equal(validKaiAuthExchangeRecovery('2026-08-20T03:54:59.999Z', now), false);
+  assert.equal(validKaiAuthExchangeRecovery('2026-08-20T04:00:00.001Z', now), false);
+});
+
+test('native terminal callback is adopted once after a process restart without losing browser-open state', async () => {
+  const [auth, app, sheet, loopback, recoveryStore, module] = await Promise.all([
+    readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../App.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/AuthSheet.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/LoopbackSessionManager.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/formal/java/expo/modules/kaiauthloopback/LoopbackCallbackRecoveryStore.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/KaiAuthLoopbackModule.kt', import.meta.url), 'utf8'),
+  ]);
+  assert.ok(loopback.indexOf('session.recoveryStore.persist') < loopback.indexOf('writeResponse(client, 200'));
+  assert.match(recoveryStore, /context\.noBackupFilesDir/u);
+  assert.match(recoveryStore, /AES\/GCM\/NoPadding/u);
+  assert.match(recoveryStore, /fun peek\(attemptId: String\)/u);
+  assert.match(recoveryStore, /fun acknowledge\(attemptId: String, state: String\)/u);
+  assert.match(module, /peekPersistedCallbackAsync/u);
+  assert.match(module, /acknowledgePersistedCallbackAsync/u);
+  assert.match(auth, /loadKaiAuthProgress[\s\S]*recoverPersistedKaiAuthCallback/u);
+  const codeAdoption = auth.slice(
+    auth.indexOf("phase: 'authorization_received'"),
+    auth.indexOf('async function recoverPersistedKaiAuthCallback'),
+  );
+  assert.doesNotMatch(codeAdoption, /acknowledgePersistedKaiAuthCallbackAsync/u);
+  assert.match(auth, /verifiedSaved = true;[\s\S]*await acknowledgeAndClearPending\(exchanging\)/u);
+  assert.match(auth, /retain_encrypted_authorization[\s\S]*savePending\([\s\S]*identity_exchange_retry/u);
+  assert.match(auth, /shouldClearPendingAfterKaiAuthStartFailure/u);
+  assert.match(sheet, /authorizationFailed[\s\S]*onKaiAuthStart/u);
+  assert.match(sheet, /重新选择 KAI 账号/u);
+  assert.match(app, /catch \(reason\) \{[\s\S]*setKaiAuthError[\s\S]*await restoreKaiAuthStatus\(\)/u);
+});
+
 test('production KAI login is direct public-client Authorization Code plus PKCE', async () => {
-  const [auth, oidc, protocol, loopback, keepAlive, formalManifest, stagingManifest, formalPorts, stagingPorts, moduleGradle,
+  const [auth, oidc, protocol, loopback, keepAlive, recoveryStore, formalManifest, stagingManifest, formalPorts, stagingPorts, moduleGradle,
     apiClient, session, metro, localAuth, appJson, manifest, gradle] = await Promise.all([
     readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/kai-oidc-client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/kai-auth-protocol.ts', import.meta.url), 'utf8'),
     readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/LoopbackSessionManager.kt', import.meta.url), 'utf8'),
     readFile(new URL('../modules/kai-auth-loopback/android/src/main/java/expo/modules/kaiauthloopback/LoopbackKeepAliveService.kt', import.meta.url), 'utf8'),
+    readFile(new URL('../modules/kai-auth-loopback/android/src/formal/java/expo/modules/kaiauthloopback/LoopbackCallbackRecoveryStore.kt', import.meta.url), 'utf8'),
     readFile(new URL('../modules/kai-auth-loopback/android/src/formal/AndroidManifest.xml', import.meta.url), 'utf8'),
     readFile(new URL('../modules/kai-auth-loopback/android/src/staging/AndroidManifest.xml', import.meta.url), 'utf8'),
     readFile(new URL('../modules/kai-auth-loopback/android/src/formal/java/expo/modules/kaiauthloopback/LoopbackPortBinder.kt', import.meta.url), 'utf8'),
@@ -101,8 +140,14 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.match(moduleGradle, /kaiAuthLoopbackStaging \? 'src\/staging\/AndroidManifest\.xml' : 'src\/formal\/AndroidManifest\.xml'/u);
   assert.match(loopback, /Collections\.shuffle\(shuffled, SecureRandom\(\)\)/u);
   assert.match(loopback, /SystemClock::elapsedRealtime/u);
-  assert.doesNotMatch(loopback, /System\.currentTimeMillis/u);
+  assert.match(loopback, /LoopbackLifetime\(SystemClock::elapsedRealtime\)/u);
   assert.match(loopback, /remainingMilliseconds\(\)/u);
+  assert.match(recoveryStore, /AndroidKeyStore/u);
+  assert.match(recoveryStore, /AES\/GCM\/NoPadding/u);
+  assert.match(recoveryStore, /context\.noBackupFilesDir/u);
+  assert.match(recoveryStore, /AtomicFile/u);
+  assert.doesNotMatch(recoveryStore, /SharedPreferences|Log\./u);
+  assert.match(auth, /acknowledgeAndClearPending/u);
   assert.match(keepAlive, /FOREGROUND_SERVICE_TYPE_SHORT_SERVICE/u);
   assert.match(keepAlive, /START_NOT_STICKY/u);
   assert.match(keepAlive, /ready\.get\(5, TimeUnit\.SECONDS\)/u);
@@ -115,6 +160,15 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.match(formalManifest, /android:foregroundServiceType="shortService"/u);
   assert.doesNotMatch(stagingManifest, /FOREGROUND_SERVICE|LoopbackKeepAliveService/u);
   assert.match(formalSource, /exchangeCodeAsync/u);
+  const initialExchange = oidc.slice(
+    oidc.indexOf('export async function exchangeKaiAuthorizationCode'),
+    oidc.indexOf('export async function refreshKaiOidcTokens'),
+  );
+  assert.match(initialExchange, /validateIssuedKaiOidcTokenSet\([\s\S]*requiredScopes: KAI_OIDC_SCOPES[\s\S]*validateKaiIdTokenClaims\(idToken, \{ nonce: input\.nonce \}\)/u);
+  const exchangeCompletion = auth.slice(auth.indexOf('async function completePendingAuthorization'));
+  assert.match(exchangeCompletion, /error instanceof KaiOidcExchangeValidationError[\s\S]*revokeKaiOidcTokens[\s\S]*queueKaiOidcRevocation[\s\S]*clear: \(\) => acknowledgeAndClearPending\(exchanging\)/u);
+  assert.match(oidc, /class KaiOidcExchangeNetworkError[\s\S]*throw new KaiOidcExchangeNetworkError\(\)/u);
+  assert.match(auth, /error instanceof KaiOidcExchangeNetworkError/u);
   assert.match(formalSource, /refreshAsync/u);
   assert.match(formalSource, /revokeAsync/u);
   assert.match(oidc, /response\.refreshToken === current\.refreshToken/u);

@@ -153,7 +153,8 @@ const creatorCommissionStore=database?new PostgresCreatorCommissionStore(databas
 const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.accountSecurity.available
   &&config.readiness.capabilities.creatorCommissions.available&&config.CREATOR_REFERRAL_SIGNING_SECRET
   ?new CreatorCommissionService(creatorCommissionStore,subjectService,
-    new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,config.PUBLIC_ORIGIN)
+    new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,
+    config.PUBLIC_ORIGIN,()=>new Date(),config.legacyCreatorCommissionMode)
   :undefined;
 const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.accountSecurity.available
   ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
@@ -198,7 +199,7 @@ const vastReconciliationWorker = vastMarketService && vastProvider.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
   : undefined;
 const creatorCommissionWorker=creatorCommissionStore&&config.creatorCommissionPolicy
-  &&config.readiness.capabilities.creatorCommissions.available
+  &&config.legacyCreatorCommissionMode==='drain'&&config.readiness.capabilities.creatorCommissions.available
   ?new CreatorCommissionWorker(creatorCommissionStore,config.creatorCommissionPolicy.refundObservationDays,app.log as WorkerLogger)
   :undefined;
 const resourceInquiryExpiryWorker=resourceInquiryService

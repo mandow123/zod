@@ -32,6 +32,13 @@ class LoopbackHttpParserTest {
     assertEquals(ParsedLoopbackRequest.Error("access_denied", state, issuer), result)
   }
 
+  @Test fun codeAndErrorUseDifferentNonReflectiveTerminalMessages() {
+    val code = parseLoopbackHttpHead(request(validTarget()), expected)
+    val error = parseLoopbackHttpHead(request(validTarget("error=access_denied")), expected)
+    assertEquals("授权结果已返回 Zod，请回到 App 继续完成登录。", loopbackTerminalMessage(code))
+    assertEquals("KAI 登录未完成，请回到 Zod 查看原因。", loopbackTerminalMessage(error))
+  }
+
   @Test fun rejectsWrongMethodPathHostAndBody() {
     assertEquals(ParsedLoopbackRequest.Ignored,
       parseLoopbackHttpHead(rawRequest("POST ${validTarget()} HTTP/1.1"), expected))

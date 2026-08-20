@@ -10,7 +10,14 @@ const commitPattern = /^[a-f0-9]{40}$/u;
 const digestPattern = /^[a-f0-9]{64}$/u;
 
 function git(root, args, encoding = 'utf8') {
-  const output = execFileSync('git', args, { cwd: root, encoding });
+  const output = execFileSync('git', args, {
+    cwd: root,
+    encoding,
+    // Binary brand assets can make an otherwise small reviewed diff exceed
+    // Node's 1 MiB child-process default. Keep the audit fail-closed while
+    // allowing the complete diff to be hashed instead of truncating it.
+    maxBuffer: 64 * 1024 * 1024,
+  });
   return typeof output === 'string' ? output.trim() : output;
 }
 

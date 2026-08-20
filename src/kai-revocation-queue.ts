@@ -11,8 +11,8 @@ const secureOptions: SecureStore.SecureStoreOptions = {
 
 type PendingRevocation = Readonly<{
   id: string;
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
   createdAt: string;
 }>;
 
@@ -33,8 +33,9 @@ function validTask(value: unknown): value is PendingRevocation {
   if (!value || typeof value !== 'object') return false;
   const task = value as Partial<PendingRevocation>;
   return typeof task.id === 'string' && /^[0-9a-f-]{36}$/iu.test(task.id)
-    && typeof task.accessToken === 'string' && task.accessToken.length >= 20
-    && typeof task.refreshToken === 'string' && task.refreshToken.length >= 20
+    && (task.accessToken === undefined || (typeof task.accessToken === 'string' && task.accessToken.length >= 20))
+    && (task.refreshToken === undefined || (typeof task.refreshToken === 'string' && task.refreshToken.length >= 20))
+    && (typeof task.accessToken === 'string' || typeof task.refreshToken === 'string')
     && typeof task.createdAt === 'string' && Number.isFinite(Date.parse(task.createdAt));
 }
 
@@ -61,19 +62,25 @@ async function writeQueue(tasks: readonly PendingRevocation[]) {
   await SecureStore.setItemAsync(REVOCATION_QUEUE_KEY, JSON.stringify(tasks), secureOptions);
 }
 
-export function queueKaiOidcRevocation(tokens: Readonly<{ accessToken: string; refreshToken: string }>) {
+export function queueKaiOidcRevocation(tokens: Readonly<{ accessToken?: string; refreshToken?: string }>) {
   return withQueueLock(async () => {
+    const accessToken = typeof tokens.accessToken === 'string' && tokens.accessToken.length >= 20
+      ? tokens.accessToken : undefined;
+    const refreshToken = typeof tokens.refreshToken === 'string' && tokens.refreshToken.length >= 20
+      ? tokens.refreshToken : undefined;
+    if (!accessToken && !refreshToken) throw new Error('没有可安全保存的统一身份撤销凭证。');
     const now = Date.now();
     const current = await readQueue();
-    const duplicate = current.some((task) => task.refreshToken === tokens.refreshToken);
+    const duplicate = current.some((task) => (refreshToken && task.refreshToken === refreshToken)
+      || (!refreshToken && accessToken && task.accessToken === accessToken));
     if (duplicate) return;
     if (current.length >= MAX_PENDING_REVOCATIONS) {
       throw new Error('远程撤销队列已满，不能安全保存新的撤销任务。');
     }
     const task: PendingRevocation = {
       id: Crypto.randomUUID(),
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      ...(accessToken ? { accessToken } : {}),
+      ...(refreshToken ? { refreshToken } : {}),
       createdAt: new Date(now).toISOString(),
     };
     await writeQueue([...current, task]);

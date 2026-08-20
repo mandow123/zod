@@ -95,6 +95,13 @@ const environmentSchema = z.object({
   VAST_PRICING_POLICY_JSON: optionalText,
   CREATOR_REFERRAL_SIGNING_SECRET: optionalText,
   CREATOR_COMMISSION_POLICY_JSON: optionalText,
+  LEGACY_CREATOR_COMMISSION_MODE: optionalText,
+  STREAMER_REWARDS_MODE: optionalText,
+  STREAMER_REFERRAL_SIGNING_SECRET: optionalText,
+  STREAMER_REWARD_POLICY_JSON: optionalText,
+  INVITE_REWARDS_MODE: optionalText,
+  INVITE_REFERRAL_SIGNING_SECRET: optionalText,
+  INVITE_REWARD_POLICY_JSON: optionalText,
 });
 
 const vastPricingPolicySchema = z.object({
@@ -114,6 +121,27 @@ const creatorCommissionPolicySchema = z.object({
   attributionTtlDays: z.number().int().min(1).max(90),
   refundObservationDays: z.number().int().min(1).max(30),
 }).strict();
+
+const streamerRewardPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  basisPoints: z.number().int().min(1).max(300),
+  attributionTtlDays: z.number().int().min(1).max(90),
+  refundObservationDays: z.number().int().min(1).max(30),
+}).strict();
+
+const inviteRewardPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  basisPoints: z.number().int().min(1).max(300),
+  attributionTtlDays: z.number().int().min(1).max(30),
+  firstOrderQualificationDays: z.number().int().min(1).max(90),
+  refundObservationDays: z.number().int().min(1).max(30),
+}).strict();
+
+type RewardMode = 'off' | 'shadow' | 'on';
+
+function rewardMode(value: string | undefined): RewardMode {
+  return value === 'shadow' || value === 'on' ? value : 'off';
+}
 
 type Capability = Readonly<{ available: boolean; missing: string[] }>;
 
@@ -321,13 +349,80 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       else creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid creator commission policy)');
     } catch { creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid JSON)'); }
   }
-  const creatorCommissions = mergeCapability(capability(environment,[
+  const legacyCreatorCommissionMode = parsed.LEGACY_CREATOR_COMMISSION_MODE === 'drain' ? 'drain' : 'off';
+  const legacyCreatorRequirements = mergeCapability(capability(environment,[
     'CREATOR_REFERRAL_SIGNING_SECRET','CREATOR_COMMISSION_POLICY_JSON',
   ]), [
     ...creatorCommissionInvalid,
     ...(parsed.CREATOR_REFERRAL_SIGNING_SECRET && parsed.CREATOR_REFERRAL_SIGNING_SECRET.length < 32
       ? ['CREATOR_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
   ]);
+  const creatorCommissions = {
+    available: legacyCreatorCommissionMode === 'drain' && legacyCreatorRequirements.available,
+    mode: legacyCreatorCommissionMode,
+    missing: legacyCreatorCommissionMode === 'drain' ? legacyCreatorRequirements.missing : [],
+  } as const;
+  const legacyCreatorMode = {
+    available: creatorCommissions.available,
+    mode: legacyCreatorCommissionMode,
+    missing: creatorCommissions.missing,
+  } as const;
+
+  let streamerRewardPolicy: z.infer<typeof streamerRewardPolicySchema> | null = null;
+  const streamerRewardInvalid: string[] = [];
+  if (parsed.STREAMER_REWARD_POLICY_JSON) {
+    try {
+      const result = streamerRewardPolicySchema.safeParse(JSON.parse(parsed.STREAMER_REWARD_POLICY_JSON));
+      if (result.success) streamerRewardPolicy = result.data;
+      else streamerRewardInvalid.push('STREAMER_REWARD_POLICY_JSON(valid strict streamer policy)');
+    } catch { streamerRewardInvalid.push('STREAMER_REWARD_POLICY_JSON(valid JSON)'); }
+  }
+  let inviteRewardPolicy: z.infer<typeof inviteRewardPolicySchema> | null = null;
+  const inviteRewardInvalid: string[] = [];
+  if (parsed.INVITE_REWARD_POLICY_JSON) {
+    try {
+      const result = inviteRewardPolicySchema.safeParse(JSON.parse(parsed.INVITE_REWARD_POLICY_JSON));
+      if (result.success) inviteRewardPolicy = result.data;
+      else inviteRewardInvalid.push('INVITE_REWARD_POLICY_JSON(valid strict invite policy)');
+    } catch { inviteRewardInvalid.push('INVITE_REWARD_POLICY_JSON(valid JSON)'); }
+  }
+  const streamerRewardsMode = rewardMode(parsed.STREAMER_REWARDS_MODE);
+  const inviteRewardsMode = rewardMode(parsed.INVITE_REWARDS_MODE);
+  const equalRewardSecrets = Boolean(parsed.STREAMER_REFERRAL_SIGNING_SECRET
+    && parsed.INVITE_REFERRAL_SIGNING_SECRET
+    && parsed.STREAMER_REFERRAL_SIGNING_SECRET === parsed.INVITE_REFERRAL_SIGNING_SECRET);
+  const streamerRequirements = mergeCapability(capability(environment,[
+    'STREAMER_REFERRAL_SIGNING_SECRET','STREAMER_REWARD_POLICY_JSON',
+  ]), [
+    ...streamerRewardInvalid,
+    ...(parsed.STREAMER_REFERRAL_SIGNING_SECRET && parsed.STREAMER_REFERRAL_SIGNING_SECRET.length < 32
+      ? ['STREAMER_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
+    ...(equalRewardSecrets ? ['STREAMER_REFERRAL_SIGNING_SECRET(independent from invite secret)'] : []),
+    ...(streamerRewardsMode === 'off' ? [] : [
+      'STREAMER_REWARDS_RUNTIME_INTEGRATION(pending atomic commerce claim and final-net producer)',
+    ]),
+  ]);
+  const inviteRequirements = mergeCapability(capability(environment,[
+    'INVITE_REFERRAL_SIGNING_SECRET','INVITE_REWARD_POLICY_JSON',
+  ]), [
+    ...inviteRewardInvalid,
+    ...(parsed.INVITE_REFERRAL_SIGNING_SECRET && parsed.INVITE_REFERRAL_SIGNING_SECRET.length < 32
+      ? ['INVITE_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
+    ...(equalRewardSecrets ? ['INVITE_REFERRAL_SIGNING_SECRET(independent from streamer secret)'] : []),
+    ...(inviteRewardsMode === 'off' ? [] : [
+      'INVITE_REWARDS_RUNTIME_INTEGRATION(pending atomic commerce claim and final-net producer)',
+    ]),
+  ]);
+  const streamerRewards = {
+    available: streamerRewardsMode !== 'off' && streamerRequirements.available,
+    mode: streamerRewardsMode,
+    missing: streamerRewardsMode === 'off' ? [] : streamerRequirements.missing,
+  } as const;
+  const inviteRewards = {
+    available: inviteRewardsMode !== 'off' && inviteRequirements.available,
+    mode: inviteRewardsMode,
+    missing: inviteRewardsMode === 'off' ? [] : inviteRequirements.missing,
+  } as const;
   const creditCommerce = kaiCreditCommerceCapability({
     verifiedTopupProviderAvailable: alipayTopup.available || wechat.available,
     computeProviderAvailable: computeFulfillment.available,
@@ -392,7 +487,14 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...backup.missing,
     ...legal.missing,
   ];
-  const commerceBlockers = [...serviceBlockers, ...creditCommerce.blockers, ...nodeEnrollment.missing];
+  const requestedRewardBlockers = [
+    ...(streamerRewardsMode === 'off' ? [] : streamerRewards.missing),
+    ...(inviteRewardsMode === 'off' ? [] : inviteRewards.missing),
+    ...(legacyCreatorCommissionMode === 'drain' ? legacyCreatorMode.missing : []),
+  ];
+  const commerceBlockers = [
+    ...serviceBlockers, ...creditCommerce.blockers, ...nodeEnrollment.missing, ...requestedRewardBlockers,
+  ];
 
   return {
     ...parsed,
@@ -405,6 +507,11 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     kaiOidcAppRedirects: kaiOidcRedirects,
     vastPricingPolicy,
     creatorCommissionPolicy,
+    legacyCreatorCommissionMode,
+    streamerRewardsMode,
+    inviteRewardsMode,
+    streamerRewardPolicy,
+    inviteRewardPolicy,
     readiness: {
       coreReady: coreBlockers.length === 0,
       serviceReady: serviceBlockers.length === 0,
@@ -415,6 +522,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       capabilities: {
         database, accountSecurity, legacyLocalAuth, kaiOidc, kaiResourceAccess, sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
         publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
+        legacyCreatorMode, streamerRewards, inviteRewards,
       },
     },
   } as const;

@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import type { LegalDocuments } from './api';
-import type { KaiAuthProgress } from './kai-auth';
+import { kaiAuthLastAttemptLabel, kaiAuthProgressMessage, type KaiAuthProgress } from './kai-auth';
 import { brand, colors } from './theme';
 
 type AuthSheetProps = Readonly<{
@@ -52,6 +52,8 @@ export function AuthSheet({
   }, [visible]);
 
   const documents = kaiAuthProgress?.kind === 'consent_required' ? kaiAuthProgress.documents : null;
+  const authorizationFailed = kaiAuthProgress?.kind === 'identity_pending'
+    && kaiAuthProgress.reason === 'identity_authorization_failed';
 
   useEffect(() => { setConsented(false); }, [
     documents?.privacy.url,
@@ -82,8 +84,9 @@ export function AuthSheet({
   };
 
   const continuePlatformLogin = async () => {
-    const action = kaiAuthProgress?.kind === 'verified_pending'
-      ? onKaiPlatformRetry
+    const action = authorizationFailed
+      ? onKaiAuthStart
+      : kaiAuthProgress && kaiAuthProgress.kind !== 'consent_required' ? onKaiPlatformRetry
       : documents && consented ? () => onKaiConsent?.(documents) : null;
     if (!action || kaiAuthBusy) return;
     setBusy(true);
@@ -105,7 +108,8 @@ export function AuthSheet({
   const unifiedError = error ?? kaiAuthError;
   const hasProgress = kaiAuthProgress !== null;
   const disabled = busy || kaiAuthBusy || (hasProgress
-    ? kaiAuthProgress.kind === 'consent_required' ? (!consented || !onKaiConsent) : !onKaiPlatformRetry
+    ? authorizationFailed ? !onKaiAuthStart
+      : kaiAuthProgress.kind === 'consent_required' ? (!consented || !onKaiConsent) : !onKaiPlatformRetry
     : !onKaiAuthStart);
 
   return (
@@ -129,10 +133,13 @@ export function AuthSheet({
               <Text style={styles.securityText}>与 cloud.kai.com 主站使用同一账号。登录会在系统浏览器中完成，密码不会交给 {brand.name} App。</Text>
             </View>
 
-            {kaiAuthProgress?.kind === 'verified_pending' ? (
+            {kaiAuthProgress ? (
               <View style={styles.verifiedNote}>
-                <Ionicons name="checkmark-circle-outline" size={18} color={colors.green} />
-                <Text style={styles.verifiedText}>KAI 账号已验证，平台服务待连接。业务功能仍保持锁定。</Text>
+                <Ionicons name={kaiAuthProgress.kind === 'identity_pending' ? 'time-outline' : 'checkmark-circle-outline'} size={18} color={kaiAuthProgress.kind === 'identity_pending' ? colors.primary : colors.green} />
+                <View style={styles.verifiedCopy}>
+                  <Text style={[styles.verifiedText, kaiAuthProgress.kind === 'identity_pending' && styles.identityPendingText]}>{kaiAuthProgressMessage(kaiAuthProgress)}</Text>
+                  <Text style={styles.attemptText}>{kaiAuthLastAttemptLabel(kaiAuthProgress)}</Text>
+                </View>
               </View>
             ) : null}
 
@@ -166,16 +173,17 @@ export function AuthSheet({
             >
               {busy || kaiAuthBusy ? <ActivityIndicator color={colors.surface} /> : (
                 <>
-                  <Text style={styles.primaryText}>{kaiAuthProgress?.kind === 'verified_pending'
-                    ? '重新连接平台'
+                  <Text style={styles.primaryText}>{kaiAuthProgress?.kind === 'identity_pending'
+                    ? authorizationFailed ? '重新选择 KAI 账号' : '重试 KAI 身份确认'
+                    : kaiAuthProgress?.kind === 'verified_pending' ? '重试连接 Zod'
                     : kaiAuthProgress?.kind === 'consent_required' ? '同意并连接平台' : '使用 KAI 账号登录'}</Text>
-                  <Ionicons name="open-outline" size={18} color={colors.surface} />
+                  <Ionicons name={hasProgress ? 'refresh-outline' : 'open-outline'} size={18} color={colors.surface} />
                 </>
               )}
             </Pressable>
             {hasProgress && onKaiAuthCancel ? (
               <Pressable disabled={busy || kaiAuthBusy} onPress={() => void changeKaiAccount()} style={styles.changeAccountButton}>
-                <Text style={styles.changeAccountText}>更换 KAI 账号</Text>
+                <Text style={styles.changeAccountText}>安全取消并更换账号</Text>
               </Pressable>
             ) : null}
           </View>
@@ -210,5 +218,8 @@ const styles = StyleSheet.create({
   securityNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 13, marginTop: 8, borderRadius: 14, backgroundColor: colors.primarySoft },
   securityText: { flex: 1, color: colors.primaryDark, fontSize: 11, lineHeight: 17 },
   verifiedNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 13, marginTop: 12, borderRadius: 14, backgroundColor: '#ECF8F0' },
-  verifiedText: { flex: 1, color: colors.green, fontSize: 11, lineHeight: 17 },
+  verifiedText: { color: colors.green, fontSize: 11, lineHeight: 17 },
+  verifiedCopy: { flex: 1 },
+  attemptText: { color: colors.muted, fontSize: 9, marginTop: 4 },
+  identityPendingText: { color: colors.primaryDark },
 });

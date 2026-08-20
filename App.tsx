@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AuthSheet } from './src/AuthSheet';
 import {
@@ -50,6 +50,8 @@ import {
   cancelVerifiedKaiAuth,
   completeKaiAuth,
   isKaiAuthCallback,
+  kaiAuthProgressMessage,
+  loadKaiAuthProgress,
   resumeVerifiedKaiAuth,
   startKaiAuth,
   KaiLegalDocumentsChangedError,
@@ -140,6 +142,17 @@ function CloudPayApp() {
     await refreshAfterPendingAuthentication(refreshInFlight.current, refresh);
   }, [refresh]);
 
+  const restoreKaiAuthStatus = useCallback(async () => {
+    try {
+      const progress = await loadKaiAuthProgress();
+      setKaiAuthProgress(progress);
+    } catch (reason) {
+      setKaiAuthError(reason instanceof Error ? reason.message : '账号验证状态无法安全读取。');
+    }
+  }, []);
+
+  useEffect(() => { void restoreKaiAuthStatus(); }, [restoreKaiAuthStatus]);
+
   useEffect(() => {
     let active = true;
     const handled = new Set<string>();
@@ -205,10 +218,13 @@ function CloudPayApp() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refresh();
+      if (state === 'active') {
+        void refresh();
+        void restoreKaiAuthStatus();
+      }
     });
     return () => subscription.remove();
-  }, [refresh]);
+  }, [refresh, restoreKaiAuthStatus]);
 
   useEffect(() => {
     if (activeTab !== 'messages' || !snapshot.authenticated) return;
@@ -483,7 +499,7 @@ function CloudPayApp() {
         return <CreatorCollaborationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)}
           onTransferred={(event) => { setCreatorReward(event); void refresh(); }} />;
       case 'profile':
-        return <ProfileScreen snapshot={snapshot}
+        return <ProfileScreen snapshot={snapshot} kaiAuthProgress={snapshot.authenticated ? null : kaiAuthProgress}
           onSelectSubject={(subjectId) => void chooseSubject(subjectId)} onSessionChanged={refresh} onLogin={() => setAuthVisible(true)}
           onOpenQualification={() => { setPublishIntentToOpen('supplier'); navigate('publish'); }} onOpenCredits={() => navigate('credits')}
           onOpenOrders={() => { setOrderSide('buyer'); navigate('orders'); }} onOpenAssets={() => navigate('assets')}
@@ -510,6 +526,16 @@ function CloudPayApp() {
       <StatusBar style="dark" />
       <StagingEnvironmentBanner />
       <View style={styles.page}>{page}</View>
+      {!snapshot.authenticated && kaiAuthProgress ? <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="继续完成账号连接"
+        onPress={() => setAuthVisible(true)}
+        style={styles.authStatusBar}
+      >
+        <View style={styles.authStatusDot} />
+        <Text numberOfLines={2} style={styles.authStatusText}>{kaiAuthProgressMessage(kaiAuthProgress)}</Text>
+        <Text style={styles.authStatusAction}>继续</Text>
+      </Pressable> : null}
       <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
@@ -520,19 +546,28 @@ function CloudPayApp() {
         kaiAuthProgress={kaiAuthProgress}
         onKaiAuthStart={async () => {
           setKaiAuthError(null);
+          setKaiAuthBusy(true);
           try {
             const progress = await startKaiAuth();
             if (progress) setKaiAuthProgress(progress);
           }
           catch (reason) {
             setKaiAuthError(reason instanceof Error ? reason.message : '无法打开统一身份登录。');
+            await restoreKaiAuthStatus();
+          } finally {
+            setKaiAuthBusy(false);
           }
         }}
         onKaiPlatformRetry={async () => {
           setKaiAuthError(null);
-          const progress = await resumeVerifiedKaiAuth();
-          if (!progress) throw new Error('KAI 账号验证已过期，请重新登录。');
-          setKaiAuthProgress(progress);
+          setKaiAuthBusy(true);
+          try {
+            const progress = await resumeVerifiedKaiAuth();
+            if (!progress) throw new Error('KAI 账号验证已过期，请重新登录。');
+            setKaiAuthProgress(progress);
+          } finally {
+            setKaiAuthBusy(false);
+          }
         }}
         onKaiConsent={async (documents) => {
           setKaiAuthError(null);
@@ -543,8 +578,11 @@ function CloudPayApp() {
             setAuthVisible(false);
           } catch (reason) {
             if (reason instanceof KaiLegalDocumentsChangedError) {
-              setKaiAuthProgress({ kind: 'consent_required', documents: reason.documents });
-            }
+              setKaiAuthProgress({
+                kind: 'consent_required', reason: 'legal_consent_required',
+                lastAttemptAt: new Date().toISOString(), documents: reason.documents,
+              });
+            } else await restoreKaiAuthStatus();
             throw reason;
           }
         }}
@@ -644,4 +682,8 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   page: { flex: 1 },
+  authStatusBar: { minHeight: 48, marginHorizontal: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 13, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#C9DDF7' },
+  authStatusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  authStatusText: { flex: 1, color: colors.primaryDark, fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  authStatusAction: { color: colors.primary, fontSize: 10, fontWeight: '900' },
 });

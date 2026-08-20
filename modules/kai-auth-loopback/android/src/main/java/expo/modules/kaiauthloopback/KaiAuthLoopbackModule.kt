@@ -32,7 +32,7 @@ class KaiAuthLoopbackModule : Module() {
       }
       LoopbackKeepAliveService.startAndAwait(context)
       try {
-        LoopbackSessionManager.start(attemptId, state, issuer)
+        LoopbackSessionManager.start(context, attemptId, state, issuer)
       } catch (error: Throwable) {
         LoopbackKeepAliveService.stop()
         throw error
@@ -49,6 +49,21 @@ class KaiAuthLoopbackModule : Module() {
 
     AsyncFunction("isActiveAsync") { attemptId: String ->
       LoopbackSessionManager.isActive(attemptId)
+    }
+
+    AsyncFunction("peekPersistedCallbackAsync") { attemptId: String ->
+      if (context.packageName != FORMAL_APPLICATION_ID || !attemptId.matches(Regex("^[0-9a-fA-F-]{36}$"))) {
+        throw LoopbackUnavailableException("KAI callback recovery is unavailable in this build.")
+      }
+      LoopbackCallbackRecoveryStore(context.applicationContext).peek(attemptId)?.toBundle()
+    }
+
+    AsyncFunction("acknowledgePersistedCallbackAsync") { attemptId: String, state: String ->
+      if (context.packageName != FORMAL_APPLICATION_ID || !attemptId.matches(Regex("^[0-9a-fA-F-]{36}$"))
+        || !state.matches(Regex("^[A-Za-z0-9._~-]{32,256}$"))) {
+        throw LoopbackUnavailableException("KAI callback recovery is unavailable in this build.")
+      }
+      LoopbackCallbackRecoveryStore(context.applicationContext).acknowledge(attemptId, state)
     }
 
     OnDestroy {

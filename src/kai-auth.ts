@@ -4,8 +4,10 @@ import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import { AppState, Platform } from 'react-native';
 import {
+  acknowledgePersistedKaiAuthCallbackAsync,
   cancelKaiAuthLoopbackAsync,
   isKaiAuthLoopbackActiveAsync,
+  peekPersistedKaiAuthCallbackAsync,
   startKaiAuthLoopbackAsync,
   waitForKaiAuthLoopbackCallbackAsync,
   type KaiLoopbackCallback,
@@ -19,11 +21,15 @@ import {
   parseKaiAuthCallback,
   parseKaiAuthCallbackFields,
   validKaiAuthRedirectUri,
+  validKaiAuthExchangeRecovery,
   validKaiAuthPending,
 } from './kai-auth-protocol';
 import {
   exchangeKaiAuthorizationCode,
   isDefinitiveKaiOidcTokenInvalid,
+  KaiOidcExchangeValidationError,
+  KaiOidcExchangeNetworkError,
+  KaiOidcUserInfoError,
   KaiOidcRefreshValidationError,
   loadKaiOidcDiscovery,
   loadKaiUserInfo,
@@ -34,10 +40,13 @@ import { queueKaiOidcRevocation } from './kai-revocation-queue';
 import {
   classifyVerifiedResumeFailure,
   classifyVerifiedStageFailure,
+  classifyAuthorizationExchangeFailure,
+  platformPendingReason,
   persistRotatedVerifiedIdentity,
+  resolvePlatformUnauthorized,
   retireVerifiedIdentityWithFallback,
-  runVerifiedBootstrap,
   sameAuthLegalDocuments,
+  shouldClearPendingAfterKaiAuthStartFailure,
 } from './kai-auth-flow-policy';
 import {
   clearVerifiedKaiIdentity,
@@ -45,7 +54,9 @@ import {
   loadVerifiedKaiIdentity,
   saveKaiOidcSession,
   saveVerifiedKaiIdentity,
+  updateVerifiedKaiConnectionStatus,
   type CloudPayUser,
+  type VerifiedKaiConnectionReason,
   type VerifiedKaiIdentity,
 } from './session';
 
@@ -61,11 +72,65 @@ type PendingKaiAuth = Readonly<{
   codeVerifier: string;
   redirectUri: string;
   createdAt: string;
+  phase: 'browser_open' | 'authorization_received' | 'authorization_error' | 'exchanging';
+  authorizationCode?: string;
+  authorizationError?: 'authorization_failed';
+  callbackReceivedAt?: string;
+  lastAttemptAt: string;
 }>;
 
 export type KaiAuthProgress =
-  | Readonly<{ kind: 'verified_pending' }>
-  | Readonly<{ kind: 'consent_required'; documents: LegalDocuments }>;
+  | Readonly<{
+    kind: 'identity_pending';
+    reason: 'identity_exchange_retry' | 'identity_authorization_failed';
+    lastAttemptAt: string;
+  }>
+  | Readonly<{
+    kind: 'verified_pending';
+    reason: VerifiedKaiConnectionReason;
+    lastAttemptAt: string;
+  }>
+  | Readonly<{
+    kind: 'consent_required';
+    reason: 'legal_consent_required';
+    lastAttemptAt: string;
+    documents: LegalDocuments;
+  }>;
+
+export function kaiAuthProgressMessage(progress: KaiAuthProgress) {
+  if (progress.kind === 'identity_pending') {
+    if (progress.reason === 'identity_authorization_failed') {
+      return 'KAI 登录未完成。可重新验证账号，业务功能仍保持锁定。';
+    }
+    return '授权结果已安全保存，身份确认时网络中断。可直接重试，业务功能仍保持锁定。';
+  }
+  if (progress.kind === 'consent_required') {
+    return 'KAI 账号已验证。阅读并同意平台当前协议后，才能启用业务功能。';
+  }
+  const messages: Record<VerifiedKaiConnectionReason, string> = {
+    identity_verified: 'KAI 账号已验证，Zod 平台服务待连接。业务功能仍保持锁定。',
+    identity_confirmation_unavailable: 'KAI 验证状态已安全保留，身份服务暂时无法再次确认。请稍后重试。',
+    platform_network_unavailable: 'KAI 账号已验证，但当前无法连接 Zod 平台。请检查网络后重试。',
+    platform_response_invalid: 'KAI 账号已验证，但 Zod 当前返回的不是移动服务数据。请稍后重试。',
+    platform_not_accepted: 'KAI 账号仍有效，但 Zod 平台尚未接受此连接。请稍后重试。',
+    platform_server_error: 'KAI 账号已验证，但 Zod 平台服务暂时异常。请稍后重试。',
+    platform_configuration_pending: 'KAI 账号已验证，但 Zod 平台配置尚未就绪。请稍后重试。',
+  };
+  return messages[progress.reason];
+}
+
+export function kaiAuthLastAttemptLabel(progress: KaiAuthProgress) {
+  const attempted = new Date(progress.lastAttemptAt);
+  if (!Number.isFinite(attempted.getTime())) return '最近尝试时间待同步';
+  const hours = String(attempted.getHours()).padStart(2, '0');
+  const minutes = String(attempted.getMinutes()).padStart(2, '0');
+  return `最近尝试 ${hours}:${minutes}`;
+}
+
+export class PendingKaiAuthIntegrityError extends Error {
+  readonly name = 'PendingKaiAuthIntegrityError';
+  constructor() { super('本机保存的登录请求无法安全读取，原始状态已保留，请联系支持。'); }
+}
 
 let completionInFlight: Promise<KaiAuthProgress> | null = null;
 let completionState: string | null = null;
@@ -81,18 +146,47 @@ async function loadPending() {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<PendingKaiAuth>;
+    const phase = value.phase ?? 'browser_open';
+    const lastAttemptAt = value.lastAttemptAt ?? value.createdAt;
     if (typeof value.attemptId !== 'string' || !/^[0-9a-f-]{36}$/iu.test(value.attemptId)
       || typeof value.state !== 'string' || !/^[A-Za-z0-9._~-]{32,256}$/u.test(value.state)
       || typeof value.nonce !== 'string' || !/^[A-Za-z0-9._~-]{32,256}$/u.test(value.nonce)
       || typeof value.codeVerifier !== 'string' || !/^[A-Za-z0-9._~-]{43,128}$/u.test(value.codeVerifier)
       || typeof value.redirectUri !== 'string' || !validKaiAuthRedirectUri(value.redirectUri)
-      || typeof value.createdAt !== 'string' || !validKaiAuthPending(value.createdAt)) return null;
-    return value as PendingKaiAuth;
-  } catch { return null; }
+      || typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt))
+      || !['browser_open', 'authorization_received', 'authorization_error', 'exchanging'].includes(phase)
+      || typeof lastAttemptAt !== 'string' || !Number.isFinite(Date.parse(lastAttemptAt))
+      || (['authorization_received', 'exchanging'].includes(phase) && (typeof value.authorizationCode !== 'string'
+        || value.authorizationCode.length < 20 || value.authorizationCode.length > 2_048
+        || /[\u0000-\u001f\u007f]/u.test(value.authorizationCode)
+        || typeof value.callbackReceivedAt !== 'string' || !Number.isFinite(Date.parse(value.callbackReceivedAt))))
+      || (phase === 'authorization_error' && (value.authorizationError !== 'authorization_failed'
+        || typeof value.callbackReceivedAt !== 'string' || !Number.isFinite(Date.parse(value.callbackReceivedAt))))) {
+      throw new PendingKaiAuthIntegrityError();
+    }
+    if (!validKaiAuthPending(value.createdAt)) {
+      await clearPending();
+      return null;
+    }
+    return { ...value, phase, lastAttemptAt } as PendingKaiAuth;
+  } catch (error) {
+    if (error instanceof PendingKaiAuthIntegrityError) throw error;
+    throw new PendingKaiAuthIntegrityError();
+  }
+}
+
+async function savePending(pending: PendingKaiAuth) {
+  await SecureStore.setItemAsync(PENDING_KEY, JSON.stringify(pending), secureOptions);
+  return pending;
 }
 
 async function clearPending() {
   await SecureStore.deleteItemAsync(PENDING_KEY, secureOptions);
+}
+
+async function acknowledgeAndClearPending(pending: Pick<PendingKaiAuth, 'attemptId' | 'state'>) {
+  await acknowledgePersistedKaiAuthCallbackAsync(pending.attemptId, pending.state);
+  await clearPending();
 }
 
 function authResultMessage(type: string, code?: string) {
@@ -124,6 +218,21 @@ function requireLegalDocuments(value: unknown): LegalDocuments {
 class PlatformBootstrapError extends Error {
   readonly name = 'PlatformBootstrapError';
   constructor(public readonly cause: unknown) { super('平台服务待连接。'); }
+}
+
+function progressForVerifiedIdentity(identity: VerifiedKaiIdentity): Extract<KaiAuthProgress, { kind: 'verified_pending' }> {
+  return {
+    kind: 'verified_pending',
+    reason: identity.connectionReason ?? 'identity_verified',
+    lastAttemptAt: identity.lastAttemptAt ?? identity.verifiedAt,
+  };
+}
+
+function verifiedReasonForPlatformFailure(cause: unknown): VerifiedKaiConnectionReason {
+  return platformPendingReason({
+    ...(cause instanceof ApiError ? { apiStatus: cause.status, apiCode: cause.code } : {}),
+    identityConfirmationUnavailable: cause instanceof KaiOidcUserInfoError && cause.status === 0,
+  });
 }
 
 export class KaiLegalDocumentsChangedError extends Error {
@@ -167,6 +276,9 @@ async function currentVerifiedIdentity(identity: VerifiedKaiIdentity) {
       ...refreshed,
       oidcSubject: refreshed.subject,
       accessExpiresInSeconds: refreshed.expiresInSeconds,
+      verifiedAt: identity.verifiedAt,
+      connectionReason: identity.connectionReason,
+      lastAttemptAt: identity.lastAttemptAt,
     }),
     queueRevocation: () => queueKaiOidcRevocation(refreshed),
   });
@@ -184,31 +296,165 @@ async function platformBootstrap(identity: VerifiedKaiIdentity) {
   } catch (error) { throw new PlatformBootstrapError(error); }
 }
 
+function callbackReceivedAtIso(receivedAt: number) {
+  const iso = new Date(receivedAt).toISOString();
+  if (!validKaiAuthExchangeRecovery(iso)) {
+    throw new Error('本机授权结果已过期，请重新登录。');
+  }
+  return iso;
+}
+
+async function adoptKaiAuthCallback(
+  pending: PendingKaiAuth,
+  callback: ReturnType<typeof parseKaiAuthCallback>,
+  receivedAt: number,
+  acknowledgeNative: boolean,
+) {
+  if (callback.kind === 'ignored' || !callback.state || callback.state !== pending.state) {
+    throw new Error('登录返回与本机发起的请求不一致，请回到原登录窗口重试。');
+  }
+  const callbackReceivedAt = callbackReceivedAtIso(receivedAt);
+  if (callback.kind === 'error') {
+    const failed = await savePending({
+      ...pending,
+      phase: 'authorization_error',
+      authorizationError: 'authorization_failed',
+      authorizationCode: undefined,
+      callbackReceivedAt,
+      lastAttemptAt: callbackReceivedAt,
+    });
+    if (acknowledgeNative) {
+      await acknowledgePersistedKaiAuthCallbackAsync(pending.attemptId, pending.state);
+    }
+    return failed;
+  }
+  const received = await savePending({
+    ...pending,
+    phase: 'authorization_received',
+    authorizationCode: callback.code,
+    authorizationError: undefined,
+    callbackReceivedAt,
+    lastAttemptAt: callbackReceivedAt,
+  });
+  return received;
+}
+
+async function recoverPersistedKaiAuthCallback(pending: PendingKaiAuth) {
+  const recovered = await peekPersistedKaiAuthCallbackAsync(pending.attemptId);
+  if (!recovered) return pending;
+  if (recovered.attemptId !== pending.attemptId || recovered.state !== pending.state
+    || !Number.isFinite(recovered.receivedAt)) {
+    throw new Error('本机保存的登录返回与当前请求不一致，原始状态已保留。');
+  }
+  if (pending.phase === 'authorization_error') {
+    await acknowledgePersistedKaiAuthCallbackAsync(pending.attemptId, pending.state);
+    return pending;
+  }
+  if (pending.phase !== 'browser_open') {
+    const callback = parseKaiAuthCallbackFields(recovered);
+    if (callback.kind !== 'code' || callback.code !== pending.authorizationCode) {
+      throw new Error('本机保存的登录返回与待交换授权不一致，原始状态已保留。');
+    }
+    return pending;
+  }
+  return adoptKaiAuthCallback(
+    pending,
+    parseKaiAuthCallbackFields(recovered),
+    recovered.receivedAt,
+    true,
+  );
+}
+
 export async function resumeVerifiedKaiAuth(): Promise<KaiAuthProgress | null> {
   const stored = await loadVerifiedKaiIdentity();
-  if (!stored) return null;
-  const result = await runVerifiedBootstrap({
-    stored,
-    refresh: currentVerifiedIdentity,
-    bootstrap: platformBootstrap,
-    classify: (error) => {
-      const cause = error instanceof PlatformBootstrapError ? error.cause : error;
-      return classifyVerifiedStageFailure({
-        stage: error instanceof PlatformBootstrapError ? 'platform' : 'identity',
-        ...(cause instanceof ApiError ? { apiStatus: cause.status, apiCode: cause.code } : {}),
-        definitiveInvalid: isDefinitiveKaiOidcTokenInvalid(cause),
+  if (!stored) {
+    const loaded = await loadPending();
+    const pending = loaded ? await recoverPersistedKaiAuthCallback(loaded) : null;
+    if (pending?.phase === 'authorization_error') {
+      return {
+        kind: 'identity_pending', reason: 'identity_authorization_failed', lastAttemptAt: pending.lastAttemptAt,
+      };
+    }
+    if (!pending || pending.phase === 'browser_open' || !pending.callbackReceivedAt
+      || !validKaiAuthExchangeRecovery(pending.callbackReceivedAt)) return null;
+    return completePendingAuthorization(pending);
+  }
+  const completedPending = await loadPending();
+  if (completedPending) await acknowledgeAndClearPending(completedPending);
+  let identity = stored;
+  try {
+    identity = await currentVerifiedIdentity(stored);
+  } catch (error) {
+    const failure = classifyVerifiedStageFailure({
+      stage: 'identity',
+      ...(error instanceof ApiError ? { apiStatus: error.status, apiCode: error.code } : {}),
+      definitiveInvalid: isDefinitiveKaiOidcTokenInvalid(error),
+    });
+    if (failure === 'require_reauthentication') {
+      await retireVerifiedIdentity(identity);
+      throw new Error('KAI 账号验证已失效，请重新登录。');
+    }
+    if (failure === 'retain_pending') {
+      const retained = await updateVerifiedKaiConnectionStatus(identity, 'identity_confirmation_unavailable');
+      return progressForVerifiedIdentity(retained);
+    }
+    throw error;
+  }
+  try {
+    const bootstrap = await platformBootstrap(identity);
+    return {
+      kind: 'consent_required',
+      reason: 'legal_consent_required',
+      lastAttemptAt: new Date().toISOString(),
+      documents: bootstrap.documents,
+    };
+  } catch (error) {
+    const cause = error instanceof PlatformBootstrapError ? error.cause : error;
+    if (cause instanceof ApiError && cause.status === 401) {
+      const resolution = await resolvePlatformUnauthorized({
+        identity,
+        confirmIdentity: (current) => loadKaiUserInfo(current.accessToken, current.oidcSubject).then(() => undefined),
+        definitiveInvalid: isDefinitiveKaiOidcTokenInvalid,
+        retire: retireVerifiedIdentity,
       });
-    },
-    retire: retireVerifiedIdentity,
-  });
-  if (result.kind === 'pending') return { kind: 'verified_pending' };
-  if (result.kind === 'reauthenticate') throw new Error('KAI 账号验证已失效，请重新登录。');
-  return { kind: 'consent_required', documents: result.value.documents };
+      if (resolution === 'reauthenticate') throw new Error('KAI 账号验证已失效，请重新登录。');
+      const retained = await updateVerifiedKaiConnectionStatus(identity,
+        resolution === 'retain_platform_not_accepted' ? 'platform_not_accepted' : 'identity_confirmation_unavailable');
+      return progressForVerifiedIdentity(retained);
+    }
+    const reason = verifiedReasonForPlatformFailure(cause);
+    const retained = await updateVerifiedKaiConnectionStatus(identity, reason);
+    return progressForVerifiedIdentity(retained);
+  }
+}
+
+export async function loadKaiAuthProgress(): Promise<KaiAuthProgress | null> {
+  const verified = await loadVerifiedKaiIdentity();
+  if (verified) return progressForVerifiedIdentity(verified);
+  const loaded = await loadPending();
+  const pending = loaded ? await recoverPersistedKaiAuthCallback(loaded) : null;
+  if (pending?.phase === 'authorization_error') {
+    return {
+      kind: 'identity_pending', reason: 'identity_authorization_failed', lastAttemptAt: pending.lastAttemptAt,
+    };
+  }
+  if (!pending || pending.phase === 'browser_open' || !pending.callbackReceivedAt) return null;
+  if (!validKaiAuthExchangeRecovery(pending.callbackReceivedAt)) {
+    await acknowledgeAndClearPending(pending);
+    return null;
+  }
+  return { kind: 'identity_pending', reason: 'identity_exchange_retry', lastAttemptAt: pending.lastAttemptAt };
 }
 
 export async function cancelVerifiedKaiAuth() {
   const identity = await loadVerifiedKaiIdentity();
   if (identity) await retireVerifiedIdentity(identity);
+  const pending = await loadPending();
+  if (pending) {
+    await cancelKaiAuthLoopbackAsync(pending.attemptId).catch(() => undefined);
+    await acknowledgePersistedKaiAuthCallbackAsync(pending.attemptId, pending.state);
+    await clearPending();
+  }
 }
 
 async function acceptVerifiedKaiConsentsOnce(documents: LegalDocuments) {
@@ -255,6 +501,21 @@ async function acceptVerifiedKaiConsentsOnce(documents: LegalDocuments) {
     return true;
   } catch (error) {
     const cause = error instanceof PlatformBootstrapError ? error.cause : error;
+    if (cause instanceof ApiError && cause.status === 401) {
+      const resolution = await resolvePlatformUnauthorized({
+        identity,
+        confirmIdentity: (current) => loadKaiUserInfo(current.accessToken, current.oidcSubject).then(() => undefined),
+        definitiveInvalid: isDefinitiveKaiOidcTokenInvalid,
+        retire: retireVerifiedIdentity,
+      });
+      if (resolution === 'reauthenticate') throw new Error('KAI 账号验证已失效，请重新登录。');
+      if (resolution === 'retain_identity_confirmation_unavailable') {
+        await updateVerifiedKaiConnectionStatus(identity, 'identity_confirmation_unavailable');
+        throw new Error('KAI 账号仍保留验证状态，身份服务暂时无法确认，请稍后重试。');
+      }
+      await updateVerifiedKaiConnectionStatus(identity, 'platform_not_accepted');
+      throw new Error('KAI 账号仍有效，但 Zod 平台尚未接受连接，请稍后重试。');
+    }
     const failure = classifyVerifiedResumeFailure({
       ...(cause instanceof ApiError ? { apiStatus: cause.status, apiCode: cause.code } : {}),
       definitiveInvalid: isDefinitiveKaiOidcTokenInvalid(cause),
@@ -262,6 +523,9 @@ async function acceptVerifiedKaiConsentsOnce(documents: LegalDocuments) {
     if (failure === 'require_reauthentication') {
       await retireVerifiedIdentity(identity);
       throw new Error('KAI 账号验证已失效，请重新登录。');
+    }
+    if (cause instanceof ApiError || error instanceof PlatformBootstrapError) {
+      await updateVerifiedKaiConnectionStatus(identity, verifiedReasonForPlatformFailure(cause));
     }
     throw error;
   }
@@ -277,7 +541,13 @@ export async function startKaiAuth() {
   if (LOCAL_E2E_DEMO_ENABLED) throw new Error('本地验收版本请使用本机验证码。');
   if (Platform.OS !== 'android') throw new Error('当前登录回跳仅支持 Android 正式客户端。');
   const existing = await resumeVerifiedKaiAuth();
-  if (existing) return existing;
+  if (existing?.kind === 'identity_pending' && existing.reason === 'identity_authorization_failed') {
+    const failed = await loadPending();
+    if (failed) {
+      await acknowledgePersistedKaiAuthCallbackAsync(failed.attemptId, failed.state);
+      await clearPending();
+    }
+  } else if (existing) return existing;
   const interrupted = await loadPending();
   if (interrupted) {
     if (await isKaiAuthLoopbackActiveAsync(interrupted.attemptId)) {
@@ -291,6 +561,7 @@ export async function startKaiAuth() {
   const nonce = randomOpaque();
   const attemptId = Crypto.randomUUID();
   let pendingPersisted = false;
+  let callbackReceived = false;
   try {
     const listener = await startKaiAuthLoopbackAsync(attemptId, state, KAI_OIDC_ISSUER);
     if (!validKaiAuthRedirectUri(listener.redirectUri)) {
@@ -310,20 +581,38 @@ export async function startKaiAuth() {
     if (!request.codeVerifier || !/^[A-Za-z0-9._~-]{43,128}$/u.test(request.codeVerifier)) {
       throw new Error('本机没有生成有效的登录安全校验，请重试。');
     }
-    await SecureStore.setItemAsync(PENDING_KEY, JSON.stringify({
+    const createdAt = new Date().toISOString();
+    await savePending({
       attemptId,
       state,
       nonce,
       codeVerifier: request.codeVerifier,
       redirectUri: listener.redirectUri,
-      createdAt: new Date().toISOString(),
-    } satisfies PendingKaiAuth), secureOptions);
+      createdAt,
+      phase: 'browser_open',
+      lastAttemptAt: createdAt,
+    });
     pendingPersisted = true;
     const callback = await openKaiAuthBrowserAndWait(attemptId, authorizationUrl);
+    callbackReceived = true;
     return completeKaiAuthCallback(callback);
   } catch (error) {
     await cancelKaiAuthLoopbackAsync(attemptId).catch(() => undefined);
-    if (pendingPersisted) await clearPending();
+    if (pendingPersisted && !callbackReceived) {
+      try {
+        const current = await loadPending();
+        if (shouldClearPendingAfterKaiAuthStartFailure({
+          callbackReceived,
+          attemptId,
+          currentAttemptId: current?.attemptId,
+          currentPhase: current?.phase,
+        })) {
+          await clearPending();
+        }
+      } catch {
+        // Preserve unreadable or partially updated state for the explicit recovery path.
+      }
+    }
     throw error;
   }
 }
@@ -369,14 +658,21 @@ export function isKaiAuthCallback(url: string) {
 }
 
 export async function completeKaiAuth(url: string) {
-  return completeParsedKaiAuth(parseKaiAuthCallback(url));
+  return completeParsedKaiAuth(parseKaiAuthCallback(url), Date.now(), false);
 }
 
 async function completeKaiAuthCallback(fields: KaiLoopbackCallback) {
-  return completeParsedKaiAuth(parseKaiAuthCallbackFields(fields));
+  if (!Number.isFinite(fields.receivedAt)) {
+    throw new Error('本机登录返回缺少安全时间戳，请重新登录。');
+  }
+  return completeParsedKaiAuth(parseKaiAuthCallbackFields(fields), fields.receivedAt as number, true);
 }
 
-async function completeParsedKaiAuth(callback: ReturnType<typeof parseKaiAuthCallback>) {
+async function completeParsedKaiAuth(
+  callback: ReturnType<typeof parseKaiAuthCallback>,
+  receivedAt: number,
+  acknowledgeNative: boolean,
+) {
   if (callback.kind === 'ignored') return false;
   if (completionInFlight && completionState === callback.state) return completionInFlight;
   if (lastCompletion?.state === callback.state) return lastCompletion.progress;
@@ -385,47 +681,98 @@ async function completeParsedKaiAuth(callback: ReturnType<typeof parseKaiAuthCal
     await clearPending();
     throw new Error('本机登录请求已过期，请重新登录。');
   }
-  if (!callback.state || callback.state !== pending.state) {
-    throw new Error('登录返回与本机发起的请求不一致，请回到原登录窗口重试。');
-  }
-  if (callback.kind === 'error') {
-    await clearPending();
-    throw new Error(authResultMessage('error', callback.error));
-  }
+  const received = await adoptKaiAuthCallback(pending, callback, receivedAt, acknowledgeNative);
+  if (callback.kind === 'error') throw new Error(authResultMessage('error', callback.error));
   completionState = callback.state;
-  completionInFlight = (async () => {
-    let tokens: Awaited<ReturnType<typeof exchangeKaiAuthorizationCode>> | null = null;
-    let verifiedSaved = false;
-    try {
-      tokens = await exchangeKaiAuthorizationCode({
-        code: callback.code,
-        codeVerifier: pending.codeVerifier,
-        nonce: pending.nonce,
-        redirectUri: pending.redirectUri,
-      });
-      await loadKaiUserInfo(tokens.accessToken, tokens.subject);
-      await saveVerifiedKaiIdentity({
-        attemptId: pending.attemptId,
-        ...tokens,
-        oidcSubject: tokens.subject,
-        accessExpiresInSeconds: tokens.expiresInSeconds,
-      });
-      verifiedSaved = true;
-      const progress = await resumeVerifiedKaiAuth() ?? { kind: 'verified_pending' } as const;
+  completionInFlight = completePendingAuthorization(received)
+    .then((progress) => {
       lastCompletion = { state: callback.state, progress };
       return progress;
-    } catch (error) {
-      if (tokens && !verifiedSaved) {
-        await retireVerifiedIdentityWithFallback({
-          revoke: () => revokeKaiOidcTokens(tokens as NonNullable<typeof tokens>),
-          queueRevocation: () => queueKaiOidcRevocation(tokens as NonNullable<typeof tokens>),
-          clear: async () => undefined,
-        });
-      }
-      throw error;
-    } finally {
-      await clearPending();
-    }
-  })().finally(() => { completionInFlight = null; completionState = null; });
+    })
+    .finally(() => { completionInFlight = null; completionState = null; });
   return completionInFlight;
+}
+
+function isRetryableExchangeNetworkFailure(error: unknown) {
+  if (error instanceof KaiOidcExchangeNetworkError) return true;
+  if (error instanceof TypeError || (error instanceof Error && error.name === 'AbortError')) return true;
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 'ERR_NETWORK' || code === 'NETWORK_ERROR';
+}
+
+async function completePendingAuthorization(pending: PendingKaiAuth): Promise<KaiAuthProgress> {
+  if (!pending.authorizationCode || !pending.callbackReceivedAt
+    || !validKaiAuthExchangeRecovery(pending.callbackReceivedAt)) {
+    await acknowledgeAndClearPending(pending);
+    throw new Error('本机授权结果已过期，请重新登录。');
+  }
+  const authorizationCode = pending.authorizationCode;
+  const callbackReceivedAt = pending.callbackReceivedAt;
+  const lastAttemptAt = new Date().toISOString();
+  const exchanging = await savePending({ ...pending, phase: 'exchanging', lastAttemptAt });
+  let tokens: Awaited<ReturnType<typeof exchangeKaiAuthorizationCode>> | null = null;
+  let verifiedSaved = false;
+  try {
+    tokens = await exchangeKaiAuthorizationCode({
+      code: authorizationCode,
+      codeVerifier: exchanging.codeVerifier,
+      nonce: exchanging.nonce,
+      redirectUri: exchanging.redirectUri,
+    });
+    await loadKaiUserInfo(tokens.accessToken, tokens.subject);
+    await saveVerifiedKaiIdentity({
+      attemptId: exchanging.attemptId,
+      ...tokens,
+      oidcSubject: tokens.subject,
+      accessExpiresInSeconds: tokens.expiresInSeconds,
+      connectionReason: 'identity_verified',
+      lastAttemptAt,
+    });
+    verifiedSaved = true;
+    await acknowledgeAndClearPending(exchanging);
+    const progress = await resumeVerifiedKaiAuth();
+    return progress ?? {
+      kind: 'verified_pending', reason: 'identity_verified', lastAttemptAt,
+    };
+  } catch (error) {
+    if (error instanceof KaiOidcExchangeValidationError) {
+      if (!error.revocationCandidate) {
+        throw new Error('KAI 返回的凭证无法安全校验或撤销，本机保留授权状态，请联系支持。');
+      }
+      await retireVerifiedIdentityWithFallback({
+        revoke: () => revokeKaiOidcTokens(error.revocationCandidate as NonNullable<typeof error.revocationCandidate>),
+        queueRevocation: () => queueKaiOidcRevocation(
+          error.revocationCandidate as NonNullable<typeof error.revocationCandidate>,
+        ),
+        clear: () => acknowledgeAndClearPending(exchanging),
+      });
+      throw new Error('KAI 返回的凭证未通过安全校验，已安排安全撤销，请重新验证账号。');
+    }
+    const failure = classifyAuthorizationExchangeFailure({
+      retryableNetwork: !tokens && isRetryableExchangeNetworkFailure(error),
+      definitiveInvalid: isDefinitiveKaiOidcTokenInvalid(error),
+      recoveryWindowValid: validKaiAuthExchangeRecovery(callbackReceivedAt),
+    });
+    if (failure === 'retain_encrypted_authorization') {
+      const retryAt = new Date().toISOString();
+      await savePending({ ...exchanging, phase: 'authorization_received', lastAttemptAt: retryAt });
+      return { kind: 'identity_pending', reason: 'identity_exchange_retry', lastAttemptAt: retryAt };
+    }
+    if (verifiedSaved) {
+      throw new Error('账号已验证，本机登录状态尚未完成安全收口，请重新打开 App 继续。');
+    }
+    if (tokens && !verifiedSaved) {
+      await retireVerifiedIdentityWithFallback({
+        revoke: () => revokeKaiOidcTokens(tokens as NonNullable<typeof tokens>),
+        queueRevocation: () => queueKaiOidcRevocation(tokens as NonNullable<typeof tokens>),
+        clear: async () => undefined,
+      });
+    }
+    await acknowledgeAndClearPending(exchanging);
+    if (failure === 'restart_authorization') {
+      throw new Error('KAI 授权结果已失效，请重新验证账号。');
+    }
+    throw error;
+  }
 }

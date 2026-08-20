@@ -14,6 +14,18 @@ export async function resumeVerifiedKaiAuth() {
   return null;
 }
 
+export async function loadKaiAuthProgress() {
+  return null;
+}
+
+export function kaiAuthProgressMessage(_progress: never) {
+  return '';
+}
+
+export function kaiAuthLastAttemptLabel(_progress: never) {
+  return '';
+}
+
 export async function acceptVerifiedKaiConsents() {
   throw new Error('测试构建不使用正式 KAI 登录。');
 }

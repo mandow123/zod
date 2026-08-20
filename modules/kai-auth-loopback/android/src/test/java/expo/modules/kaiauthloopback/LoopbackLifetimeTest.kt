@@ -21,4 +21,12 @@ class LoopbackLifetimeTest {
     assertEquals(0L, lifetime.remainingMilliseconds())
     assertTrue(lifetime.expired())
   }
+
+  @Test fun persistedCallbackUsesABoundedWallClockWindowAcrossProcessRestarts() {
+    val now = 1_800_000_000_000L
+    assertTrue(validPersistedLoopbackCallbackTime(now, now))
+    assertTrue(validPersistedLoopbackCallbackTime(now - RECOVERED_CALLBACK_MAX_AGE_MILLISECONDS, now))
+    assertFalse(validPersistedLoopbackCallbackTime(now - RECOVERED_CALLBACK_MAX_AGE_MILLISECONDS - 1L, now))
+    assertFalse(validPersistedLoopbackCallbackTime(now + 1L, now))
+  }
 }

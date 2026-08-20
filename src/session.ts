@@ -47,7 +47,28 @@ export type VerifiedKaiIdentity = Readonly<{
   oidcSubject: string;
   accessExpiresAt: string;
   verifiedAt: string;
+  connectionReason?: VerifiedKaiConnectionReason;
+  lastAttemptAt?: string;
 }>;
+
+export type VerifiedKaiConnectionReason =
+  | 'identity_verified'
+  | 'identity_confirmation_unavailable'
+  | 'platform_network_unavailable'
+  | 'platform_response_invalid'
+  | 'platform_not_accepted'
+  | 'platform_server_error'
+  | 'platform_configuration_pending';
+
+const verifiedKaiConnectionReasons: readonly VerifiedKaiConnectionReason[] = [
+  'identity_verified',
+  'identity_confirmation_unavailable',
+  'platform_network_unavailable',
+  'platform_response_invalid',
+  'platform_not_accepted',
+  'platform_server_error',
+  'platform_configuration_pending',
+];
 
 export class VerifiedKaiIdentityIntegrityError extends Error {
   readonly name = 'VerifiedKaiIdentityIntegrityError';
@@ -80,7 +101,11 @@ function validVerifiedIdentity(value: unknown): value is VerifiedKaiIdentity {
     && identity.tokenType === 'Bearer' && typeof identity.scope === 'string'
     && typeof identity.oidcSubject === 'string' && identity.oidcSubject.length > 0
     && typeof identity.accessExpiresAt === 'string' && Number.isFinite(Date.parse(identity.accessExpiresAt))
-    && typeof identity.verifiedAt === 'string' && Number.isFinite(Date.parse(identity.verifiedAt));
+    && typeof identity.verifiedAt === 'string' && Number.isFinite(Date.parse(identity.verifiedAt))
+    && (identity.connectionReason === undefined
+      || verifiedKaiConnectionReasons.includes(identity.connectionReason))
+    && (identity.lastAttemptAt === undefined
+      || (typeof identity.lastAttemptAt === 'string' && Number.isFinite(Date.parse(identity.lastAttemptAt))));
 }
 
 export async function deviceDescriptor() {
@@ -130,7 +155,11 @@ export async function saveVerifiedKaiIdentity(input: Readonly<{
   scope: string;
   oidcSubject: string;
   accessExpiresInSeconds: number;
+  verifiedAt?: string;
+  connectionReason?: VerifiedKaiConnectionReason;
+  lastAttemptAt?: string;
 }>) {
+  const now = new Date().toISOString();
   const identity: VerifiedKaiIdentity = {
     status: 'verified_pending_consent',
     attemptId: input.attemptId,
@@ -141,10 +170,22 @@ export async function saveVerifiedKaiIdentity(input: Readonly<{
     scope: input.scope,
     oidcSubject: input.oidcSubject,
     accessExpiresAt: new Date(Date.now() + input.accessExpiresInSeconds * 1_000).toISOString(),
-    verifiedAt: new Date().toISOString(),
+    verifiedAt: input.verifiedAt ?? now,
+    connectionReason: input.connectionReason ?? 'identity_verified',
+    lastAttemptAt: input.lastAttemptAt ?? now,
   };
   await SecureStore.setItemAsync(VERIFIED_IDENTITY_KEY, JSON.stringify(identity), secureOptions);
   return identity;
+}
+
+export async function updateVerifiedKaiConnectionStatus(
+  identity: VerifiedKaiIdentity,
+  connectionReason: VerifiedKaiConnectionReason,
+  lastAttemptAt = new Date().toISOString(),
+) {
+  const updated: VerifiedKaiIdentity = { ...identity, connectionReason, lastAttemptAt };
+  await SecureStore.setItemAsync(VERIFIED_IDENTITY_KEY, JSON.stringify(updated), secureOptions);
+  return updated;
 }
 
 export async function clearVerifiedKaiIdentity() {

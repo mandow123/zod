@@ -7,6 +7,12 @@ import {
   validKaiAuthRedirectUri,
   validateKaiIdTokenClaims,
 } from './kai-auth-protocol';
+import {
+  KaiOidcExchangeValidationError,
+  validateIssuedKaiOidcTokenSet,
+  type KaiOidcRevocationCandidate,
+} from './kai-auth-flow-policy';
+export { KaiOidcExchangeValidationError } from './kai-auth-flow-policy';
 
 export type KaiOidcTokens = Readonly<{
   accessToken: string;
@@ -26,7 +32,28 @@ export class KaiOidcRefreshValidationError extends Error {
   ) { super(message); }
 }
 
+export class KaiOidcExchangeNetworkError extends Error {
+  readonly name = 'KaiOidcExchangeNetworkError';
+  constructor() { super('统一身份暂时无法连接，本机已保留授权结果。'); }
+}
+
+class KaiOidcDiscoverySecurityError extends Error {
+  readonly name = 'KaiOidcDiscoverySecurityError';
+}
+
+export class KaiOidcUserInfoError extends Error {
+  readonly name = 'KaiOidcUserInfoError';
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly reason: 'network' | 'unauthorized' | 'response_invalid' | 'subject_mismatch' | 'server',
+  ) { super(message); }
+}
+
 export function isDefinitiveKaiOidcTokenInvalid(error: unknown) {
+  if (error instanceof KaiOidcUserInfoError) {
+    return error.reason === 'unauthorized' || error.reason === 'subject_mismatch';
+  }
   if (!error || typeof error !== 'object') return false;
   const candidate = error as { code?: unknown; params?: unknown };
   if (candidate.code === 'invalid_grant') return true;
@@ -37,11 +64,11 @@ export function isDefinitiveKaiOidcTokenInvalid(error: unknown) {
 let discoveryInFlight: Promise<AuthSession.DiscoveryDocument> | null = null;
 
 function requiredEndpoint(value: string | undefined, label: string) {
-  if (!value) throw new Error(`统一身份没有提供${label}，当前无法安全登录。`);
+  if (!value) throw new KaiOidcDiscoverySecurityError(`统一身份没有提供${label}，当前无法安全登录。`);
   const url = new URL(value);
   if (url.protocol !== 'https:' || url.hostname !== 'auth.kai.com'
     || !url.pathname.startsWith('/api/auth/')) {
-    throw new Error(`统一身份${label}地址未通过安全校验。`);
+    throw new KaiOidcDiscoverySecurityError(`统一身份${label}地址未通过安全校验。`);
   }
   return value;
 }
@@ -50,7 +77,7 @@ export async function loadKaiOidcDiscovery() {
   discoveryInFlight ??= AuthSession.fetchDiscoveryAsync(KAI_OIDC_ISSUER)
     .then((discovery) => {
       const issuer = discovery.discoveryDocument?.issuer;
-      if (issuer !== KAI_OIDC_ISSUER) throw new Error('统一身份服务来源未通过校验。');
+      if (issuer !== KAI_OIDC_ISSUER) throw new KaiOidcDiscoverySecurityError('统一身份服务来源未通过校验。');
       requiredEndpoint(discovery.authorizationEndpoint, '授权');
       requiredEndpoint(discovery.tokenEndpoint, '令牌');
       requiredEndpoint(discovery.revocationEndpoint, '撤销');
@@ -89,27 +116,30 @@ export async function exchangeKaiAuthorizationCode(input: Readonly<{
   if (!validKaiAuthRedirectUri(input.redirectUri)) {
     throw new Error('本机登录回调地址未通过安全校验。');
   }
-  const discovery = await loadKaiOidcDiscovery();
-  const response = await AuthSession.exchangeCodeAsync({
-    clientId: KAI_OIDC_CLIENT_ID,
-    code: input.code,
-    redirectUri: input.redirectUri,
-    extraParams: { code_verifier: input.codeVerifier },
-  }, discovery);
-  validateBaseResponse(response);
-  if (typeof response.refreshToken !== 'string' || response.refreshToken.length < 20
-    || typeof response.idToken !== 'string' || response.idToken.length < 40) {
-    throw new Error('统一身份没有返回可续期的登录凭证，请重新登录。');
+  let response: TokenResponse;
+  try {
+    const discovery = await loadKaiOidcDiscovery();
+    response = await AuthSession.exchangeCodeAsync({
+      clientId: KAI_OIDC_CLIENT_ID,
+      code: input.code,
+      redirectUri: input.redirectUri,
+      extraParams: { code_verifier: input.codeVerifier },
+    }, discovery);
+  } catch (error) {
+    if (error instanceof KaiOidcDiscoverySecurityError || isDefinitiveKaiOidcTokenInvalid(error)) throw error;
+    const oauthError = error && typeof error === 'object'
+      && (error as { params?: unknown }).params && typeof (error as { params?: unknown }).params === 'object'
+      && typeof ((error as { params: { error?: unknown } }).params.error) === 'string';
+    if (oauthError) throw error;
+    throw new KaiOidcExchangeNetworkError();
   }
-  const claims = validateKaiIdTokenClaims(response.idToken, { nonce: input.nonce });
   return {
-    accessToken: response.accessToken,
-    refreshToken: response.refreshToken,
-    idToken: response.idToken,
+    ...validateIssuedKaiOidcTokenSet({
+      ...response,
+      requiredScopes: KAI_OIDC_SCOPES,
+      validateIdToken: (idToken) => validateKaiIdTokenClaims(idToken, { nonce: input.nonce }),
+    }),
     tokenType: 'Bearer',
-    scope: requireScope(response.scope),
-    expiresInSeconds: response.expiresIn as number,
-    subject: claims.sub,
   } satisfies KaiOidcTokens;
 }
 
@@ -153,26 +183,52 @@ export async function refreshKaiOidcTokens(current: KaiOidcTokens) {
 
 export async function loadKaiUserInfo(accessToken: string, expectedSubject: string) {
   const discovery = await loadKaiOidcDiscovery();
-  const profile = await AuthSession.fetchUserInfoAsync({ accessToken }, discovery);
-  if (typeof profile.sub !== 'string' || profile.sub !== expectedSubject) {
-    throw new Error('统一身份账户资料与登录结果不一致，请重新登录。');
+  const endpoint = requiredEndpoint(discovery.userInfoEndpoint, '账户资料');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new KaiOidcUserInfoError('统一身份账户资料暂时无法连接。', 0, 'network');
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (response.status === 401) {
+    throw new KaiOidcUserInfoError('KAI 账号验证已失效。', 401, 'unauthorized');
+  }
+  if (!response.ok) {
+    throw new KaiOidcUserInfoError('统一身份账户资料暂时不可用。', response.status, 'server');
+  }
+  let profile: unknown;
+  try { profile = await response.json(); }
+  catch { throw new KaiOidcUserInfoError('统一身份账户资料无法安全识别。', response.status, 'response_invalid'); }
+  if (!profile || typeof profile !== 'object') {
+    throw new KaiOidcUserInfoError('统一身份账户资料无法安全识别。', response.status, 'response_invalid');
+  }
+  const subject = (profile as { sub?: unknown }).sub;
+  if (typeof subject !== 'string' || subject !== expectedSubject) {
+    throw new KaiOidcUserInfoError('统一身份账户资料与登录结果不一致，请重新登录。', response.status, 'subject_mismatch');
   }
   return profile;
 }
 
-export async function revokeKaiOidcTokens(tokens: Readonly<{ refreshToken: string; accessToken: string }>) {
+export async function revokeKaiOidcTokens(tokens: KaiOidcRevocationCandidate) {
   const discovery = await loadKaiOidcDiscovery();
   const failures: unknown[] = [];
-  for (const request of [
-    {
-      token: tokens.accessToken,
-      tokenTypeHint: TokenTypeHint.AccessToken,
-    },
-    {
-      token: tokens.refreshToken,
-      tokenTypeHint: TokenTypeHint.RefreshToken,
-    },
-  ] as const) {
+  const requests: { token: string; tokenTypeHint: TokenTypeHint }[] = [];
+  if (typeof tokens.accessToken === 'string' && tokens.accessToken.length >= 20) {
+    requests.push({ token: tokens.accessToken, tokenTypeHint: TokenTypeHint.AccessToken });
+  }
+  if (typeof tokens.refreshToken === 'string' && tokens.refreshToken.length >= 20) {
+    requests.push({ token: tokens.refreshToken, tokenTypeHint: TokenTypeHint.RefreshToken });
+  }
+  if (requests.length === 0) throw new Error('没有可安全撤销的统一身份凭证。');
+  for (const request of requests) {
     try {
       await AuthSession.revokeAsync({
       clientId: KAI_OIDC_CLIENT_ID,

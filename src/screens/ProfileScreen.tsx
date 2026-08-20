@@ -5,6 +5,7 @@ import { SessionLogoutError, logoutCloudPay, type CloudPaySnapshot, type Trading
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
 import { useStagingProfileToolsSlot } from '../StagingProfileToolsSlot';
 import { brand, colors } from '../theme';
+import { kaiAuthLastAttemptLabel, kaiAuthProgressMessage, type KaiAuthProgress } from '../kai-auth';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -45,12 +46,13 @@ function SubjectSheet({ visible, subjects, currentSubjectId, onSelect, onClose }
 
 type Props = Readonly<{
   snapshot: CloudPaySnapshot; onSelectSubject: (subjectId: string) => void;
+  kaiAuthProgress: KaiAuthProgress | null;
   onSessionChanged: () => void | Promise<void>; onLogin: () => void; onOpenQualification: () => void;
   onOpenCredits: () => void; onOpenOrders: () => void; onOpenAssets: () => void;
   onOpenCreatorCollaboration: () => void; onOpenMessages: () => void; onOpenPayout: () => void;
 }>;
 
-export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onLogin, onOpenQualification, onOpenCredits, onOpenOrders, onOpenAssets, onOpenCreatorCollaboration, onOpenMessages, onOpenPayout }: Props) {
+export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSessionChanged, onLogin, onOpenQualification, onOpenCredits, onOpenOrders, onOpenAssets, onOpenCreatorCollaboration, onOpenMessages, onOpenPayout }: Props) {
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [securityVisible, setSecurityVisible] = useState(false);
   const [subjectsVisible, setSubjectsVisible] = useState(false);
@@ -74,10 +76,18 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
     }]);
   };
   const openSubjects = () => snapshot.authenticated ? setSubjectsVisible(true) : onLogin();
+  const accountPending = !snapshot.authenticated && kaiAuthProgress !== null;
+  const pendingAccountName = kaiAuthProgress?.kind === 'identity_pending' ? 'KAI 身份待确认' : 'KAI 账号已验证';
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <Text style={styles.pageTitle}>我的</Text>
-    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? '访客模式'}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? '登录后查看账号资产'}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : '登录 Zod'}</Text></Pressable></View>
+    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? (accountPending ? pendingAccountName : '访客模式')}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? (accountPending ? '业务会话尚未建立' : '登录后查看账号资产')}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : accountPending ? '继续' : '登录 Zod'}</Text></Pressable></View>
+
+    {accountPending ? <Pressable accessibilityRole="button" onPress={onLogin} style={styles.authProgressCard}>
+      <Ionicons name={kaiAuthProgress.kind === 'identity_pending' ? 'time-outline' : 'shield-checkmark-outline'} size={18} color={colors.primary} />
+      <View style={styles.authProgressCopy}><Text style={styles.authProgressTitle}>{pendingAccountName}</Text><Text style={styles.authProgressMeta}>{kaiAuthProgressMessage(kaiAuthProgress)}</Text><Text style={styles.authAttemptMeta}>{kaiAuthLastAttemptLabel(kaiAuthProgress)}</Text></View>
+      <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+    </Pressable> : null}
 
     {snapshot.authenticated ? <Pressable accessibilityRole="button" onPress={openSubjects} style={styles.subjectSummary}>
       <View style={styles.subjectSummaryCopy}><Text style={styles.subjectEyebrow}>当前服务主体</Text><Text numberOfLines={1} style={styles.subjectName}>{currentSubject?.displayName ?? '暂无可用主体'}</Text><Text style={styles.subjectMeta}>{currentSubject ? `${currentSubject.kind === 'organization' ? '组织主体' : '个人主体'} · ${subjectRoleLabel[currentSubject.role]} · ${subjectStatusLabel[currentSubject.status]}` : '主体状态以服务端为准'}</Text></View>
@@ -139,6 +149,8 @@ function Menu({ icon, label, meta, onPress, enabled = true, trailingIcon, tone =
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.canvas }, content: { padding: 16, paddingBottom: 34 }, pageTitle: { color: colors.ink, fontSize: 25, fontWeight: '900', marginBottom: 12 },
   accountCard: { minHeight: 76, paddingHorizontal: 13, borderRadius: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, avatar: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F2FF' }, avatarText: { color: colors.ink, fontSize: 14, fontWeight: '900' }, accountCopy: { flex: 1, marginLeft: 11 }, accountName: { color: colors.ink, fontSize: 15, fontWeight: '900' }, accountMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, textAction: { color: colors.primary, fontSize: 11, fontWeight: '800' },
+  authProgressCard: { minHeight: 74, marginTop: 10, paddingHorizontal: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#C9DDF7' }, authProgressCopy: { flex: 1 }, authProgressTitle: { color: colors.primaryDark, fontSize: 12, fontWeight: '900' }, authProgressMeta: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 4 },
+  authAttemptMeta: { color: colors.subtle, fontSize: 8, marginTop: 4 },
   subjectSummary: { minHeight: 76, marginTop: 10, paddingHorizontal: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#DFE6EE' }, subjectSummaryCopy: { flex: 1 }, subjectEyebrow: { color: colors.primary, fontSize: 8, fontWeight: '900' }, subjectName: { color: colors.ink, fontSize: 13, fontWeight: '900', marginTop: 4 }, subjectMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, subjectAction: { flexDirection: 'row', alignItems: 'center', gap: 3 }, subjectActionText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
   group: { marginTop: 20 }, groupHeading: { minHeight: 38, marginBottom: 8, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center' }, groupGlyph: { width: 32, height: 32, marginRight: 9, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, orangeGlyph: { backgroundColor: colors.orangeSoft }, sectionLabel: { color: colors.ink, fontSize: 15, fontWeight: '900' }, sectionCaption: { color: colors.muted, fontSize: 8, marginTop: 3 },
   menuCard: { paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, menuRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.line }, subjectRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.line }, lastRow: { borderBottomWidth: 0 }, disabledRow: { opacity: 0.62 }, menuIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F3F5' }, selectedIcon: { backgroundColor: colors.primarySoft }, orangeMenuIcon: { backgroundColor: colors.orangeSoft }, rowCopy: { flex: 1, marginLeft: 10 }, rowTitle: { color: colors.ink, fontSize: 12, fontWeight: '800' }, rowMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, version: { color: colors.subtle, fontSize: 9, textAlign: 'center', marginTop: 20 },
