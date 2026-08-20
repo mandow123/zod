@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["App.tsx", "index.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": [
+    "admin",
+    "backend",
+    "dist",
+    "game",
+    "node_modules",
+    "promo",
+    "test"
+  ]
+}

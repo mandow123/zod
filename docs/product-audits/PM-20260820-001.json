@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-20T01:45:41.559Z",
+  "baseCommit": "66da2060a307dfd7738fbb297f503d1aac38a72e",
+  "stagedDiffSha256": "1361d47ad5cb1ec6aa26cd59bcd92b281ac04618ac55271c5d528544a49556cc",
+  "summary": "批准将类型检查限定到真实移动端源码，并用自动化测试锁定其与 backend、promo、admin 等无关工作区的隔离；本次差异不改变产品结构、商业能力或运行时行为。"
+}

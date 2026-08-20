@@ -34,7 +34,7 @@
     "ios": "node scripts/expo-with-build-policy.mjs ios app-store run:ios",
     "web": "node scripts/expo-with-build-policy.mjs android direct-cn start --web",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test test/*.test.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.mobile.json",
     "contract:verify": "node scripts/verify-mobile-backend-contract.mjs",
     "audit:product": "node scripts/verify-product-manager-audit.mjs",
     "setup:git-hooks": "node scripts/install-git-hooks.mjs",
