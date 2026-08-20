@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-001",
+  "auditedAt": "2026-08-20T01:49:42+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准增加仅限本地开发的管理员产品演示模式，保持正式开发与生产认证边界不变。",
+  "baseCommit": "481a0de3a040f01a6af5b33fa0d6eb55714bb76d",
+  "stagedDiffSha256": "685d4519212c28ca6f4b2efb3fa548a6f3adb048789b7175ff068dc317fc9db8"
+}
