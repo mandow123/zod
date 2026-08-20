@@ -57,7 +57,7 @@ test('pending App PKCE is accepted only inside its bounded callback window', () 
 });
 
 test('production KAI login is direct public-client Authorization Code plus PKCE', async () => {
-  const [auth, oidc, apiClient, session, metro, localAuth, appJson, manifest, assetLinks, fallback] = await Promise.all([
+  const [auth, oidc, apiClient, session, metro, localAuth, appJson, manifest, gradle, assetLinks, fallback] = await Promise.all([
     readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/kai-oidc-client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/api-client.ts', import.meta.url), 'utf8'),
@@ -66,6 +66,7 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
     readFile(new URL('../src/kai-auth.local-e2e.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app.json', import.meta.url), 'utf8'),
     readFile(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8'),
+    readFile(new URL('../android/app/build.gradle', import.meta.url), 'utf8'),
     readFile(new URL('../deploy/cloud.kai.com/.well-known/assetlinks.json', import.meta.url), 'utf8'),
     readFile(new URL('../deploy/cloud.kai.com/zod/oauth2redirect/kai/index.html', import.meta.url), 'utf8'),
   ]);
@@ -98,8 +99,10 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.match(appJson, /"host":\s*"cloud\.kai\.com"/u);
   assert.match(appJson, /"path":\s*"\/zod\/oauth2redirect\/kai"/u);
   assert.match(manifest, /android:autoVerify="true"/u);
-  assert.match(manifest, /android:host="cloud\.kai\.com"/u);
-  assert.match(manifest, /android:path="\/zod\/oauth2redirect\/kai"/u);
+  assert.match(manifest, /android:host="\$\{cloudPayAuthHost\}"/u);
+  assert.match(manifest, /android:path="\$\{cloudPayAuthPath\}"/u);
+  assert.match(gradle, /cloudPayAuthHost:\s*"cloud\.kai\.com"/u);
+  assert.match(gradle, /cloudPayAuthPath:\s*"\/zod\/oauth2redirect\/kai"/u);
   const association = JSON.parse(assetLinks)[0];
   assert.equal(association.target.package_name, 'com.kaicloud.marketplace');
   assert.deepEqual(association.relation, ['delegate_permission/common.handle_all_urls']);

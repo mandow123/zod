@@ -4,9 +4,10 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { loadCloudPayOrders, type AftercareReview, type CloudPayOrder, type CloudPaySnapshot } from '../api';
 import { Card } from '../components';
 import { OrderCard } from '../OrderCard';
+import { StagingOrdersSlot } from '../StagingOrdersSlot';
 import { colors } from '../theme';
 
-export function OrdersScreen({ snapshot, side, refreshing, onRefresh, onMarket, onLogin, onOpenOrder, onOpenReview }: Readonly<{
+export function OrdersScreen({ snapshot, side, refreshing, onRefresh, onMarket, onLogin, onOpenOrder, onOpenStagingOrder, onOpenReview }: Readonly<{
   snapshot: CloudPaySnapshot;
   side: 'buyer' | 'provider';
   refreshing: boolean;
@@ -14,6 +15,7 @@ export function OrdersScreen({ snapshot, side, refreshing, onRefresh, onMarket, 
   onMarket: () => void;
   onLogin: () => void;
   onOpenOrder: (order: CloudPayOrder) => void;
+  onOpenStagingOrder: (order: CloudPayOrder) => void;
   onOpenReview: (review: AftercareReview) => void;
 }>) {
   const [orders, setOrders] = useState<CloudPayOrder[]>([]);
@@ -51,6 +53,7 @@ export function OrdersScreen({ snapshot, side, refreshing, onRefresh, onMarket, 
         <Text style={styles.eyebrow}>算力订单</Text>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.caption}>{side === 'provider' ? '资源锁定、自动开通、验收和结算都在这里查看。' : '购买、使用、验收和售后都在这里查看。'}</Text>
+        {side === 'buyer' ? <StagingOrdersSlot onOpenOrder={onOpenStagingOrder} /> : null}
         {snapshot.authenticated && snapshot.orderErrors[side] && orders.length === 0 ? (
           <Card style={styles.emptyCard}>
             <View style={[styles.icon, styles.warningIcon]}><Ionicons name="cloud-offline-outline" size={35} color={colors.amber} /></View>

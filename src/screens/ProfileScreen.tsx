@@ -3,6 +3,7 @@ import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SessionLogoutError, logoutCloudPay, type CloudPaySnapshot, type TradingSubject } from '../api';
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
+import { useStagingProfileToolsSlot } from '../StagingProfileToolsSlot';
 import { brand, colors } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -21,7 +22,7 @@ function PrivacySheet({ visible, onClose }: Readonly<{ visible: boolean; onClose
   return <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}><View style={styles.backdrop}><View style={styles.sheet}><View style={styles.handle} /><View style={styles.sheetHeading}><Text style={styles.sheetTitle}>隐私与数据</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭隐私与数据" onPress={onClose}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>{[
     ['公开市场数据', 'App 只读取已审核资源与挂牌。'],
     ['安全会话', '凭证保存在手机系统安全存储中。'],
-    ['交易边界', '卡时、订单和供给操作必须由服务端确认。'],
+    ['履约边界', '卡时、订单和供给操作必须由服务端确认。'],
   ].map(([title, body]) => <View key={title} style={styles.privacyRow}><Text style={styles.privacyTitle}>{title}</Text><Text style={styles.privacyText}>{body}</Text></View>)}</View></View></Modal>;
 }
 
@@ -30,7 +31,7 @@ function SubjectSheet({ visible, subjects, currentSubjectId, onSelect, onClose }
   onSelect: (subjectId: string) => void; onClose: () => void;
 }>) {
   return <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}><View style={styles.backdrop}><View style={styles.sheet}><View style={styles.handle} />
-    <View style={styles.sheetHeading}><View><Text style={styles.sheetTitle}>主体与认证</Text><Text style={styles.sheetSubtitle}>显示服务端返回的交易主体与当前状态</Text></View><Pressable accessibilityRole="button" accessibilityLabel="关闭主体选择" onPress={onClose}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>
+    <View style={styles.sheetHeading}><View><Text style={styles.sheetTitle}>主体与认证</Text><Text style={styles.sheetSubtitle}>显示服务端返回的服务主体与当前状态</Text></View><Pressable accessibilityRole="button" accessibilityLabel="关闭主体选择" onPress={onClose}><Ionicons name="close" size={22} color={colors.ink} /></Pressable></View>
     {subjects.length ? <View style={styles.subjectList}>{subjects.map((subject, index) => {
       const selected = subject.id === currentSubjectId;
       return <Pressable key={subject.id} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { onSelect(subject.id); onClose(); }} style={[styles.subjectRow, index === subjects.length - 1 && styles.lastRow]}>
@@ -38,7 +39,7 @@ function SubjectSheet({ visible, subjects, currentSubjectId, onSelect, onClose }
         <View style={styles.rowCopy}><Text style={styles.rowTitle}>{subject.displayName}</Text><Text style={styles.rowMeta}>{subject.kind === 'organization' ? '组织主体' : '个人主体'} · {subjectRoleLabel[subject.role]} · {subjectStatusLabel[subject.status]}</Text></View>
         <Ionicons name={selected ? 'checkmark-circle' : 'chevron-forward'} size={selected ? 19 : 16} color={selected ? colors.primary : colors.subtle} />
       </Pressable>;
-    })}</View> : <View style={styles.subjectEmpty}><Text style={styles.subjectEmptyTitle}>暂无交易主体</Text><Text style={styles.subjectEmptyText}>主体信息以服务端实际开通结果为准。</Text></View>}
+    })}</View> : <View style={styles.subjectEmpty}><Text style={styles.subjectEmptyTitle}>暂无服务主体</Text><Text style={styles.subjectEmptyText}>主体信息以服务端实际开通结果为准。</Text></View>}
   </View></View></Modal>;
 }
 
@@ -53,10 +54,11 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [securityVisible, setSecurityVisible] = useState(false);
   const [subjectsVisible, setSubjectsVisible] = useState(false);
+  const stagingTools = useStagingProfileToolsSlot();
   const currentSubject = snapshot.subjects.find((subject) => subject.id === snapshot.currentSubjectId) ?? null;
   const supplier = snapshot.providerWorkspace?.supplier ?? null;
   // payout-profile is synthesized as pending for buyers, so supplier is the sole supply-business gate.
-  const showSupplyBusiness = supplier !== null;
+  const showSupplyBusiness = supplier !== null || stagingTools.draftEntry !== null;
   const payoutActive = snapshot.payoutProfile?.status === 'active';
   const payoutMeta = payoutActive ? '查看可兑付收益与公司付款进度'
     : snapshot.payoutProfile?.status === 'suspended' ? '收款账户已暂停，请联系客服' : '兑付资格尚未激活';
@@ -78,22 +80,25 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
     <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? '访客模式'}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? '登录后查看账号资产'}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : '登录 Zod'}</Text></Pressable></View>
 
     {snapshot.authenticated ? <Pressable accessibilityRole="button" onPress={openSubjects} style={styles.subjectSummary}>
-      <View style={styles.subjectSummaryCopy}><Text style={styles.subjectEyebrow}>当前交易主体</Text><Text numberOfLines={1} style={styles.subjectName}>{currentSubject?.displayName ?? '暂无可用主体'}</Text><Text style={styles.subjectMeta}>{currentSubject ? `${currentSubject.kind === 'organization' ? '组织主体' : '个人主体'} · ${subjectRoleLabel[currentSubject.role]} · ${subjectStatusLabel[currentSubject.status]}` : '主体状态以服务端为准'}</Text></View>
+      <View style={styles.subjectSummaryCopy}><Text style={styles.subjectEyebrow}>当前服务主体</Text><Text numberOfLines={1} style={styles.subjectName}>{currentSubject?.displayName ?? '暂无可用主体'}</Text><Text style={styles.subjectMeta}>{currentSubject ? `${currentSubject.kind === 'organization' ? '组织主体' : '个人主体'} · ${subjectRoleLabel[currentSubject.role]} · ${subjectStatusLabel[currentSubject.status]}` : '主体状态以服务端为准'}</Text></View>
       <View style={styles.subjectAction}><Text style={styles.subjectActionText}>{snapshot.subjects.length > 1 ? '切换' : '查看'}</Text><Ionicons name="chevron-forward" size={15} color={colors.primary} /></View>
     </Pressable> : null}
 
-    <MenuGroup title="资产与交易" caption="常用账户能力" icon="wallet-outline">
+    <MenuGroup title="资产与履约" caption="常用账户能力" icon="wallet-outline">
       <Menu icon="cube-outline" label="我的资产" meta="我购买的、我提供的" onPress={onOpenAssets} />
       <Menu icon="receipt-outline" label="订单" meta="购买、交付、验收与售后" onPress={onOpenOrders} />
       <Menu icon="wallet-outline" label="KAI 卡时" meta="余额、预留、待结算与明细" onPress={onOpenCredits} last />
     </MenuGroup>
 
     {showSupplyBusiness ? <MenuGroup title="供给经营" caption="资格审核与供应结算" icon="server-outline" accent="orange">
-      <Menu icon="shield-checkmark-outline" label="上架资格"
+      {supplier ? <><Menu icon="shield-checkmark-outline" label="上架资格"
         meta={supplier.status === 'approved' ? '资格已通过 · 创建和管理资源请使用底部“上架”' : `${supplierStatusLabel[supplier.status]} · 查看审核与资格状态`}
         onPress={supplier.status === 'approved' ? undefined : onOpenQualification} enabled={supplier.status !== 'approved'}
         trailingIcon={supplier.status === 'approved' ? 'checkmark-circle' : undefined} tone="orange" />
-      <Menu icon="cash-outline" label="供应收益与兑付" meta={payoutMeta} onPress={payoutActive ? onOpenPayout : undefined} enabled={payoutActive} tone="orange" last />
+      <Menu icon="cash-outline" label="供应收益与兑付" meta={payoutMeta} onPress={payoutActive ? onOpenPayout : undefined} enabled={payoutActive} tone="orange" last={!stagingTools.draftEntry} /></> : null}
+      {stagingTools.draftEntry ? <Menu icon="document-text-outline" label={stagingTools.draftEntry.label}
+        meta={`${stagingTools.draftEntry.meta}${stagingTools.draftEntry.count === undefined ? '' : ` · ${stagingTools.draftEntry.count} 份`}`}
+        onPress={stagingTools.draftEntry.onPress} tone="orange" last /> : null}
     </MenuGroup> : null}
 
     <MenuGroup title="合作增长" caption="真实订单归因与返佣" icon="people-outline">
@@ -104,13 +109,18 @@ export function ProfileScreen({ snapshot, onSelectSubject, onSessionChanged, onL
       <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta={`通过消息联系 ${brand.name}`} onPress={onOpenMessages} />
       <Menu icon="business-outline" label="主体与认证" meta={currentSubject ? `${currentSubject.displayName} · ${subjectStatusLabel[currentSubject.status]}` : '查看真实主体状态'} onPress={openSubjects} />
       <Menu icon="settings-outline" label="账号设置" meta="本机安全、通知与账户状态" onPress={() => snapshot.authenticated ? setSecurityVisible(true) : onLogin()} />
-      <Menu icon="document-text-outline" label="隐私与数据" meta="数据使用与交易边界" onPress={() => setPrivacyVisible(true)} last />
+      {stagingTools.sshEntry ? <Menu icon="key-outline" label={stagingTools.sshEntry.label} meta={stagingTools.sshEntry.meta}
+        onPress={stagingTools.sshEntry.onPress} /> : null}
+      {stagingTools.connectionEntry ? <Menu icon="flask-outline" label={stagingTools.connectionEntry.label}
+        meta={stagingTools.connectionEntry.meta} onPress={stagingTools.connectionEntry.onPress} /> : null}
+      <Menu icon="document-text-outline" label="隐私与数据" meta="数据使用与履约边界" onPress={() => setPrivacyVisible(true)} last />
     </MenuGroup>
     <Text style={styles.version}>{brand.name} · 1.0.0</Text>
   </ScrollView>
   <SubjectSheet visible={subjectsVisible} subjects={snapshot.subjects} currentSubjectId={snapshot.currentSubjectId} onSelect={onSelectSubject} onClose={() => setSubjectsVisible(false)} />
   <PrivacySheet visible={privacyVisible} onClose={() => setPrivacyVisible(false)} />
   <AccountSecuritySheet visible={securityVisible} pushBackendReady={snapshot.pushReady} phoneReauthenticationAvailable={Boolean(snapshot.user?.phone)} onClose={() => setSecurityVisible(false)} onAccountChanged={onSessionChanged} />
+  {stagingTools.sheets}
   </View>;
 }
 

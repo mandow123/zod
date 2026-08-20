@@ -5,7 +5,7 @@ export type PurchaseAvailability = Readonly<{ allowed: boolean; reason: string |
 export function marketAvailability(snapshot: Pick<CloudPaySnapshot, 'online' | 'listingCatalogOnline' | 'creditCommerceReady' | 'commerceBlockers'>,
   buildAllowsOrders: boolean): PurchaseAvailability {
   if (!snapshot.online || !snapshot.listingCatalogOnline) return { allowed: false, reason: '市场连接中断' };
-  if (!snapshot.creditCommerceReady) return { allowed: false, reason: snapshot.commerceBlockers[0] ?? '交易服务暂未开放' };
+  if (!snapshot.creditCommerceReady) return { allowed: false, reason: snapshot.commerceBlockers[0] ?? '卡时履约服务暂未开放' };
   if (!buildAllowsOrders) return { allowed: false, reason: '此版本暂未开放新增购买' };
   return { allowed: true, reason: null };
 }
@@ -13,7 +13,7 @@ export function marketAvailability(snapshot: Pick<CloudPaySnapshot, 'online' | '
 export function deviceMarketAvailability(snapshot: Pick<CloudPaySnapshot, 'online' | 'deviceCatalogOnline' | 'creditCommerceReady' | 'commerceBlockers'>,
   buildAllowsOrders: boolean): PurchaseAvailability {
   if (!snapshot.online || !snapshot.deviceCatalogOnline) return { allowed: false, reason: '设备商品目录正在同步' };
-  if (!snapshot.creditCommerceReady) return { allowed: false, reason: snapshot.commerceBlockers[0] ?? '交易服务暂未开放' };
+  if (!snapshot.creditCommerceReady) return { allowed: false, reason: snapshot.commerceBlockers[0] ?? '卡时履约服务暂未开放' };
   if (!buildAllowsOrders) return { allowed: false, reason: '此版本暂未开放新增采购' };
   return { allowed: true, reason: null };
 }

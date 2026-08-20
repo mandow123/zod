@@ -152,7 +152,7 @@ export function MarketOrderSheet({ listing, balance, authenticated, onClose, onL
           <Pressable disabled={busy} onPress={confirm} style={[styles.primary, busy && styles.disabled]}>
             {busy ? <ActivityIndicator color={colors.surface} /> : <><Text style={styles.primaryText}>{authenticated ? insufficient ? '查看卡时账户' : '确认购买' : '登录后购买'}</Text><Ionicons name="arrow-forward" size={18} color={colors.surface} /></>}
           </Pressable>
-          <Text style={styles.footnote}>{physicalProduct ? '提交后由服务端核对活动库存与采购资格；未确认成功前不展示订单成功。' : '确认购买后卡时先冻结，平台立即开通算力；开通失败或超时会自动全额退回。'}</Text>
+          <Text style={styles.footnote}>{physicalProduct ? '提交后由服务端核对活动库存与采购资格；未确认成功前不显示订单成功。' : '确认购买后卡时先冻结，平台立即开通算力；开通失败或超时会自动全额退回。'}</Text>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

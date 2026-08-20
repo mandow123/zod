@@ -63,6 +63,8 @@ import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
 import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
+import { StagingDemoShell } from './src/StagingDemoShell';
+import { StagingEnvironmentBanner } from './src/StagingEnvironmentBanner';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 
@@ -86,6 +88,7 @@ function CloudPayApp() {
   const [publishListingToManage, setPublishListingToManage] = useState<string | null>(null);
   const [publishIntentToOpen, setPublishIntentToOpen] = useState<ProviderPublishIntent | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CloudPayOrder | null>(null);
+  const [selectedOrderSource, setSelectedOrderSource] = useState<'formal' | 'staging'>('formal');
   const [selectedListing, setSelectedListing] = useState<MarketCreditListing | null>(null);
   const [selectedSparkProduct, setSelectedSparkProduct] = useState<DeviceProduct | null>(null);
   const [selectedDeviceProduct, setSelectedDeviceProduct] = useState<DeviceProduct | null>(null);
@@ -234,6 +237,7 @@ function CloudPayApp() {
     navigate(destination.tab);
     if (destination.orderId) {
       try {
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(destination.orderId));
       } catch (caught) {
         Alert.alert('没能打开订单', caught instanceof Error ? caught.message : '请稍后重试。');
@@ -327,11 +331,13 @@ function CloudPayApp() {
       }
       if (message.data.route === 'provider_order' && typeof message.data.orderId === 'string') {
         setActiveTab('messages');
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
       if (message.data.route === 'buyer_order' && typeof message.data.orderId === 'string') {
         setActiveTab('orders');
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
@@ -398,7 +404,7 @@ function CloudPayApp() {
           }} />;
       case 'assets':
         return <UnifiedAssetsScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
-          onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then(setSelectedOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
+          onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then((order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenDeviceOrder={(orderId) => void loadDeviceOrder(orderId).then(setSelectedDeviceOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenMarket={() => navigate('market')} onOpenProviderAssets={(resourceId) => { setResourceToOpenId(resourceId ?? null); navigate('resources'); }} onOpenPublish={() => navigate('publish')}
           onOpenPayout={() => setPayoutVisible(true)} />;
@@ -408,7 +414,9 @@ function CloudPayApp() {
           onOpenPayout={() => setPayoutVisible(true)} />;
       case 'orders':
         return <OrdersScreen snapshot={snapshot} side={orderSide} refreshing={refreshing} onRefresh={refresh}
-          onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)} onOpenOrder={setSelectedOrder}
+          onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)}
+          onOpenOrder={(order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }}
+          onOpenStagingOrder={(order) => { setSelectedOrderSource('staging'); setSelectedOrder(order); }}
           onOpenReview={setSelectedReview} />;
       case 'workspace':
         return <ProviderWorkspaceScreen
@@ -417,7 +425,7 @@ function CloudPayApp() {
           onRefresh={refresh}
           onNext={openProviderNextAction}
           onLogin={() => setAuthVisible(true)}
-          onOpenOrder={setSelectedOrder}
+          onOpenOrder={(order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }}
           onOpenDeviceOrder={setSelectedDeviceOrder}
           onAllOrders={() => { setOrderSide('provider'); navigate('orders'); }}
         />;
@@ -479,6 +487,7 @@ function CloudPayApp() {
   return (
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
+      <StagingEnvironmentBanner />
       <View style={styles.page}>{page}</View>
       <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
@@ -546,6 +555,7 @@ function CloudPayApp() {
         onLogin={() => { setSelectedListing(null); setAuthVisible(true); }}
         onNeedCredits={() => { setSelectedListing(null); setCreditWalletVisible(true); }}
         onCreated={(order) => {
+          setSelectedOrderSource('formal');
           setSelectedOrder(order);
           void refresh().catch(() => undefined);
         }}
@@ -553,7 +563,7 @@ function CloudPayApp() {
       <CreditWalletSheet visible={creditWalletVisible} balance={snapshot.creditBalance}
         onClose={() => setCreditWalletVisible(false)} onChanged={refresh}
         onOpenSupport={() => { setCreditWalletVisible(false); navigate('messages'); }} />
-      <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
+      <OrderDetailSheet order={selectedOrder} source={selectedOrderSource} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
       <AftercareReviewSheet review={selectedReview} onClose={() => setSelectedReview(null)} onChanged={refresh} />
       <SparkProductDetailSheet product={selectedSparkProduct} visible={selectedSparkProduct !== null}
         purchaseAllowed={selectedSparkAvailability.allowed} blockedReason={selectedSparkAvailability.reason}
@@ -584,7 +594,7 @@ function CloudPayApp() {
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <CloudPayApp />
+      <StagingDemoShell><CloudPayApp /></StagingDemoShell>
     </SafeAreaProvider>
   );
 }

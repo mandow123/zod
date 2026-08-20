@@ -48,7 +48,7 @@ export function SparkProductDetailSheet({ product, visible, purchaseAllowed, blo
 
         <Fact icon="cube-outline" title="整机商品" body={`${product.title} 采用实物交付，不作为 GPU 小时算力订单。`} />
         <Fact icon="time-outline" title="交付周期" body={`${product.expectedDelivery.label}，实际交付节点以订单和平台消息为准。`} />
-        <Fact icon="shield-checkmark-outline" title="价格说明" body={`当前价格 ${creditAmount(product.pricing.unitCredit)} KAI 卡时 / 台，已按 8 折活动直接展示，价格由服务端锁定。`} />
+        <Fact icon="shield-checkmark-outline" title="价格说明" body={`当前价格 ${creditAmount(product.pricing.unitCredit)} KAI 卡时 / 台，已按 8 折活动直接计入，价格由服务端锁定。`} />
         {!purchaseAllowed ? <View style={styles.blocked}><Ionicons name="alert-circle-outline" size={19} color={colors.amber} /><Text style={styles.noticeText}>{blockedReason ?? '该商品当前暂不可购买。'}</Text></View> : null}
         <View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.amber} /><Text style={styles.noticeText}>点击购买只会进入确认页；数量、价格与订单结果以服务端确认为准。</Text></View>
       </ScrollView>
@@ -101,8 +101,8 @@ const styles = StyleSheet.create({
   factCopy: { flex: 1 },
   factTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
   factBody: { color: colors.muted, fontSize: 10, lineHeight: 17, marginTop: 4 },
-  notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, marginTop: 13, borderRadius: 18, backgroundColor: '#FFF8E7' },
+  notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, marginTop: 13, borderRadius: 18, backgroundColor: colors.primarySoft },
   noticeText: { flex: 1, color: colors.muted, fontSize: 10, lineHeight: 17 },
-  blocked: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, marginTop: 10, borderRadius: 12, backgroundColor: '#FFF8E7' },
+  blocked: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, marginTop: 10, borderRadius: 12, backgroundColor: colors.primarySoft },
   footer: { minHeight: 72, paddingHorizontal: 17, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface }, footerLabel: { color: colors.muted, fontSize: 9 }, footerPrice: { color: colors.ink, fontSize: 16, fontWeight: '900', marginTop: 4 }, buy: { minHeight: 46, paddingHorizontal: 18, borderRadius: 8, flexDirection: 'row', gap: 7, alignItems: 'center', backgroundColor: colors.primary }, buyDisabled: { opacity: 0.5 }, buyText: { color: colors.surface, fontSize: 12, fontWeight: '900' },
 });

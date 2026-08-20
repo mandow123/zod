@@ -31,7 +31,8 @@ test('compute market separates platform listings from Vast.ai instant inventory'
   assert.match(market, /const computeSources: ComputeSource\[\] = \['平台保障', 'Vast\.ai 即时'\]/u);
   assert.match(market, /section !== '算力租用' \|\| computeSource !== '平台保障'/u);
   assert.match(market, /section === '设备采购' \? !snapshot\.deviceCatalogOnline/u);
-  assert.match(market, /computeSource === 'Vast\.ai 即时' \? vastState === 'unavailable' \|\| vastState === 'error' : !snapshot\.listingCatalogOnline/u);
+  assert.match(market, /computeSource === 'Vast\.ai 即时' \? vastState === 'unavailable' \|\| vastState === 'error'/u);
+  assert.match(market, /stagingPlatformMarket \? Boolean\(commerce\.error\) : !snapshot\.listingCatalogOnline/u);
   assert.doesNotMatch(market, /const marketUnavailable =[^;]*!snapshot\.online/u);
   for (const route of ['/mobile/v1/vast/offers', '/mobile/v1/vast/quotes', '/mobile/v1/vast/orders']) {
     assert.match(commerce, new RegExp(route.replaceAll('/', '\\/'), 'u'));

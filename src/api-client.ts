@@ -28,7 +28,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = Readonly<{
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   auth?: 'none' | 'optional' | 'required';
   headers?: Record<string, string>;

@@ -30,6 +30,9 @@ release-signing.properties
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+/.qa/
+__pycache__/
+*.pyc
 
 # macOS
 .DS_Store

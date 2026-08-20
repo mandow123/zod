@@ -85,7 +85,7 @@ export function CreatorCollaborationScreen({ snapshot, onLogin, onTransferred }:
       <View style={styles.toolCard}><View style={styles.toolIcon}><Ionicons name="link-outline" size={22} color={colors.primary} /></View><View style={styles.toolCopy}><Text style={styles.toolTitle}>专属推广链接</Text><Text style={styles.toolText}>{referralLink ? `${referralLink.code} · 已复制` : '创建后自动复制，可用于你自己的内容与直播间。'}</Text></View><Pressable disabled={busy === 'link'} onPress={() => void createLink()} style={styles.toolAction}>{busy === 'link' ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={styles.toolActionText}>{referralLink ? '重新创建' : '创建'}</Text>}</Pressable></View>
       {notice ? <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={colors.amber} /><Text style={styles.noticeText}>{notice}</Text></View> : null}
 
-      <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>返佣记录</Text><Text style={styles.sectionCaption}>仅展示服务端真实订单</Text></View>
+      <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>返佣记录</Text><Text style={styles.sectionCaption}>仅显示服务端真实订单</Text></View>
       {summary?.commissions.length ? summary.commissions.map((item) => <CommissionRow key={item.id} item={item} />)
         : !loading ? <View style={styles.emptyRecords}><Ionicons name="receipt-outline" size={24} color={colors.muted} /><Text style={styles.emptyRecordsTitle}>还没有返佣记录</Text><Text style={styles.emptyRecordsText}>通过专属链接产生的合格订单会显示在这里。</Text></View> : null}
       <View style={styles.rules}><Text style={styles.rulesTitle}>结算规则</Text><Text style={styles.rulesText}>返佣使用独立账本。订单退款或撤销会在可转入前冲正；只有服务端确认可用的返佣才能转入 KAI 卡时。</Text></View>

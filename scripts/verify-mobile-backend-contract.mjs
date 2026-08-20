@@ -44,6 +44,12 @@ function requestMethod(options) {
     : 'GET';
 }
 
+function resolvedRequestMethod(options) {
+  if (options && ts.isCallExpression(options) && ts.isIdentifier(options.expression)
+    && options.expression.text === 'mutation') return 'POST';
+  return requestMethod(options);
+}
+
 async function collectFrontendRequests() {
   const requests = [];
   for (const file of await sourceFiles(join(root, 'src'))) {
@@ -60,7 +66,7 @@ async function collectFrontendRequests() {
         if (!path) throw new Error(`${relative(root, file)}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}: apiRequest path must be a literal or template literal.`);
         if (!insideFunction(node, 'orderAction')) {
           requests.push({
-            method: requestMethod(node.arguments[1]), path, normalized: normalizedPath(path),
+            method: resolvedRequestMethod(node.arguments[1]), path, normalized: normalizedPath(path),
             file: relative(root, file), line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
           });
         }
@@ -83,7 +89,11 @@ async function collectFrontendRequests() {
 
 async function collectBackendRoutes() {
   const routes = [];
-  for (const file of await sourceFiles(join(root, 'backend', 'src'))) {
+  const files = [
+    ...await sourceFiles(join(root, 'backend', 'src')),
+    ...await sourceFiles(join(root, 'backend', 'staging-sandbox')),
+  ];
+  for (const file of files) {
     const source = ts.createSourceFile(file, await readFile(file, 'utf8'), ts.ScriptTarget.Latest, true);
     function visit(node) {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)

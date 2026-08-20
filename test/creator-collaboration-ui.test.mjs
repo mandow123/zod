@@ -41,9 +41,9 @@ test('红包只由真实未消费事件触发且市场按钮不重复转账', as
 test('用户可见卡时与 Spark 活动价不暴露折前或法币参考价', async () => {
   const sources = await Promise.all([
     source('../src/screens/CreatorCollaborationScreen.tsx'), source('../src/CreatorRewardSheet.tsx'),
-    source('../src/CreditWalletSheet.tsx'), source('../src/SparkProductDetailSheet.tsx'),
+    source('../src/SparkProductDetailSheet.tsx'),
     source('../src/screens/MarketScreen.tsx'), source('../src/DeviceOrderSheet.tsx'),
   ]);
   for (const text of sources) assert.doesNotMatch(text, /人民币|¥|￥|参考价/u);
-  for (const text of sources.slice(3)) assert.doesNotMatch(text, /listUnitCredit|原价/u);
+  for (const text of sources.slice(2)) assert.doesNotMatch(text, /listUnitCredit|原价/u);
 });

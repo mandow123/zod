@@ -84,7 +84,7 @@ export function UnifiedAssetsScreen({ snapshot, refreshing, onRefresh, onLogin, 
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}
     refreshControl={<RefreshControl refreshing={refreshing || loading} onRefresh={() => void refreshAll()} tintColor={colors.primary} />}>
-    <View style={styles.heading}><View><Text style={styles.title}>我的资产</Text><Text style={styles.subtitle}>{portfolio?.subject.displayName ?? '购买与提供记录按交易主体隔离'}</Text></View><Pressable onPress={onOpenPublish}><Text style={styles.textAction}>上架资源</Text></Pressable></View>
+    <View style={styles.heading}><View><Text style={styles.title}>我的资产</Text><Text style={styles.subtitle}>{portfolio?.subject.displayName ?? '购买与提供记录按当前主体隔离'}</Text></View><Pressable onPress={onOpenPublish}><Text style={styles.textAction}>上架资源</Text></Pressable></View>
     <View style={styles.segment}><Pressable onPress={() => setProvided(false)} style={[styles.segmentItem, !provided && styles.segmentActive]}><Text style={[styles.segmentText, !provided && styles.segmentTextActive]}>我购买的</Text></Pressable><Pressable onPress={() => setProvided(true)} style={[styles.segmentItem, provided && styles.segmentActive]}><Text style={[styles.segmentText, provided && styles.segmentTextActive]}>我提供的</Text></Pressable></View>
 
     {!snapshot.authenticated ? <Empty icon="lock-closed-outline" title="登录后查看资产" text="已购算力、设备和供应资产都会保留在同一账号。" action="安全登录" onPress={onLogin} />
@@ -113,7 +113,7 @@ export function UnifiedAssetsScreen({ snapshot, refreshing, onRefresh, onLogin, 
           {vastError ? <Text style={styles.readWarning}>Vast.ai 订单暂时没能同步，下拉刷新后再试。</Text> : null}
           {portfolio.groups.purchasedDeviceOrders.length ? <Text style={styles.sectionTitle}>设备订单</Text> : null}{portfolio.groups.purchasedDeviceOrders.map((item) => <AssetRow key={item.id} title={snapshot.deviceProducts.find((value) => value.id === item.productId)?.title ?? item.orderNumber} meta={`${item.quantity} 台 · ${creditAmount(item.totalCredit)} 卡时`} action={item.actions[0]} onPress={() => onOpenDeviceOrder(item.id)} />)}
           {portfolio.groups.ownedDevices.length ? <Text style={styles.sectionTitle}>已拥有设备</Text> : null}{portfolio.groups.ownedDevices.map((item) => <AssetRow key={item.id} title={item.title} meta={`${item.quantity} 台 · ${new Date(item.acquiredAt).toLocaleDateString('zh-CN')}`} action={item.actions[0]} onPress={() => onOpenDeviceOrder(item.orderId)} />)}
-          {!portfolio.groups.purchasedCompute.length && !vastOrders.length && !portfolio.groups.purchasedDeviceOrders.length && !portfolio.groups.ownedDevices.length ? <Empty icon="cube-outline" title="还没有购买资产" text="市场只展示服务端确认可购买的资源。" action="去市场看看" onPress={onOpenMarket} /> : null}
+          {!portfolio.groups.purchasedCompute.length && !vastOrders.length && !portfolio.groups.purchasedDeviceOrders.length && !portfolio.groups.ownedDevices.length ? <Empty icon="cube-outline" title="还没有购买资产" text="市场只显示服务端确认可购买的资源。" action="去市场看看" onPress={onOpenMarket} /> : null}
         </>}
       </> : null}
   </ScrollView></View>;

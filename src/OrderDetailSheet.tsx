@@ -20,12 +20,17 @@ import { parseCreditMicros, remainingCreditAmount } from './credit-display';
 import { isAmbiguousMutationFailure, providerOrderActionAccepted } from './mutation-recovery';
 import { orderStatusLabel } from './OrderCard';
 import { colors } from './theme';
+import { StagingManualDeliverySlot } from './StagingManualDeliverySlot';
+import { StagingOrderActionsSlot } from './StagingOrderActionsSlot';
+import { initialStagingOrderSlotRefresh, nextStagingOrderSlotRefresh,
+  type StagingOrderSlotOrigin } from './staging-order-slot-sync';
 import { creditAmount } from './format';
 
 type OrderActionResponse = Readonly<{ order: CloudPayOrder }>;
 
-export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
+export function OrderDetailSheet({ order, source, onClose, onChanged }: Readonly<{
   order: CloudPayOrder | null;
+  source: 'formal' | 'staging';
   onClose: () => void;
   onChanged: () => Promise<void> | void;
 }>) {
@@ -42,7 +47,16 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
   const [aftercareDescription, setAftercareDescription] = useState('');
   const [aftercareCredits, setAftercareCredits] = useState('');
   const [providerResponse, setProviderResponse] = useState('');
+  const [stagingStatusLabel, setStagingStatusLabel] = useState<string | null>(null);
+  const [stagingSlotRefresh, setStagingSlotRefresh] = useState(initialStagingOrderSlotRefresh);
   const actionRequests = useRef(new Map<string, string>());
+  const updateStagingOrder = useCallback((latest: CloudPayOrder, statusLabel: string) => {
+    setCurrentOrder(latest); setStagingStatusLabel(statusLabel);
+  }, []);
+  const stagingSlotChanged = useCallback(async (origin: StagingOrderSlotOrigin, orderId: string) => {
+    setStagingSlotRefresh((current) => nextStagingOrderSlotRefresh(current, orderId, origin));
+    await onChanged();
+  }, [onChanged]);
 
   const actionRequestId = (signature: string) => {
     const existing = actionRequests.current.get(signature);
@@ -75,8 +89,13 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
 
   useEffect(() => {
     setCurrentOrder(order);
+    setStagingStatusLabel(null);
     setComputeSnapshot(null); setComputeIssue(null);
     setError(null); setNotice(null);
+    if (order && source === 'staging') {
+      setIssue(null); setAftercare(null); setSettlement(null);
+      return undefined;
+    }
     if (order) {
       let live = true;
       void loadCloudPayOrder(order.id).then((latest) => {
@@ -91,7 +110,7 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
     }
     else { setIssue(null); setAftercare(null); setSettlement(null); }
     return undefined;
-  }, [loadRelated, order]);
+  }, [loadRelated, order, source]);
 
   const run = async (
     task: () => Promise<OrderActionResponse>,
@@ -200,21 +219,29 @@ export function OrderDetailSheet({ order, onClose, onChanged }: Readonly<{
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.summary}>
-              <View style={styles.summaryTop}><Text style={styles.status}>{orderStatusLabel(currentOrder.status, currentOrder.side)}</Text><Text style={styles.number}>{currentOrder.orderNumber}</Text></View>
+              <View style={styles.summaryTop}><Text style={styles.status}>{source === 'staging'
+                ? stagingStatusLabel ?? '正在读取测试状态'
+                : orderStatusLabel(currentOrder.status, currentOrder.side)}</Text><Text style={styles.number}>{currentOrder.orderNumber}</Text></View>
               <Text style={styles.credits}>{creditAmount(currentOrder.totalCredits)} <Text style={styles.unit}>KAI 卡时</Text></Text>
               <Text style={styles.meta}>{trim(currentOrder.quantity)} {currentOrder.capacityUnit} · {currentOrder.productCode ?? '算力资源'} · {currentOrder.region ?? '区域待确认'}</Text>
             </View>
 
-            <ComputeFulfillmentCard order={currentOrder} onChanged={onChanged}
-              onSnapshot={setComputeSnapshot} onIssueChanged={setComputeIssue} />
+            {source === 'formal' ? <ComputeFulfillmentCard order={currentOrder} onChanged={onChanged}
+              onSnapshot={setComputeSnapshot} onIssueChanged={setComputeIssue} /> : null}
+            <StagingOrderActionsSlot enabled={source === 'staging'} orderId={currentOrder.id}
+              onOrderUpdated={updateStagingOrder} refreshSignal={stagingSlotRefresh}
+              onChanged={() => stagingSlotChanged('order-action', currentOrder.id)} />
+            <StagingManualDeliverySlot enabled={source === 'staging'} orderId={currentOrder.id}
+              refreshSignal={stagingSlotRefresh}
+              onChanged={() => stagingSlotChanged('manual-delivery', currentOrder.id)} />
 
-            <Text style={styles.sectionTitle}>进度</Text>
+            {source === 'formal' ? <><Text style={styles.sectionTitle}>进度</Text>
             <View style={styles.timeline}>
               <Timeline label="订单创建" value={formatTime(currentOrder.createdAt)} done />
               <Timeline label={confirmationTimelineLabel} value={formatTime(currentOrder.confirmedAt)} done={Boolean(currentOrder.confirmedAt)} />
               <Timeline label="算力开通" value={formatTime(currentOrder.deliveryReadyAt)} done={Boolean(currentOrder.deliveryReadyAt)} />
               <Timeline label={acceptanceTimelineLabel} value={formatTime(currentOrder.acceptedAt)} done={Boolean(currentOrder.acceptedAt)} last />
-            </View>
+            </View></> : null}
 
             {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
             {notice ? <View style={styles.notice}><Ionicons name="checkmark-circle-outline" size={18} color={colors.green} /><Text style={styles.noticeText}>{notice}</Text></View> : null}
@@ -324,6 +351,6 @@ const styles = StyleSheet.create({
   help: { color: colors.muted, fontSize: 11, lineHeight: 18, marginTop: 8 }, field: { marginTop: 13 }, fieldLabel: { color: colors.ink, fontSize: 10, fontWeight: '800', marginBottom: 6 }, fieldError: { color: colors.red, fontSize: 9, marginTop: 6 }, input: { minHeight: 48, paddingHorizontal: 13, borderWidth: 1, borderColor: colors.line, borderRadius: 15, color: colors.ink, backgroundColor: colors.surface }, multiline: { minHeight: 88, paddingTop: 12, textAlignVertical: 'top' }, draftNote: { color: colors.muted, fontSize: 9, lineHeight: 15, marginTop: 10 }, primary: { minHeight: 50, marginTop: 13, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, danger: { backgroundColor: '#B73A35' }, primaryText: { color: colors.surface, fontSize: 13, fontWeight: '900' }, disabled: { opacity: 0.48 }, secondary: { minHeight: 48, marginTop: 11, borderWidth: 1, borderColor: colors.primary, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }, secondaryText: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   choiceRow: { flexDirection: 'row', gap: 9, marginTop: 12 }, choice: { flex: 1, minHeight: 46, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: colors.line, borderRadius: 14, backgroundColor: colors.surface }, choiceActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft }, choiceText: { color: colors.muted, fontSize: 11, fontWeight: '800' }, choiceTextActive: { color: colors.primaryDark }, issueForm: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.line },
   cardHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }, attempt: { color: colors.amber, fontSize: 9, fontWeight: '900', marginTop: 6 }, detailRow: { flexDirection: 'row', gap: 15, marginTop: 13 }, detailKey: { width: 72, color: colors.muted, fontSize: 10 }, detailValue: { flex: 1, color: colors.ink, fontSize: 11, lineHeight: 17, fontWeight: '700', textAlign: 'right' }, reasonLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', marginTop: 16 }, reason: { color: colors.ink, fontSize: 12, lineHeight: 19, marginTop: 8 },
-  settlementCard: { padding: 17, marginTop: 15, borderRadius: 22, backgroundColor: '#FFF7E1' }, settlementHeading: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }, settlementEyebrow: { color: colors.amber, fontSize: 10, fontWeight: '900' }, settlementAmount: { color: colors.ink, fontSize: 27, fontWeight: '900', marginTop: 4 }, settlementTitle: { color: colors.ink, fontSize: 13, fontWeight: '900', marginTop: 14 }, settlementText: { color: colors.muted, fontSize: 10, lineHeight: 17, marginTop: 6 }, settledCard: { padding: 17, marginTop: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 22, backgroundColor: colors.greenSoft }, settledEyebrow: { color: colors.green, fontSize: 10, fontWeight: '900' }, settledAmount: { color: colors.greenDark, fontSize: 27, fontWeight: '900', marginTop: 4 }, settledMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 }, settledText: { color: colors.greenDark, fontSize: 10, fontWeight: '800' },
-  aftercareMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, pill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.primarySoft }, pillWarn: { backgroundColor: '#FFF4D4' }, pillSuccess: { backgroundColor: colors.greenSoft }, pillMuted: { backgroundColor: colors.canvas }, pillText: { color: colors.primaryDark, fontSize: 9, fontWeight: '900' }, pillTextWarn: { color: colors.amber }, pillTextSuccess: { color: colors.greenDark }, pillTextMuted: { color: colors.muted }, refundAmount: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, marginTop: 14, borderRadius: 14, backgroundColor: colors.primarySoft }, refundLabel: { color: colors.muted, fontSize: 10 }, refundValue: { color: colors.primaryDark, fontSize: 12, fontWeight: '900' }, waitText: { color: colors.amber, fontSize: 10, lineHeight: 16, marginTop: 14 },
+  settlementCard: { padding: 17, marginTop: 15, borderRadius: 22, backgroundColor: colors.primarySoft }, settlementHeading: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }, settlementEyebrow: { color: colors.amber, fontSize: 10, fontWeight: '900' }, settlementAmount: { color: colors.ink, fontSize: 27, fontWeight: '900', marginTop: 4 }, settlementTitle: { color: colors.ink, fontSize: 13, fontWeight: '900', marginTop: 14 }, settlementText: { color: colors.muted, fontSize: 10, lineHeight: 17, marginTop: 6 }, settledCard: { padding: 17, marginTop: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 22, backgroundColor: colors.greenSoft }, settledEyebrow: { color: colors.green, fontSize: 10, fontWeight: '900' }, settledAmount: { color: colors.greenDark, fontSize: 27, fontWeight: '900', marginTop: 4 }, settledMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 }, settledText: { color: colors.greenDark, fontSize: 10, fontWeight: '800' },
+  aftercareMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, pill: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.primarySoft }, pillWarn: { backgroundColor: colors.primarySoft }, pillSuccess: { backgroundColor: colors.greenSoft }, pillMuted: { backgroundColor: colors.canvas }, pillText: { color: colors.primaryDark, fontSize: 9, fontWeight: '900' }, pillTextWarn: { color: colors.amber }, pillTextSuccess: { color: colors.greenDark }, pillTextMuted: { color: colors.muted }, refundAmount: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, marginTop: 14, borderRadius: 14, backgroundColor: colors.primarySoft }, refundLabel: { color: colors.muted, fontSize: 10 }, refundValue: { color: colors.primaryDark, fontSize: 12, fontWeight: '900' }, waitText: { color: colors.amber, fontSize: 10, lineHeight: 16, marginTop: 14 },
 });

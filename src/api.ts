@@ -69,7 +69,7 @@ export type MarketCreditListing = Readonly<{
   purchasable?: boolean;
   blockedReason?: string | null;
   demo?: Readonly<{
-    mode: 'local_e2e'; label: '演示资源'; payment: 'sandbox_only';
+    mode: 'local_e2e'; label: '测试资源'; payment: 'sandbox_only';
     purchasable: boolean; simulatedAudit: true;
   }>;
   promotion?: null | Readonly<{
@@ -496,6 +496,7 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
   const response = await loadLocalE2EDemoCatalog<LocalE2EDemoCatalogResponse>();
   return { ok: response.ok, listings: response.listings.map((listing) => ({
     ...listing,
+    title: listing.title.replace(/演示/gu, '测试'),
     offerId: listing.resourceId,
     specifications: { source: 'local_e2e_catalog', productCode: listing.productCode },
     sla: { mode: 'sandbox_preview' },
@@ -504,7 +505,7 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
     audits: { resource: true, price: true },
     ownedByCurrentSubject: false,
     purchasable: listing.demo.simulatedAudit ? false : listing.demo.purchasable,
-    blockedReason: listing.demo.simulatedAudit || !listing.demo.purchasable ? '本地验收资源，不进入真实交易' : null,
+    blockedReason: listing.demo.simulatedAudit || !listing.demo.purchasable ? '测试资源当前仅支持查看' : null,
     demo: { ...listing.demo },
   })) };
 }

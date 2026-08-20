@@ -8,8 +8,8 @@
     "icon": "./assets/icon.png",
     "scheme": "kaicloudpay",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F4F8FE",
-    "primaryColor": "#1769E0",
+    "backgroundColor": "#F2F5F8",
+    "primaryColor": "#1677FF",
     "plugins": [
       "expo-system-ui",
       [
@@ -25,7 +25,7 @@
       [
         "expo-notifications",
         {
-          "color": "#1769E0",
+          "color": "#1677FF",
           "defaultChannel": "cloudpay-activity"
         }
       ]
@@ -76,7 +76,7 @@
         "me.everything.badger.permission.BADGE_COUNT_WRITE"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#F4F8FE",
+        "backgroundColor": "#F2F5F8",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false

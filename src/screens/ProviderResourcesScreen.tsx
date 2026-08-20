@@ -195,7 +195,7 @@ export function ProviderResourcesScreen({
           <Card style={styles.loginCard}>
             <Ionicons name="lock-closed-outline" size={30} color={colors.primary} />
             <Text style={styles.loginTitle}>登录后查看资产</Text>
-            <Text style={styles.loginText}>设备状态、待处理事项和上架记录都绑定当前交易主体。</Text>
+            <Text style={styles.loginText}>设备状态、待处理事项和上架记录都绑定当前主体。</Text>
             <Pressable onPress={onLogin} style={styles.loginButton}><Text style={styles.primaryText}>登录</Text></Pressable>
           </Card>
         ) : (

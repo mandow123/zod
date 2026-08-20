@@ -2,12 +2,14 @@ import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import { clearSession, loadSession, updateSessionTokens } from './session';
 import { distributionChannel } from './distribution';
+import { loadStagingPrincipalToken } from './staging-principal';
 
 const configuredBase = String(Constants.expoConfig?.extra?.cloudPayBaseUrl ?? 'http://10.0.2.2:4156').replace(/\/+$/u, '');
 const localE2eSessionToken = typeof Constants.expoConfig?.extra?.localE2eSessionToken === 'string'
   ? Constants.expoConfig.extra.localE2eSessionToken : null;
 export const API_BASE_URL = configuredBase;
 export const LOCAL_E2E_DEMO_ENABLED = true;
+const STAGING_DEMO_ENABLED = Constants.expoConfig?.extra?.stagingDemoEnabled === true;
 
 export class ApiError extends Error {
   constructor(
@@ -19,7 +21,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = Readonly<{
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown;
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown;
   auth?: 'none' | 'optional' | 'required'; headers?: Record<string, string>; retry?: boolean;
 }>;
 
@@ -29,6 +31,13 @@ let sessionLogoutInProgress = false;
 async function parseResponse<T>(response: Response): Promise<T> {
   let payload: unknown;
   try { payload = await response.json(); } catch { throw new ApiError('RESPONSE_INVALID', response.status, '服务返回了无法识别的数据。'); }
+  if (STAGING_DEMO_ENABLED) {
+    const envelope = payload as { environment?: unknown; simulation?: unknown } | null;
+    if (response.headers.get('X-Zod-Environment') !== 'staging'
+      || envelope?.environment !== 'staging' || envelope.simulation !== true) {
+      throw new ApiError('STAGING_RESPONSE_MISMATCH', 409, '测试服务身份校验失败，已停止读取数据。');
+    }
+  }
   if (!response.ok) {
     const error = (payload as { error?: { code?: string; message?: string; requestId?: string } }).error;
     throw new ApiError(error?.code ?? `HTTP_${response.status}`, response.status, error?.message ?? '服务暂时不可用。', error?.requestId ?? null);
@@ -40,12 +49,18 @@ async function rawRequest<T>(path: string, options: RequestOptions, accessToken?
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
+    const stagingPrincipalToken = STAGING_DEMO_ENABLED ? await loadStagingPrincipalToken() : null;
+    if (STAGING_DEMO_ENABLED && !stagingPrincipalToken) {
+      throw new ApiError('AUTH_REQUIRED', 401, '请先连接隔离的测试账号。');
+    }
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET', signal: controller.signal,
       headers: {
         Accept: 'application/json', 'x-request-id': Crypto.randomUUID(),
         'x-kai-distribution-channel': distributionChannel,
-        ...(localE2eSessionToken ? { 'x-kai-e2e-session': localE2eSessionToken } : {}),
+        ...(STAGING_DEMO_ENABLED ? { 'X-Zod-Client-Environment': 'staging' } : {}),
+        ...((stagingPrincipalToken || localE2eSessionToken)
+          ? { 'x-kai-e2e-session': stagingPrincipalToken || localE2eSessionToken! } : {}),
         ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...options.headers,

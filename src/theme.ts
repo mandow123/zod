@@ -13,10 +13,10 @@ export const colors = {
   greenSoft: '#E8F7EF',
   blue: '#1476FF',
   blueSoft: '#EEF5FF',
-  amber: '#E87909',
-  amberSoft: '#FFF4E5',
-  orange: '#FF6A00',
-  orangeSoft: '#FFF0E5',
+  amber: '#1677FF',
+  amberSoft: '#EEF5FF',
+  orange: '#1677FF',
+  orangeSoft: '#EEF5FF',
   red: '#D92D20',
 };
 

@@ -34,18 +34,39 @@ test('实付金额只接受两位小数和 1.00 至 100000.00', () => {
   assert.equal(parseTopupAmount('100000.00').amountCents, 10_000_000);
 });
 
-test('支付通道未接通时不能创建支付单、启动收银台或模拟到账', async () => {
-  const wallet = await source('../src/CreditWalletSheet.tsx');
+test('正式包保持快线禁用，staging 快线只按服务端支付单状态流转', async () => {
+  const [wallet, formalSource, stagingSource] = await Promise.all([
+    source('../src/CreditWalletSheet.tsx'),
+    source('../src/QuicklinePaymentSource.ts'),
+    source('../src/QuicklinePaymentSource.staging.ts'),
+  ]);
   assert.match(wallet, /1 卡时 = 1\.002 元/u);
   assert.match(wallet, /快线支付/u);
   assert.match(wallet, /支付通道接入中/u);
-  assert.match(wallet, /accessibilityState=\{\{ disabled: true \}\} disabled/u);
+  assert.match(wallet, /disabled=\{quickline\.source !== 'staging' \|\| quicklinePendingConfirmation \|\| Boolean\(quote\.error\) \|\| !quote\.cardHours\}/u);
+  assert.match(wallet, /quickline\.source === 'staging' \? '进入快线支付' : '支付通道接入中'/u);
+  assert.match(wallet, /支付结果只以服务端状态为准，不会在本地提前宣称到账/u);
+  assert.match(wallet, /QuicklineConfirmPanel/u);
+  assert.match(wallet, /quickline\.create\(amountInput\)/u);
+  assert.match(wallet, /quickline\.load\(selectedQuickline\.id\)/u);
+  assert.match(wallet, /recovered = await quickline\.recover\(\)/u);
+  assert.match(wallet, /AppState\.addEventListener\('change'.*state === 'active'.*refresh\(\)/us);
+  assert.match(wallet, /上一笔支付结果待确认.*确认前不能新建/u);
+  assert.doesNotMatch(wallet, /setTimeout\(\(\) => setPreviewCheckout\('succeeded'\)|PreviewCheckoutState/u);
   assert.doesNotMatch(wallet, /createCreditTopup|launchNativeTopup|randomUUID|logo-alipay|logo-wechat/u);
   assert.doesNotMatch(wallet, /setSelectedTopup\(\{[^)]*status/u);
   assert.match(wallet, /listCreditTopups\(\)/u);
   assert.match(wallet, /loadCreditTopup\(selectedTopup\.id\)/u);
   assert.match(wallet, /topupProviderLabel\(topup\.provider\)/u);
   assert.match(wallet, /provider === 'alipay' \? '支付宝' : '微信支付'/u);
+  assert.match(formalSource, /source: 'formal'/u);
+  assert.doesNotMatch(formalSource, /staging-sandbox-api|createStagingTopup|\/mobile\/v1\/staging/u);
+  assert.match(stagingSource, /createStagingTopup\(request\.amount, request\.idempotencyKey\)/u);
+  assert.match(stagingSource, /loadStagingTopup\(id\)/u);
+  assert.match(stagingSource, /loadStagingTopups\(\)/u);
+  assert.match(stagingSource, /SecureStore\.WHEN_UNLOCKED_THIS_DEVICE_ONLY/u);
+  assert.match(stagingSource, /loadStagingPrincipalFingerprint/u);
+  assert.match(stagingSource, /recover: async \(\)/u);
 });
 
 test('六种支付结果只由真实充值记录状态渲染并提供恢复动作', async () => {

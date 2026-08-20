@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   textAction: { minWidth: 42, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   dangerText: { color: colors.red, fontSize: 12, fontWeight: '800' },
   emptyText: { color: colors.muted, fontSize: 12, padding: 18 },
-  deletionCard: { padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F4D39A', backgroundColor: '#FFF8E8' },
+  deletionCard: { padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F2B7B7', backgroundColor: '#FFF1F1' },
   deletionHeading: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   deletionTitle: { color: colors.ink, fontSize: 15, fontWeight: '900' },
   deletionBody: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 10 },

@@ -270,7 +270,7 @@ export function PublishFlowSheet({
     setSuccess(result.recovered
       ? `识别到这份资源已经提交，已恢复「${result.resource.productCode}」的${resourceStatusLabel(result.resource)}进度。`
       : result.replayed
-        ? '上次提交已经成功，当前展示的是同一份资源，不会重复创建。'
+        ? '上次提交已经成功，当前显示的是同一份资源，不会重复创建。'
         : '资源已保存。请继续准备权属、配置和可用性材料。');
     setCreatedResourceId(resource.id);
     resourceRequestRef.current = null;
@@ -321,7 +321,7 @@ export function PublishFlowSheet({
             <View style={styles.loginGate}>
               <View style={styles.gateIcon}><Ionicons name="lock-closed-outline" size={32} color={colors.primary} /></View>
               <Text style={styles.gateTitle}>先确认你的 Zod 身份</Text>
-              <Text style={styles.gateText}>主体资料、资源和上架进度都会绑定当前交易主体；登录后可在同一账号内切换。</Text>
+              <Text style={styles.gateText}>主体资料、资源和上架进度都会绑定当前主体；登录后可在同一账号内切换。</Text>
               <Pressable onPress={() => { onClose(); onLogin(); }} style={styles.primaryButton}><Text style={styles.primaryText}>前往 KAI 统一登录</Text></Pressable>
             </View>
           ) : (
@@ -363,7 +363,7 @@ export function PublishFlowSheet({
                     <Field label="企业/主体名称" value={legalName} onChange={setLegalName} placeholder="营业执照上的完整名称" />
                     <Field label="统一社会信用代码" value={creditCode} onChange={(value) => setCreditCode(value.toUpperCase().replace(/[^0-9A-Z]/gu, '').slice(0, 18))} placeholder={profile?.status === 'rejected' ? '请重新输入完整的 18 位代码' : '18 位代码'} />
                     <Field label="业务联系人" value={contactName} onChange={setContactName} placeholder="真实联系人姓名" />
-                    <View style={styles.truthBox}><Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} /><Text style={styles.truthText}>资料只用于主体审核；通过前不能发布资源或收取交易款项。</Text></View>
+                    <View style={styles.truthBox}><Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} /><Text style={styles.truthText}>资料只用于主体审核；通过前不能发布资源或收取履约款项。</Text></View>
                     {!supplierFormReady ? <Text style={styles.formHint}>请填写完整主体名称、18 位统一社会信用代码和联系人。</Text> : null}
                     <Pressable disabled={busy || !supplierFormReady} onPress={registerSupplier} style={[styles.primaryButton, !supplierFormReady && styles.buttonDisabled]}>{busy ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{profile?.status === 'rejected' ? '重新提交入驻审核' : '提交入驻审核'}</Text>}</Pressable>
                   </>
@@ -382,7 +382,7 @@ export function PublishFlowSheet({
                       {[['hardware_serial', '硬件序列号'], ['cloud_resource_id', '云资源 ID'], ['internal_asset_id', '企业内部编号']].map(([value, label]) => <Pressable key={value} onPress={() => setAssetIdentityKind(value as typeof assetIdentityKind)} style={[styles.identityKind, assetIdentityKind === value && styles.identityKindActive]}><Text style={[styles.identityKindText, assetIdentityKind === value && styles.identityKindTextActive]}>{label}</Text></Pressable>)}
                     </View>
                     <Field label={assetIdentityKind === 'hardware_serial' ? '设备序列号' : assetIdentityKind === 'cloud_resource_id' ? '云资源 ID' : '企业内部编号'} value={assetReference} onChange={setAssetReference} placeholder={assetIdentityKind === 'hardware_serial' ? '设备铭牌上的 SN / Serial Number' : assetIdentityKind === 'cloud_resource_id' ? '云平台实例或资源的唯一 ID' : '例如：SH-GPU-RACK03-NODE12'} />
-                    <View style={styles.identityNote}><Ionicons name="finger-print-outline" size={17} color={colors.primary} /><Text style={styles.identityText}>只用于防止重复提交和核验权属。提交后不再回传或展示原值，服务端也只保存不可逆指纹。</Text></View>
+                    <View style={styles.identityNote}><Ionicons name="finger-print-outline" size={17} color={colors.primary} /><Text style={styles.identityText}>只用于防止重复提交和核验权属。提交后不再回传或显示原值，服务端也只保存不可逆指纹。</Text></View>
                     <Field label="资源型号" value={productCode} onChange={setProductCode} placeholder="例如：NVIDIA H100 SXM5 98G" /><Field label="资源地区" value={resourceRegion} onChange={setResourceRegion} placeholder="例如：华东-上海" />
                     <View style={styles.twoColumns}><View style={styles.column}><Field label="节点 GPU 数" value={gpuCount} onChange={setGpuCount} placeholder="8" keyboardType="number-pad" /></View><View style={styles.column}><Field label="单卡显存（GB）" value={gpuMemoryGiB} onChange={setGpuMemoryGiB} placeholder="98" keyboardType="decimal-pad" /></View></View>
                     <View style={styles.twoColumns}><View style={styles.column}><Field label="可售总量（GPU时）" value={capacityTotal} onChange={setCapacityTotal} placeholder="800" keyboardType="decimal-pad" /></View><View style={styles.column}><View style={styles.lockedUnit}><Text style={styles.lockedUnitLabel}>计量单位</Text><Text style={styles.lockedUnitValue}>{capacityUnit}</Text><Text style={styles.lockedUnitHint}>1 张 GPU × 1 小时</Text></View></View></View>

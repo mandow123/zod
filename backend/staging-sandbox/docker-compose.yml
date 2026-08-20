@@ -1,0 +1,26 @@
+services:
+  zod-staging-sandbox:
+    build:
+      context: ..
+      dockerfile: staging-sandbox/Dockerfile
+    image: zod-staging-sandbox:local
+    container_name: zod-staging-sandbox
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - /etc/zod-staging-sandbox.env
+    environment:
+      NODE_ENV: production
+      ZOD_ENV: staging
+      STAGING_SANDBOX_ENABLED: "true"
+      STAGING_DATABASE_PATH: /data/zod-staging-sandbox
+      PORT: "4187"
+    volumes:
+      - /opt/zod-staging-4187/data:/data/zod-staging-sandbox
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
