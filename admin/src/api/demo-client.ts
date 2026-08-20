@@ -49,7 +49,7 @@ function queryString(query: ListQuery): string {
   return value ? `?${value}` : '';
 }
 
-function normalizeReturnTo(value: string): string {
+export function normalizeReturnTo(value: string): string {
   if (!value.startsWith('/') || value.startsWith('//') || /[\u0000-\u001f\u007f]/u.test(value)) return '/';
   try {
     const parsed = new URL(value, 'https://admin.invalid');
