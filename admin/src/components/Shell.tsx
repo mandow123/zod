@@ -15,6 +15,7 @@ const navigation: readonly NavItem[] = [
 ];
 
 export function Shell() {
+  const isDemo = import.meta.env.MODE === 'demo';
   const { me, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -70,7 +71,7 @@ export function Shell() {
           <button className="icon-button menu-button" type="button" aria-label="打开导航" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
           <div><span className="topbar-context">KAI / ADMIN</span><strong>{current}</strong></div>
           <div className="topbar-actions">
-            <span className="live-indicator"><i />系统已连接</span>
+            <span className="live-indicator"><i />{isDemo ? '本地演示数据' : '系统已连接'}</span>
             <span className="topbar-avatar">{me.admin.displayName.slice(0, 1).toUpperCase()}</span>
           </div>
         </header>

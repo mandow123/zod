@@ -14,10 +14,22 @@ Independent React + TypeScript administrator console. It does not import the Exp
 
 ```sh
 npm ci
+npm run demo
 npm run typecheck
 npm test
 npm run build
 ```
+
+## Local product demo
+
+Run `npm run demo`, then open `http://127.0.0.1:4170`. This development-only
+mode provides an in-process synthetic administrator session plus sample
+dashboard, compute-order, device-order, payout, and top-up records. The console
+labels the data as local demo data and never writes to a database.
+
+`npm run dev` still expects a real administrator API. Demo mode cannot be used
+for a production build, is not included in the production bundle, and must not
+be treated as proof that production OIDC, database, DNS, or TLS is configured.
 
 ## Production container
 
