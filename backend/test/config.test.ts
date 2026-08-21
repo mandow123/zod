@@ -327,6 +327,34 @@ describe('runtime configuration', () => {
     }
   });
 
+  it('supports only a canonical verified-email allowlist when the email claim is selected', () => {
+    const emailEnvironment = {
+      ...adminEnvironment,
+      ADMIN_OIDC_GROUP_CLAIM: 'email',
+      ADMIN_OIDC_SCOPE: 'openid profile email',
+      ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: JSON.stringify({
+        'admin@example.test': 'super_admin',
+      }),
+    };
+    const configured = loadConfig(emailEnvironment);
+    expect(configured.readiness.capabilities.adminAuth.available).toBe(true);
+    expect(configured.adminOidcGroupRoleMappings).toEqual([
+      { group: 'admin@example.test', roleCode: 'super_admin' },
+    ]);
+
+    const missingEmailScope = loadConfig({ ...emailEnvironment, ADMIN_OIDC_SCOPE: 'openid profile' });
+    expect(missingEmailScope.readiness.capabilities.adminAuth.missing)
+      .toContain('ADMIN_OIDC_SCOPE(requires email for verified-email allowlist)');
+    for (const mapping of [
+      JSON.stringify({ 'Admin@example.test': 'super_admin' }),
+      JSON.stringify({ 'not-an-email': 'super_admin' }),
+    ]) {
+      const invalid = loadConfig({ ...emailEnvironment, ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON: mapping });
+      expect(invalid.readiness.capabilities.adminAuth.missing)
+        .toContain('ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON(valid verified-email allowlist)');
+    }
+  });
+
   it('enforces administrator pepper length and canonical encryption key encoding', () => {
     const pepperNames = [
       'ADMIN_OIDC_FLOW_PEPPER', 'ADMIN_OIDC_SUBJECT_PEPPER', 'ADMIN_OIDC_GROUP_PEPPER',

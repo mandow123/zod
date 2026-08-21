@@ -21,6 +21,9 @@ OIDC 注册、Group-role 映射、管理员 Secret、数据库迁移和生产开
 - 不得复用移动 Client ID、Client Secret 或移动 callback；
 - scope 必须包含 `openid`，不得包含 `offline_access`；
 - Group Claim 名和 Group-role 映射由身份负责人确认；
+- 如果身份服务尚不能签发应用专用 Group Claim，可显式设置 `ADMIN_OIDC_GROUP_CLAIM=email`，
+  并以经过验证的全小写完整邮箱作为精确角色白名单；必须同时请求 `email` scope，禁止域名、
+  通配符、未验证邮箱或仅在单一 Token 来源出现的邮箱。提供方恢复专用 Group Claim 后应迁回 Group 模式；
 - Token/JWKS/UserInfo endpoint 必须使用代码中固定的 auth.kai.com 合同；
 - redirect URI 不允许通配符、query 或 fragment。
 

@@ -3,6 +3,7 @@ import { AppError } from '../src/errors.js';
 import {
   ADMIN_SESSION_COOKIE,
   authoritativeGroups,
+  authoritativeOidcAuthorizationValues,
   canonicalGroupClaim,
   canonicalReturnPath,
   mappedOidcRoles,
@@ -49,6 +50,31 @@ describe('admin HTTP and OIDC security primitives', () => {
     expect(roles[0]).toMatchObject({ roleCode: 'support_viewer', expiresAt: null });
     expect(roles[0]?.sourceReferenceDigest).toMatch(/^[a-f0-9]{128}$/u);
     expect(JSON.stringify(roles)).not.toContain('alpha-support');
+  });
+
+  it('accepts only matching, verified, canonical emails in explicit email-allowlist mode', () => {
+    const verified = { email: 'admin@example.test', emailVerified: true } as const;
+    expect(authoritativeOidcAuthorizationValues(
+      'email', 'admin@example.test', 'admin@example.test', verified, verified,
+    )).toEqual(['admin@example.test']);
+    for (const [idTokenClaim, userInfoClaim, idTokenIdentity, userInfoProfile, code] of [
+      ['admin@example.test', 'admin@example.test', { ...verified, emailVerified: false }, verified,
+        'ADMIN_OIDC_EMAIL_NOT_VERIFIED'],
+      ['admin@example.test', 'other@example.test', verified,
+        { email: 'other@example.test', emailVerified: true }, 'ADMIN_OIDC_EMAIL_CLAIM_MISMATCH'],
+      ['Admin@example.test', 'Admin@example.test',
+        { email: 'Admin@example.test', emailVerified: true },
+        { email: 'Admin@example.test', emailVerified: true }, 'ADMIN_OIDC_EMAIL_CLAIM_INVALID'],
+    ] as const) {
+      try {
+        authoritativeOidcAuthorizationValues(
+          'email', idTokenClaim, userInfoClaim, idTokenIdentity, userInfoProfile,
+        );
+        throw new Error('expected verified-email authorization to reject');
+      } catch (error) {
+        expect(error).toMatchObject({ code });
+      }
+    }
   });
 
   it('rejects ambiguous, whitespace-normalized, duplicate, or oversized cookies', () => {

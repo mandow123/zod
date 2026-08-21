@@ -348,6 +348,15 @@ function adminAuthConfiguration(environment: Record<string, string | undefined>,
     parsed.ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON,
     invalid,
   );
+  if (parsed.ADMIN_OIDC_GROUP_CLAIM === 'email') {
+    if (!adminOidcScopes.includes('email')) {
+      invalid.push('ADMIN_OIDC_SCOPE(requires email for verified-email allowlist)');
+    }
+    if (adminOidcGroupRoleMappings.some((mapping) => mapping.group !== mapping.group.toLowerCase()
+      || !/^[^\s@]+@[^\s@]+$/u.test(mapping.group))) {
+      invalid.push('ADMIN_OIDC_GROUP_ROLE_MAPPING_JSON(valid verified-email allowlist)');
+    }
+  }
   if (adminApiOrigin && adminWebOrigin && adminApiOrigin === adminWebOrigin) {
     invalid.push('ADMIN_API_ORIGIN(isolated from Web origin)');
   }

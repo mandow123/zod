@@ -160,4 +160,58 @@ describe('admin authentication service', () => {
       expect(active.rows[0]?.count).toBe('0');
       await f.database.close();
     });
+
+  it('admits an exact verified-email allowlist without requiring a provider-specific Group claim',
+    { timeout: 120_000 }, async () => {
+      const f = await adminFixture();
+      const emailSettings: AdminAuthRuntimeSettings = Object.freeze({
+        ...settings,
+        oidcGroupClaim: 'email',
+        oidcScopes: Object.freeze(['email', 'openid', 'profile']),
+        oidcGroupRoleMappings: Object.freeze([
+          Object.freeze({ group: 'admin@example.test', roleCode: 'super_admin' as const }),
+        ]),
+      });
+      const identities = new PostgresAdminIdentityStore(f.database);
+      const rbac = new PostgresAdminRbacStore(f.database);
+      const sessions = new PostgresAdminSessionStore(f.database, { previousTokenGraceMs: 10_000 });
+      const transactions = new PostgresAdminLoginTransactionStore(f.database);
+      const audit = new PostgresAdminAuditStore(f.database, emailSettings.auditPepper);
+      let nonce = '';
+      const verifiedProfile = {
+        subject: 'raw-email-admin-subject', displayName: 'Email Administrator',
+        email: 'admin@example.test', emailVerified: true,
+      } as const;
+      const oidc = {
+        exchange: vi.fn(async () => ({ idToken: 'signed-id-token', accessToken: 'opaque-access-token' })),
+        userInfoWithClaims: vi.fn(async () => ({
+          profile: verifiedProfile,
+          claims: { email: 'admin@example.test', email_verified: true },
+        })),
+      };
+      const verifier = {
+        verifyWithClaims: vi.fn(async () => ({
+          identity: { ...verifiedProfile, nonce },
+          claims: { email: 'admin@example.test', email_verified: true },
+        })),
+      };
+      const service = new AdminAuthService(identities, rbac, sessions, transactions, audit,
+        oidc, verifier, emailSettings);
+      const context = { requestId: 'email-allowlist-request', ip: '127.0.0.1',
+        userAgent: 'admin-browser', now: new Date('2026-08-20T10:00:00.000Z') };
+      const started = await service.startLogin('/', context);
+      const authorization = new URL(started.authorizationUrl);
+      nonce = authorization.searchParams.get('nonce')!;
+      const completed = await service.completeLogin({
+        state: authorization.searchParams.get('state')!,
+        code: 'email-allowlist-code',
+        issuer: KAI_OIDC_ISSUER,
+        providerError: undefined,
+        browserBindingToken: started.browserBindingToken,
+      }, context);
+      expect(completed.principal.roles).toEqual(['super_admin']);
+      expect(JSON.stringify(completed)).not.toContain('admin@example.test');
+      expect(JSON.stringify(await audit.recent(20))).not.toContain('admin@example.test');
+      await f.database.close();
+    });
 });

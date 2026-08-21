@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260821-001",
+  "auditedAt": "2026-08-21T09:38:42+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准管理员生产接入的 KAI Auth 已验证邮箱精确白名单兼容模式及安全回归。",
+  "baseCommit": "b2adcc088543a25725ed46bb8287454478150c85",
+  "stagedDiffSha256": "5ec45cb882eddfcf52e8da836f351b676a685c361d488dda806fe684115ace64"
+}
