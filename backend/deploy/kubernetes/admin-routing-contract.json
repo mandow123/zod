@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "web": {
+    "host": "admin.kai.com",
+    "path": "/",
+    "pathType": "Prefix",
+    "service": "cloudpay-admin-web",
+    "tlsSecret": "cloudpay-admin-kai-com-tls"
+  },
+  "api": {
+    "host": "admin-api.kai.com",
+    "path": "/admin/v1",
+    "pathType": "Prefix",
+    "service": "cloudpay-backend",
+    "tlsSecret": "cloudpay-admin-api-kai-com-tls"
+  },
+  "canary": {
+    "manifest": "admin-api-canary.yaml",
+    "deployment": "cloudpay-admin-api-canary",
+    "service": "cloudpay-admin-api-canary",
+    "replicas": 1,
+    "adminAuthEnabled": true,
+    "imageMustMatchDeployment": "cloudpay-backend",
+    "mainService": "cloudpay-backend",
+    "ingress": "cloudpay-admin-api"
+  },
+  "transitions": {
+    "stageC": [
+      "apply_canary_manifest",
+      "wait_canary_ready",
+      "verify_canary_admin_environment",
+      "switch_admin_api_ingress_main_to_canary",
+      "verify_enabled_admin_routes"
+    ],
+    "stageD": [
+      "set_main_admin_auth_enabled_true",
+      "restart_main_backend",
+      "wait_main_backend_rollout",
+      "verify_every_main_pod_admin_environment",
+      "switch_admin_api_ingress_canary_to_main",
+      "verify_enabled_admin_routes",
+      "delete_canary_manifest"
+    ],
+    "emergencyDisable": [
+      "set_main_admin_auth_enabled_false",
+      "restart_main_backend",
+      "wait_main_backend_rollout",
+      "verify_every_main_pod_admin_auth_disabled",
+      "remove_admin_ingresses",
+      "delete_canary_manifest"
+    ]
+  },
+  "rollback": {
+    "removeOnly": [
+      "ingress/cloudpay-admin-web",
+      "ingress/cloudpay-admin-api"
+    ],
+    "preserve": [
+      "ingress/cloudpay-mobile-api",
+      "deployment/cloudpay-backend",
+      "database migrations",
+      "admin audit data"
+    ]
+  }
+}

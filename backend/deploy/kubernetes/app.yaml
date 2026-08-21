@@ -24,6 +24,20 @@ data:
   PUBLIC_ORIGIN: https://cloudpay.kai.com
   DATABASE_SSL: "true"
   TRUST_PROXY_HOPS: "1"
+  # The administrator routes remain absent until a separately reviewed rollout
+  # changes this value. Origins and TTL policy are non-secret release inputs.
+  ADMIN_AUTH_ENABLED: "false"
+  ADMIN_WEB_ORIGIN: https://admin.kai.com
+  ADMIN_API_ORIGIN: https://admin-api.kai.com
+  ADMIN_OIDC_REDIRECT_URI: https://admin-api.kai.com/admin/v1/auth/callback
+  ADMIN_OIDC_SCOPE: openid email
+  ADMIN_OIDC_GROUP_CLAIM: email
+  ADMIN_LOGIN_TRANSACTION_TTL_SECONDS: "300"
+  ADMIN_SESSION_IDLE_TTL_SECONDS: "1800"
+  ADMIN_SESSION_ABSOLUTE_TTL_SECONDS: "28800"
+  ADMIN_SESSION_ROTATION_SECONDS: "900"
+  ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: "30"
+  ADMIN_REAUTH_FRESHNESS_SECONDS: "300"
   SMS_PROVIDER: aliyun
   PUSH_PROVIDER: expo
   OBJECT_STORAGE_PROVIDER: s3
@@ -88,6 +102,12 @@ spec:
                 name: cloudpay-backend-config
             - secretRef:
                 name: cloudpay-backend-secrets
+            # Stage A can deploy with authentication disabled before this
+            # External Secret exists. Enabling auth without it fails closed in
+            # the production environment gate.
+            - secretRef:
+                name: cloudpay-admin-auth-secrets
+                optional: true
           resources:
             requests:
               cpu: 250m

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260821-002",
+  "auditedAt": "2026-08-21T00:06:32-07:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准管理员后台生产加固：独立可复现前端发布包、动态 OIDC 授权失效、准确审计与低基数监控、隔离 canary 上线及确定性回滚门禁。",
+  "baseCommit": "9c2c9bdedb89dd1978b7e8a79f7e9d0f279dc42a",
+  "stagedDiffSha256": "6d5c3fa65a9ca88550d07ebe9e2a484f00802dd73f7751056be4eeca6cc8efdd"
+}

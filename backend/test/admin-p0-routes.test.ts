@@ -66,9 +66,15 @@ async function fixture(permissions: readonly string[] = BASE_PERMISSIONS) {
   const store = storeFixture();
   const service = new AdminP0Service(store);
   const principal: AdminP0Principal = { permissions };
-  const resolvePrincipal = vi.fn(async () => principal);
-  await registerAdminP0Routes(app, service, resolvePrincipal, settings);
-  return { app, store, resolvePrincipal };
+  const recordSucceeded = vi.fn(async () => undefined);
+  const recordDenied = vi.fn(async () => undefined);
+  const recordFailed = vi.fn(async () => undefined);
+  const recordOriginDenial = vi.fn(async () => undefined);
+  const resolvePrincipal = vi.fn(async () => ({
+    principal, recordSucceeded, recordDenied, recordFailed,
+  }));
+  await registerAdminP0Routes(app, service, resolvePrincipal, settings, recordOriginDenial);
+  return { app, store, resolvePrincipal, recordSucceeded, recordDenied, recordFailed, recordOriginDenial };
 }
 
 describe('admin P0 read routes', () => {
@@ -174,7 +180,7 @@ describe('admin P0 read routes', () => {
   });
 
   it('ignores forged identity and permission headers because principal comes only from the resolver', async () => {
-    const { app, store, resolvePrincipal } = await fixture(['admin.overview.read']);
+    const { app, store, resolvePrincipal, recordSucceeded, recordDenied } = await fixture(['admin.overview.read']);
     const response = await app.inject({
       method: 'GET', url: '/admin/v1/payouts',
       headers: { authorization: 'Bearer forged-mobile-token', 'x-admin-permissions': 'admin.payout.read' },
@@ -184,16 +190,19 @@ describe('admin P0 read routes', () => {
     expect(response.json().error.code).toBe('ADMIN_PERMISSION_REQUIRED');
     expect(resolvePrincipal).toHaveBeenCalledTimes(1);
     expect(store.listPayouts).not.toHaveBeenCalled();
+    expect(recordDenied).toHaveBeenCalledWith('ADMIN_PERMISSION_REQUIRED');
+    expect(recordSucceeded).not.toHaveBeenCalled();
     await app.close();
   });
 
   it('rejects a foreign Origin and returns credentialed CORS only to the configured admin web origin', async () => {
-    const { app, resolvePrincipal } = await fixture();
+    const { app, resolvePrincipal, recordOriginDenial } = await fixture();
     const rejected = await app.inject({
       method: 'GET', url: '/admin/v1/dashboard', headers: { origin: 'https://attacker.example.test' },
     });
     expect(rejected.statusCode).toBe(403);
     expect(resolvePrincipal).not.toHaveBeenCalled();
+    expect(recordOriginDenial).toHaveBeenCalledWith(expect.anything(), 'ADMIN_ORIGIN_INVALID');
     const accepted = await app.inject({
       method: 'GET', url: '/admin/v1/dashboard', headers: { origin: settings.webOrigin },
     });
@@ -204,6 +213,29 @@ describe('admin P0 read routes', () => {
     await app.close();
   });
 
+  it('records a failed outcome only after an authorized query fails', async () => {
+    const { app, store, recordSucceeded, recordDenied, recordFailed } = await fixture();
+    vi.mocked(store.listPayouts).mockRejectedValueOnce(new Error('database canary must not enter audit'));
+    const response = await app.inject({ method: 'GET', url: '/admin/v1/payouts' });
+    expect(response.statusCode).toBe(500);
+    expect(recordFailed).toHaveBeenCalledWith('ADMIN_READ_FAILED');
+    expect(recordDenied).not.toHaveBeenCalled();
+    expect(recordSucceeded).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('records a semantic client cursor error as denied without poisoning operation failures', async () => {
+    const { app, store, recordSucceeded, recordDenied, recordFailed } = await fixture();
+    const response = await app.inject({ method: 'GET', url: '/admin/v1/payouts?cursor=e30' });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('ADMIN_PAGINATION_CURSOR_INVALID');
+    expect(store.listPayouts).not.toHaveBeenCalled();
+    expect(recordDenied).toHaveBeenCalledWith('ADMIN_PAGINATION_CURSOR_INVALID');
+    expect(recordFailed).not.toHaveBeenCalled();
+    expect(recordSucceeded).not.toHaveBeenCalled();
+    await app.close();
+  });
+
   it('fails closed when the injected server-side principal resolver rejects authentication', async () => {
     const app = Fastify();
     installErrorHandling(app);
@@ -211,7 +243,7 @@ describe('admin P0 read routes', () => {
     const resolvePrincipal = vi.fn(async () => {
       throw new AppError('ADMIN_AUTHENTICATION_REQUIRED', 401, '需要管理员登录。');
     });
-    await registerAdminP0Routes(app, new AdminP0Service(store), resolvePrincipal, settings);
+    await registerAdminP0Routes(app, new AdminP0Service(store), resolvePrincipal, settings, async () => undefined);
 
     const response = await app.inject({ method: 'GET', url: '/admin/v1/topups' });
     expect(response.statusCode).toBe(401);

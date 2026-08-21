@@ -38,7 +38,7 @@
 - `cloudpay-mobile-backend.service` 启动前会运行 `scripts/verify-production-env.mjs`。它只输出缺少或不合规的配置项名称，不输出配置值；短信、推送、对象存储、安全扫描、监控、备份、法务资料、至少一个真实卡时充值渠道或算力 sidecar 未就绪时，后端不会以半可用状态启动。
 - 支付私钥或证书中的换行以字面量 `\\n` 保存；进程只在内存中还原 PEM。
 
-首次安装或发布新版本时，在新目录只运行 `npm run release:verify`。它会核对逐文件摘要、38 份迁移（截至 `0038_compute_admission_reliability.sql`）、不含密钥文件、Node 版本，执行干净的生产依赖安装和编译入口加载，并验证 systemd/容器在缺配置时都能拒绝启动。8 项全部通过后才能原子更新 `current` 软链接。安装本目录的三个 `.service`、两个 `.timer/.socket` 和防火墙单元后执行 `systemctl daemon-reload`。
+首次安装或发布新版本时，在新目录只运行 `npm run release:verify`。它会核对逐文件摘要、60 份迁移（截至 `0060_admin_identity_rbac_sessions.sql`）、不含密钥文件、Node 版本，执行干净的生产依赖安装和编译入口加载，并验证 systemd/容器在缺配置时都能拒绝启动。8 项全部通过后才能原子更新 `current` 软链接。安装本目录的三个 `.service`、两个 `.timer/.socket` 和防火墙单元后执行 `systemctl daemon-reload`。
 
 任何 CloudPay 单元启动前，以目标主机实际 VPC 私网地址和 24 小时内保存的旧站基线运行：
 
@@ -55,7 +55,7 @@ npm run production:host:preflight -- \
 
 1. 保存旧站基线并运行目标主机预检；失败时不得启动迁移、后端或入口 socket。
 2. 在隔离的 PostgreSQL 15 实例创建 CloudPay 数据库与最小权限账户，注入生产 Secret。
-3. 启动 `cloudpay-mobile-migrate.service`，确认 35 条迁移均成功；任何校验值不一致都会失败关闭。
+3. 启动 `cloudpay-mobile-migrate.service`，确认 60 条迁移均成功且最新为 `0060_admin_identity_rbac_sessions.sql`；任何校验值不一致都会失败关闭。
 4. 启动 `cloudpay-mobile-backend.service`，保持 `127.0.0.1:4100`，先检查 health、readiness 和业务冒烟。
 5. 安装本目录的防火墙、socket 与 relay，目标安全组只允许 ALB 安全组访问 TCP `4154`。
 6. 手动运行一次 `cloudpay-mobile-backup.service`，确认加密对象、不可变保留期和审计记录，再启用 `cloudpay-mobile-backup.timer`。

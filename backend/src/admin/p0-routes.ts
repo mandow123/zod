@@ -13,11 +13,23 @@ import type {
 } from './p0-service.js';
 import type { AdminP0Service } from './p0-service.js';
 
+export type AdminP0AuthorizedRequest = Readonly<{
+  principal: AdminP0Principal;
+  recordSucceeded(): Promise<void>;
+  recordDenied(failureCode: string): Promise<void>;
+  recordFailed(failureCode: string): Promise<void>;
+}>;
+
 export type AdminP0PrincipalResolver = (
   action: AdminReadAuditAction,
   request: FastifyRequest,
   reply: FastifyReply,
-) => AdminP0Principal | Promise<AdminP0Principal>;
+) => AdminP0AuthorizedRequest | Promise<AdminP0AuthorizedRequest>;
+
+export type AdminP0OriginDenialRecorder = (
+  request: FastifyRequest,
+  failureCode: 'ADMIN_ORIGIN_INVALID',
+) => Promise<void>;
 
 export type AdminP0DashboardActivity = Readonly<{
   resource: 'compute-order' | 'device-order' | 'payout' | 'topup';
@@ -48,6 +60,33 @@ function requestFrom(query: z.infer<typeof listQuery>): AdminP0ListRequest {
     ...(query.limit === undefined ? {} : { limit: query.limit }),
     ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
   };
+}
+
+function stableReadFailureCode(error: unknown): string {
+  if (error instanceof AppError && /^[A-Z0-9_]{1,80}$/u.test(error.code)) return error.code;
+  return 'ADMIN_READ_FAILED';
+}
+
+async function auditedRead<T>(
+  authorized: AdminP0AuthorizedRequest,
+  operation: () => Promise<T>,
+): Promise<T> {
+  let result: T;
+  try {
+    result = await operation();
+  } catch (error) {
+    const failureCode = stableReadFailureCode(error);
+    try {
+      if (error instanceof AppError && error.statusCode >= 400 && error.statusCode < 500) {
+        await authorized.recordDenied(failureCode);
+      } else {
+        await authorized.recordFailed(failureCode);
+      }
+    } catch { /* A denied or failed read remains fail-closed when audit is unavailable. */ }
+    throw error;
+  }
+  await authorized.recordSucceeded();
+  return result;
 }
 
 function computeActivity(item: AdminP0ComputeCreditOrderView): AdminP0DashboardActivity {
@@ -98,10 +137,12 @@ export async function registerAdminP0Routes(
   service: AdminP0Service,
   resolvePrincipal: AdminP0PrincipalResolver,
   settings: AdminAuthRuntimeSettings,
+  recordOriginDenial: AdminP0OriginDenialRecorder,
 ) {
   await app.register(async (admin) => {
     admin.addHook('onRequest', async (request) => {
       if (request.headers.origin !== undefined && request.headers.origin !== settings.webOrigin) {
+        try { await recordOriginDenial(request, 'ADMIN_ORIGIN_INVALID'); } catch { /* denial stays fail-closed */ }
         throw new AppError('ADMIN_ORIGIN_INVALID', 403, '管理员请求来源无效。');
       }
     });
@@ -122,37 +163,43 @@ export async function registerAdminP0Routes(
 
     admin.get('/dashboard', { config: { cors: false } }, async (request, reply) => {
       parsed(emptyQuery, request.query);
-      const principal = await resolvePrincipal('admin.dashboard.read', request, reply);
-      const metrics = await service.overview(principal);
-      const activity = await dashboardActivity(service, principal);
+      const authorized = await resolvePrincipal('admin.dashboard.read', request, reply);
+      const { metrics, activity } = await auditedRead(authorized, async () => ({
+        metrics: await service.overview(authorized.principal),
+        activity: await dashboardActivity(service, authorized.principal),
+      }));
       return { ok: true, metrics, activity };
     });
 
     admin.get('/compute-orders', { config: { cors: false } }, async (request, reply) => {
       const query = parsed(listQuery, request.query);
-      const principal = await resolvePrincipal('admin.compute_order.list', request, reply);
-      const result = await service.listComputeCreditOrders(principal, requestFrom(query));
+      const authorized = await resolvePrincipal('admin.compute_order.list', request, reply);
+      const result = await auditedRead(authorized,
+        () => service.listComputeCreditOrders(authorized.principal, requestFrom(query)));
       return { ok: true, items: result.items, nextCursor: result.nextCursor };
     });
 
     admin.get('/device-orders', { config: { cors: false } }, async (request, reply) => {
       const query = parsed(listQuery, request.query);
-      const principal = await resolvePrincipal('admin.device_order.list', request, reply);
-      const result = await service.listDeviceOrders(principal, requestFrom(query));
+      const authorized = await resolvePrincipal('admin.device_order.list', request, reply);
+      const result = await auditedRead(authorized,
+        () => service.listDeviceOrders(authorized.principal, requestFrom(query)));
       return { ok: true, items: result.items, nextCursor: result.nextCursor };
     });
 
     admin.get('/payouts', { config: { cors: false } }, async (request, reply) => {
       const query = parsed(listQuery, request.query);
-      const principal = await resolvePrincipal('admin.payout.list', request, reply);
-      const result = await service.listPayouts(principal, requestFrom(query));
+      const authorized = await resolvePrincipal('admin.payout.list', request, reply);
+      const result = await auditedRead(authorized,
+        () => service.listPayouts(authorized.principal, requestFrom(query)));
       return { ok: true, items: result.items, nextCursor: result.nextCursor };
     });
 
     admin.get('/topups', { config: { cors: false } }, async (request, reply) => {
       const query = parsed(listQuery, request.query);
-      const principal = await resolvePrincipal('admin.topup.list', request, reply);
-      const result = await service.listTopups(principal, requestFrom(query));
+      const authorized = await resolvePrincipal('admin.topup.list', request, reply);
+      const result = await auditedRead(authorized,
+        () => service.listTopups(authorized.principal, requestFrom(query)));
       return { ok: true, items: result.items, nextCursor: result.nextCursor };
     });
   }, { prefix: '/admin/v1' });

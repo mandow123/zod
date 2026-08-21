@@ -45,6 +45,22 @@ jobs:
     name: Ubuntu backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: kai_admin_ci
+          POSTGRES_USER: kai_admin_ci
+          POSTGRES_PASSWORD: kai_admin_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kai_admin_ci -d kai_admin_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ADMIN_POSTGRES_TEST_URL: postgresql://kai_admin_ci:kai_admin_ci_only@127.0.0.1:5432/kai_admin_ci
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -62,8 +78,72 @@ jobs:
       - name: Check backend TypeScript
         run: npm run typecheck:backend
 
+      - name: Verify PostgreSQL session token concurrency
+        run: |
+          node -e "if (!process.env.ADMIN_POSTGRES_TEST_URL) throw new Error('ADMIN_POSTGRES_TEST_URL is required in CI')"
+          npm --prefix backend test -- test/admin-session-postgres-concurrency.test.ts
+
       - name: Run backend tests
         run: npm --prefix backend test
+
+      - name: Build backend
+        run: npm --prefix backend run build
+
+      - name: Verify administrator security boundary
+        run: node backend/scripts/verify-admin-boundary.mjs --root .
+
+      - name: Verify deployment contract
+        run: npm --prefix backend run deployment:verify
+
+  admin:
+    name: Ubuntu administrator console
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install locked administrator dependencies
+        run: npm --prefix admin ci
+
+      - name: Check administrator TypeScript
+        run: npm --prefix admin run typecheck
+
+      - name: Run administrator tests
+        run: npm --prefix admin test
+
+      - name: Build administrator console
+        run: npm --prefix admin run build
+
+      - name: Build and verify administrator release archive
+        env:
+          VITE_ADMIN_API_ORIGIN: https://admin-api.kai.com
+        run: npm --prefix admin run release
+
+      - name: Re-verify extracted administrator release archive
+        env:
+          ADMIN_API_ORIGIN: https://admin-api.kai.com
+        run: |
+          cd artifacts/admin
+          sha256sum -c kai-admin-web.tar.gz.sha256
+          verify_dir="$(mktemp -d)"
+          tar -xzf kai-admin-web.tar.gz -C "$verify_dir"
+          node "$verify_dir/kai-admin-web/scripts/verify-release.mjs" "$verify_dir/kai-admin-web"
+
+      - name: Upload verified administrator release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: kai-admin-web-release
+          path: artifacts/admin/*
+          if-no-files-found: error
+          retention-days: 14
 
   windows-toolchain:
     name: Windows toolchain

@@ -1,4 +1,27 @@
-import { loadConfig } from '../dist/config.js';
+import { adminProductionConfigurationIssues, loadConfig } from '../dist/config.js';
+
+const arguments_ = process.argv.slice(2);
+if (arguments_.length > 1 || (arguments_.length === 1 && arguments_[0] !== '--admin-only')) {
+  process.stderr.write('Usage: node scripts/verify-production-env.mjs [--admin-only]\n');
+  process.exit(2);
+}
+
+if (arguments_[0] === '--admin-only') {
+  let issues;
+  try {
+    issues = adminProductionConfigurationIssues(process.env);
+  } catch {
+    // Never serialize the parser error: validation errors may retain rejected input.
+    issues = ['ADMIN_CONFIGURATION'];
+  }
+  if (issues.length > 0) {
+    process.stderr.write(`Administrator production configuration is incomplete (${issues.length} items):\n`);
+    for (const issue of issues) process.stderr.write(`- ${issue}\n`);
+    process.exit(1);
+  }
+  process.stdout.write('Administrator production configuration gate passed.\n');
+  process.exit(0);
+}
 
 const config = loadConfig(process.env);
 const deployment = {

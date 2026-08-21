@@ -109,6 +109,12 @@ describe('administrator session refresh', () => {
     await adminApi.me();
     await adminApi.computeOrders({ cursor: 'page-2', limit: 50 });
 
-    expect(String(fetcher.mock.calls[1]?.[0])).toBe('https://admin.example.test/admin/v1/compute-orders?cursor=page-2&limit=50');
+    const configuredOrigin = resolveApiOrigin(
+      import.meta.env.VITE_ADMIN_API_ORIGIN,
+      'https://admin.example.test',
+    );
+    expect(String(fetcher.mock.calls[1]?.[0])).toBe(
+      `${configuredOrigin}/admin/v1/compute-orders?cursor=page-2&limit=50`,
+    );
   });
 });

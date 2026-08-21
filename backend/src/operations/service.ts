@@ -1,5 +1,6 @@
 import { constantTimeEqual } from '../account/crypto.js';
 import type { AccountPrincipal } from '../account/types.js';
+import { adminProcessMetrics, type AdminMetricReader } from '../admin/metrics.js';
 import type { RuntimeConfig } from '../config.js';
 import { AppError } from '../errors.js';
 import type { OperationalCounts, OperationsStore } from './store.js';
@@ -20,12 +21,24 @@ const metricNames: Record<keyof OperationalCounts, string> = {
   backupSucceeded24h: 'backup_succeeded_24h', backupFailures24h: 'backup_failures_24h',
   restoreDrillSucceeded90d: 'restore_drill_succeeded_90d',
   oldestOutboxAgeSeconds: 'oldest_outbox_age_seconds',
+  adminLoginSucceeded24h: 'admin_login_succeeded_24h',
+  adminLoginDenied24h: 'admin_login_denied_24h',
+  adminLoginFailed24h: 'admin_login_failed_24h',
+  adminSecurityDenials24h: 'admin_security_denials_24h',
+  adminOperationFailures24h: 'admin_operation_failures_24h',
+  adminActiveSessions: 'admin_active_sessions',
+  adminRevokedSessions24h: 'admin_revoked_sessions_24h',
 };
 
 export class OperationsService {
   private readonly token: string;
 
-  constructor(private readonly store: OperationsStore, config: RuntimeConfig, private readonly now: () => Date = () => new Date()) {
+  constructor(
+    private readonly store: OperationsStore,
+    config: RuntimeConfig,
+    private readonly now: () => Date = () => new Date(),
+    private readonly adminMetrics: AdminMetricReader = adminProcessMetrics,
+  ) {
     this.token = required(config.METRICS_BEARER_TOKEN, 'METRICS_BEARER_TOKEN');
   }
 
@@ -46,13 +59,14 @@ export class OperationsService {
   async prometheus() {
     const capturedAt = this.now();
     const counts = await this.store.snapshot(capturedAt);
+    const processAdminMetrics = this.adminMetrics.snapshot();
     const status = this.status(counts);
     const lines = [
       '# HELP cloudpay_operational_items Current operational queue and exception counts.',
       '# TYPE cloudpay_operational_items gauge',
     ];
     for (const [key, name] of Object.entries(metricNames) as Array<[keyof OperationalCounts, string]>) {
-      if (key === 'oldestOutboxAgeSeconds') continue;
+      if (key === 'oldestOutboxAgeSeconds' || key.startsWith('admin')) continue;
       lines.push(`cloudpay_operational_items{kind="${name}"} ${counts[key]}`);
     }
     lines.push(
@@ -62,6 +76,29 @@ export class OperationsService {
       '# HELP cloudpay_operational_health Operational health: 2 healthy, 1 warning, 0 critical.',
       '# TYPE cloudpay_operational_health gauge',
       `cloudpay_operational_health ${status === 'healthy' ? 2 : status === 'warning' ? 1 : 0}`,
+      '# HELP cloudpay_admin_login_events_24h Administrator login results recorded during the last 24 hours.',
+      '# TYPE cloudpay_admin_login_events_24h gauge',
+      `cloudpay_admin_login_events_24h{result="succeeded"} ${counts.adminLoginSucceeded24h}`,
+      `cloudpay_admin_login_events_24h{result="denied"} ${counts.adminLoginDenied24h}`,
+      `cloudpay_admin_login_events_24h{result="failed"} ${counts.adminLoginFailed24h}`,
+      '# HELP cloudpay_admin_security_denials_24h Administrator origin, session, CSRF and permission denials recorded during the last 24 hours.',
+      '# TYPE cloudpay_admin_security_denials_24h gauge',
+      `cloudpay_admin_security_denials_24h ${counts.adminSecurityDenials24h}`,
+      '# HELP cloudpay_admin_operation_failures_24h Administrator operations with a failed audit outcome during the last 24 hours.',
+      '# TYPE cloudpay_admin_operation_failures_24h gauge',
+      `cloudpay_admin_operation_failures_24h ${counts.adminOperationFailures24h}`,
+      '# HELP cloudpay_admin_audit_append_failures_total Administrator audit append calls that threw in this process.',
+      '# TYPE cloudpay_admin_audit_append_failures_total counter',
+      `cloudpay_admin_audit_append_failures_total ${processAdminMetrics.auditAppendFailuresTotal}`,
+      '# HELP cloudpay_admin_http_5xx_total HTTP 5xx responses from the fixed administrator API boundary in this process.',
+      '# TYPE cloudpay_admin_http_5xx_total counter',
+      `cloudpay_admin_http_5xx_total ${processAdminMetrics.http5xxTotal}`,
+      '# HELP cloudpay_admin_active_sessions Currently unexpired active administrator sessions.',
+      '# TYPE cloudpay_admin_active_sessions gauge',
+      `cloudpay_admin_active_sessions ${counts.adminActiveSessions}`,
+      '# HELP cloudpay_admin_revoked_sessions_24h Administrator sessions revoked during the last 24 hours.',
+      '# TYPE cloudpay_admin_revoked_sessions_24h gauge',
+      `cloudpay_admin_revoked_sessions_24h ${counts.adminRevokedSessions24h}`,
       '# HELP cloudpay_metrics_snapshot_timestamp_seconds Unix timestamp of this snapshot.',
       '# TYPE cloudpay_metrics_snapshot_timestamp_seconds gauge',
       `cloudpay_metrics_snapshot_timestamp_seconds ${Math.floor(capturedAt.getTime() / 1000)}`,
@@ -70,7 +107,8 @@ export class OperationsService {
   }
 
   private status(counts: OperationalCounts): 'healthy' | 'warning' | 'critical' {
-    if (counts.paymentDeadLetters || counts.outboxDeadLetters || counts.evidenceScanFailed || counts.backupFailures24h) return 'critical';
+    if (counts.paymentDeadLetters || counts.outboxDeadLetters || counts.evidenceScanFailed
+      || counts.backupFailures24h || counts.adminOperationFailures24h) return 'critical';
     if (counts.paymentOverdue || counts.refundProviderPendingStale || counts.evidencePendingScanStale
       || counts.invoiceRequestedStale || counts.invoiceProcessingStale || counts.invoiceRedPendingStale
       || counts.disputesReadyForReview || counts.deliveryStale || counts.reservationOverdue

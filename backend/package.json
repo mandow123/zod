@@ -30,7 +30,9 @@
     "production:routing:verify": "node deploy/aws-ubuntu/verify-routing.mjs verify",
     "production:host:preflight": "node deploy/aws-ubuntu/preflight-host.mjs",
     "production:sidecar:verify": "node deploy/aws-ubuntu/verify-sidecar.mjs",
-    "production:env:verify": "node scripts/verify-production-env.mjs"
+    "production:admin-routing:verify": "node deploy/kubernetes/verify-admin-routing.mjs",
+    "production:env:verify": "node scripts/verify-production-env.mjs",
+    "production:admin-env:verify": "node scripts/verify-production-env.mjs --admin-only"
   },
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.6.0",

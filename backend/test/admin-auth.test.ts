@@ -158,6 +158,11 @@ describe('admin authentication service', () => {
         `SELECT count(*)::text AS count FROM admin_sessions WHERE status='active'`,
       );
       expect(active.rows[0]?.count).toBe('0');
+      expect(await audit.recent(20)).toContainEqual(expect.objectContaining({
+        action: 'admin.auth.login.failed',
+        outcome: 'failed',
+        errorCode: 'ADMIN_AUDIT_UNAVAILABLE',
+      }));
       await f.database.close();
     });
 
@@ -212,6 +217,54 @@ describe('admin authentication service', () => {
       expect(completed.principal.roles).toEqual(['super_admin']);
       expect(JSON.stringify(completed)).not.toContain('admin@example.test');
       expect(JSON.stringify(await audit.recent(20))).not.toContain('admin@example.test');
+
+      const removedSettings: AdminAuthRuntimeSettings = Object.freeze({
+        ...emailSettings,
+        oidcGroupRoleMappings: Object.freeze([
+          Object.freeze({ group: 'other@example.test', roleCode: 'super_admin' as const }),
+        ]),
+      });
+      const removedService = new AdminAuthService(identities, rbac, sessions, transactions, audit,
+        oidc, verifier, removedSettings);
+      await expect(removedService.authenticate(completed.sessionToken, {
+        ...context, now: new Date(context.now.getTime() + 1_000),
+      })).rejects.toMatchObject({ code: 'ADMIN_AUTHORIZATION_STALE' });
+      await expect(service.authenticate(completed.sessionToken, {
+        ...context, now: new Date(context.now.getTime() + 2_000),
+      })).rejects.toMatchObject({ code: 'ADMIN_AUTH_REQUIRED' });
+
+      const secondContext = { ...context, now: new Date(context.now.getTime() + 3_000) };
+      const second = await service.startLogin('/', secondContext);
+      const secondAuthorization = new URL(second.authorizationUrl);
+      nonce = secondAuthorization.searchParams.get('nonce')!;
+      const secondCompleted = await service.completeLogin({
+        state: secondAuthorization.searchParams.get('state')!,
+        code: 'second-email-allowlist-code',
+        issuer: KAI_OIDC_ISSUER,
+        providerError: undefined,
+        browserBindingToken: second.browserBindingToken,
+      }, secondContext);
+
+      const removalContext = { ...context, now: new Date(context.now.getTime() + 4_000) };
+      const removal = await removedService.startLogin('/', removalContext);
+      const removalAuthorization = new URL(removal.authorizationUrl);
+      nonce = removalAuthorization.searchParams.get('nonce')!;
+      await expect(removedService.completeLogin({
+        state: removalAuthorization.searchParams.get('state')!,
+        code: 'removed-email-allowlist-code',
+        issuer: KAI_OIDC_ISSUER,
+        providerError: undefined,
+        browserBindingToken: removal.browserBindingToken,
+      }, removalContext)).rejects.toMatchObject({ code: 'ADMIN_OIDC_ROLE_REQUIRED' });
+      expect(await audit.recent(20)).toContainEqual(expect.objectContaining({
+        action: 'admin.auth.login.failed',
+        outcome: 'denied',
+        errorCode: 'ADMIN_OIDC_ROLE_REQUIRED',
+      }));
+      expect(await rbac.activeRoles(secondCompleted.principal.identityId, removalContext.now)).toEqual([]);
+      await expect(service.authenticate(secondCompleted.sessionToken, {
+        ...context, now: new Date(context.now.getTime() + 5_000),
+      })).rejects.toMatchObject({ code: 'ADMIN_AUTH_REQUIRED' });
       await f.database.close();
     });
 });
