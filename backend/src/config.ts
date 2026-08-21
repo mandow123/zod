@@ -181,6 +181,12 @@ const ADMIN_ENCRYPTION_KEY_KEYS = [
   'ADMIN_PII_ENCRYPTION_KEY',
 ] as const;
 
+const ADMIN_SECRET_KEYS = [
+  'ADMIN_OIDC_CLIENT_SECRET',
+  ...ADMIN_PEPPER_KEYS,
+  ...ADMIN_ENCRYPTION_KEY_KEYS,
+] as const;
+
 const EXISTING_SECURITY_KEY_NAMES = [
   'KAI_OIDC_CLIENT_SECRET',
   'KAI_OIDC_FLOW_PEPPER',
@@ -464,6 +470,57 @@ function adminAuthConfiguration(environment: Record<string, string | undefined>,
       reauthFreshnessSeconds,
     }),
   } as const;
+}
+
+const ADMIN_PRODUCTION_INSPECTION_KEYS = [
+  ...ADMIN_REQUIRED_KEYS,
+  'ADMIN_LOGIN_TRANSACTION_TTL_SECONDS',
+  'ADMIN_SESSION_IDLE_TTL_SECONDS',
+  'ADMIN_SESSION_ABSOLUTE_TTL_SECONDS',
+  'ADMIN_SESSION_ROTATION_SECONDS',
+  'ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS',
+  'ADMIN_REAUTH_FRESHNESS_SECONDS',
+  'PUBLIC_ORIGIN',
+  'KAI_OIDC_CLIENT_ID',
+  ...EXISTING_SECURITY_KEY_NAMES,
+] as const;
+
+function adminIssueNames(issues: readonly string[]): string[] {
+  return stableStrings(issues.flatMap((issue) => {
+    const name = issue.match(/^ADMIN_[A-Z0-9_]+/u)?.[0];
+    if (!name) return [];
+    return name === 'ADMIN_AUTH_SECRETS' ? [...ADMIN_SECRET_KEYS] : [name];
+  }));
+}
+
+/**
+ * Validates administrator production configuration independently from the runtime
+ * feature flag. The result deliberately contains variable names only, so callers
+ * can report it in CI or an operator terminal without exposing supplied values.
+ */
+export function adminProductionConfigurationIssues(
+  input: NodeJS.ProcessEnv | Record<string, string | undefined>,
+): readonly string[] {
+  const environment = Object.fromEntries(ADMIN_PRODUCTION_INSPECTION_KEYS.flatMap((name) =>
+    typeof input[name] === 'string' ? [[name, input[name]]] : []));
+
+  // PUBLIC_ORIGIN is validated by the full production gate. Keep this focused
+  // administrator inspection usable even when an unrelated public origin is
+  // absent or malformed, while still enforcing origin isolation when it is valid.
+  if (environment.PUBLIC_ORIGIN) {
+    try {
+      new URL(environment.PUBLIC_ORIGIN);
+    } catch {
+      delete environment.PUBLIC_ORIGIN;
+    }
+  }
+
+  const parsed = environmentSchema.parse({
+    ...environment,
+    NODE_ENV: 'production',
+    ADMIN_AUTH_ENABLED: 'true',
+  });
+  return Object.freeze(adminIssueNames(adminAuthConfiguration(environment, parsed).adminAuth.missing));
 }
 
 function pushCapability(environment: Record<string, string | undefined>, parsed: {

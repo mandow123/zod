@@ -72,6 +72,7 @@ function adminAuthFixture() {
     recordRejectedCallback: vi.fn(async () => undefined),
     recordSecurityDenial: vi.fn(async () => undefined),
     recordAuthorizedRead: vi.fn(async () => undefined),
+    recordFailedRead: vi.fn(async () => undefined),
   };
   return service;
 }
@@ -151,6 +152,10 @@ describe('buildApp administrator wiring', () => {
     expect(forgedPermission.json().error.code).toBe('ADMIN_PERMISSION_REQUIRED');
     expect(auth.authenticate).toHaveBeenCalledWith(SESSION_TOKEN, expect.anything(), expect.anything());
     expect(p0.listPayouts).not.toHaveBeenCalled();
+    expect(auth.recordSecurityDenial).toHaveBeenCalledWith(
+      'permission', 'ADMIN_PERMISSION_REQUIRED', expect.anything(), expect.anything(),
+    );
+    expect(auth.recordAuthorizedRead).not.toHaveBeenCalled();
     await app.close();
   });
 
@@ -173,7 +178,19 @@ describe('buildApp administrator wiring', () => {
     const response = await app.inject({ method: 'GET', url: '/admin/v1/dashboard', headers: { cookie: sessionCookie } });
     expect(response.statusCode).toBe(503);
     expect(response.json().error.code).toBe('ADMIN_AUDIT_UNAVAILABLE');
-    expect(p0.overview).not.toHaveBeenCalled();
+    expect(p0.overview).toHaveBeenCalledTimes(1);
+    await app.close();
+  });
+
+  it('records an authorized P0 query failure without recording a successful read', async () => {
+    const { app, auth, p0 } = await enabledFixture();
+    p0.overview.mockRejectedValueOnce(new Error('database failure canary'));
+    const response = await app.inject({ method: 'GET', url: '/admin/v1/dashboard', headers: { cookie: sessionCookie } });
+    expect(response.statusCode).toBe(500);
+    expect(auth.recordFailedRead).toHaveBeenCalledWith(
+      expect.anything(), 'admin.dashboard.read', 'ADMIN_READ_FAILED', expect.anything(),
+    );
+    expect(auth.recordAuthorizedRead).not.toHaveBeenCalled();
     await app.close();
   });
 

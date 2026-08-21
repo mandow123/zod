@@ -21,6 +21,13 @@ export type OperationalCounts = Readonly<{
   backupFailures24h: number;
   restoreDrillSucceeded90d: number;
   oldestOutboxAgeSeconds: number;
+  adminLoginSucceeded24h: number;
+  adminLoginDenied24h: number;
+  adminLoginFailed24h: number;
+  adminSecurityDenials24h: number;
+  adminOperationFailures24h: number;
+  adminActiveSessions: number;
+  adminRevokedSessions24h: number;
 }>;
 
 type SnapshotRow = QueryResultRow & Record<keyof OperationalCounts, string | number | null>;
@@ -31,6 +38,8 @@ const fields: Array<keyof OperationalCounts> = [
   'invoiceRequestedStale', 'invoiceProcessingStale', 'invoiceRedPendingStale',
   'disputesReadyForReview', 'deliveryStale', 'reservationOverdue', 'auditEvents24h', 'oldestOutboxAgeSeconds',
   'backupSucceeded24h', 'backupFailures24h', 'restoreDrillSucceeded90d',
+  'adminLoginSucceeded24h', 'adminLoginDenied24h', 'adminLoginFailed24h',
+  'adminSecurityDenials24h', 'adminOperationFailures24h', 'adminActiveSessions', 'adminRevokedSessions24h',
 ];
 
 export interface OperationsStore { snapshot(now: Date): Promise<OperationalCounts>; }
@@ -61,7 +70,26 @@ export class PostgresOperationsStore implements OperationsStore {
          (SELECT count(*) FROM backup_runs WHERE status = 'failed' AND completed_at >= $1 - interval '24 hours')::text AS "backupFailures24h",
          (SELECT count(*) FROM restore_drills WHERE status = 'succeeded' AND completed_at >= $1 - interval '90 days')::text AS "restoreDrillSucceeded90d",
          COALESCE((SELECT floor(extract(epoch FROM ($1 - min(created_at))))
-           FROM outbox_events WHERE processed_at IS NULL AND dead_lettered_at IS NULL), 0)::text AS "oldestOutboxAgeSeconds"`,
+           FROM outbox_events WHERE processed_at IS NULL AND dead_lettered_at IS NULL), 0)::text AS "oldestOutboxAgeSeconds",
+         (SELECT count(*) FROM admin_audit_events
+           WHERE occurred_at >= $1 - interval '24 hours'
+             AND action = 'admin.auth.login.succeeded' AND outcome = 'succeeded')::text AS "adminLoginSucceeded24h",
+         (SELECT count(*) FROM admin_audit_events
+           WHERE occurred_at >= $1 - interval '24 hours'
+             AND action = 'admin.auth.login.failed' AND outcome = 'denied')::text AS "adminLoginDenied24h",
+         (SELECT count(*) FROM admin_audit_events
+           WHERE occurred_at >= $1 - interval '24 hours'
+             AND action = 'admin.auth.login.failed' AND outcome = 'failed')::text AS "adminLoginFailed24h",
+         (SELECT count(*) FROM admin_audit_events
+           WHERE occurred_at >= $1 - interval '24 hours' AND outcome = 'denied'
+             AND action IN ('admin.auth.origin.denied', 'admin.auth.session.denied',
+               'admin.auth.csrf.denied', 'admin.auth.permission.denied'))::text AS "adminSecurityDenials24h",
+         (SELECT count(*) FROM admin_audit_events
+           WHERE occurred_at >= $1 - interval '24 hours' AND outcome = 'failed')::text AS "adminOperationFailures24h",
+         (SELECT count(*) FROM admin_sessions
+           WHERE status = 'active' AND idle_expires_at > $1 AND absolute_expires_at > $1)::text AS "adminActiveSessions",
+         (SELECT count(*) FROM admin_sessions
+           WHERE status = 'revoked' AND revoked_at >= $1 - interval '24 hours')::text AS "adminRevokedSessions24h"`,
       [now],
     );
     const row = result.rows[0];

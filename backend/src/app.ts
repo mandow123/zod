@@ -58,6 +58,11 @@ import type { AdminAuthService } from './admin/auth-service.js';
 import type { AdminAuthRuntimeSettings } from './admin/runtime.js';
 import { registerAdminP0Routes } from './admin/p0-routes.js';
 import type { AdminP0Service } from './admin/p0-service.js';
+import { adminProcessMetrics, type AdminMetricRecorder } from './admin/metrics.js';
+
+function isAdminApiRequest(rawUrl: string): boolean {
+  return rawUrl === '/admin/v1' || rawUrl.startsWith('/admin/v1/') || rawUrl.startsWith('/admin/v1?');
+}
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -86,10 +91,11 @@ type BuildAppOptions = Readonly<{
   adminAuthService?: AdminAuthService;
   adminAuthSettings?: AdminAuthRuntimeSettings;
   adminP0Service?: AdminP0Service;
+  adminMetrics?: AdminMetricRecorder;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, adminMetrics = adminProcessMetrics, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -104,6 +110,13 @@ export async function buildApp({ config, database, accountService, subjectServic
     trustProxy: config.trustedProxy,
     requestIdHeader: 'x-request-id',
     bodyLimit: 1_048_576,
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    const rawUrl = request.raw.url ?? '';
+    if (reply.statusCode >= 500 && reply.statusCode <= 599 && isAdminApiRequest(rawUrl)) {
+      adminMetrics.recordHttp5xx();
+    }
   });
 
   await app.register(helmet, {
@@ -231,15 +244,28 @@ export async function buildApp({ config, database, accountService, subjectServic
         const authenticated = await authenticateAdminHttpRequest(
           request, reply, adminAuthService, adminAuthSettings,
         );
-        try {
-          await adminAuthService.recordAuthorizedRead(
-            authenticated, action, adminRequestContext(request),
-          );
-        } catch {
-          throw new AppError('ADMIN_AUDIT_UNAVAILABLE', 503, '管理员审计服务暂时不可用。');
-        }
-        return { permissions: authenticated.principal.permissions };
-      }, adminAuthSettings);
+        const context = adminRequestContext(request);
+        return {
+          principal: { permissions: authenticated.principal.permissions },
+          recordSucceeded: async () => {
+            try {
+              await adminAuthService.recordAuthorizedRead(authenticated, action, context);
+            } catch {
+              throw new AppError('ADMIN_AUDIT_UNAVAILABLE', 503, '管理员审计服务暂时不可用。');
+            }
+          },
+          recordDenied: (failureCode: string) => adminAuthService.recordSecurityDenial(
+            'permission', failureCode, context, authenticated,
+          ),
+          recordFailed: (failureCode: string) => adminAuthService.recordFailedRead(
+            authenticated, action, failureCode, context,
+          ),
+        };
+      }, adminAuthSettings, async (request, failureCode) => {
+        await adminAuthService.recordSecurityDenial(
+          'origin', failureCode, adminRequestContext(request),
+        );
+      });
     }
   }
   if (operationsService) await registerOperationsRoutes(app, accountService, operationsService);

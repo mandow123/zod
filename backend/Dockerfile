@@ -7,7 +7,7 @@ RUN npm ci --ignore-scripts
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY migrations ./migrations
-COPY scripts/verify-container-env.mjs scripts/start-production-container.mjs ./scripts/
+COPY scripts/verify-container-env.mjs scripts/verify-production-env.mjs scripts/start-production-container.mjs ./scripts/
 RUN npm run build && npm prune --omit=dev --ignore-scripts
 
 FROM node:24.18.0-bookworm-slim AS runtime

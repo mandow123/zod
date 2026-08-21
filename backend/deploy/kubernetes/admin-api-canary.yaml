@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudpay-admin-api-canary
+  namespace: cloudpay
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudpay-admin-api-canary
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudpay-admin-api-canary
+        app.kubernetes.io/part-of: cloudpay
+        app.kubernetes.io/component: admin-api-canary
+    spec:
+      serviceAccountName: cloudpay-backend
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          # Must be byte-for-byte the same immutable digest as the main backend
+          # Deployment for this release. Only the explicit feature flag differs.
+          image: registry.example.invalid/kai/cloudpay-backend@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 4100
+          envFrom:
+            - configMapRef:
+                name: cloudpay-backend-config
+            - secretRef:
+                name: cloudpay-backend-secrets
+            - secretRef:
+                name: cloudpay-admin-auth-secrets
+          env:
+            # Explicit env entries override envFrom. This is the only workload
+            # allowed to enable administrator auth while the main ConfigMap is
+            # still pinned to false during Stage C.
+            - name: ADMIN_AUTH_ENABLED
+              value: "true"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 384Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            httpGet:
+              path: /mobile/v1/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /mobile/v1/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /mobile/v1/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudpay-admin-api-canary
+  namespace: cloudpay
+spec:
+  selector:
+    app.kubernetes.io/name: cloudpay-admin-api-canary
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudpay-admin-api-canary-ingress
+  namespace: cloudpay
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cloudpay-admin-api-canary
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 4100
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 4100

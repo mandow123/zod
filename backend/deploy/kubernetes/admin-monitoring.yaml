@@ -1,0 +1,66 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cloudpay-admin
+  namespace: cloudpay
+spec:
+  groups:
+    - name: cloudpay-admin.rules
+      interval: 1m
+      rules:
+        - alert: KAIAdminAuditAppendFailures
+          expr: sum(increase(cloudpay_admin_audit_append_failures_total[5m])) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: Administrator audit append failed
+            description: At least one administrator audit append threw in the last five minutes; disable privileged operations and investigate the audit sink.
+        - alert: KAIAdminHttp5xxResponses
+          expr: sum(increase(cloudpay_admin_http_5xx_total[5m])) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator API returned HTTP 5xx responses
+            description: At least one request inside the fixed administrator API boundary returned a 5xx response in the last five minutes.
+        - alert: KAIAdminOperationFailures
+          expr: max(cloudpay_admin_operation_failures_24h) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator operations contain failed outcomes
+            description: Investigate administrator operations with failed audit outcomes recorded during the last 24 hours.
+        - alert: KAIAdminLoginDeniedOrFailedSpike
+          expr: sum(max by (result) (cloudpay_admin_login_events_24h{result=~"denied|failed"})) > 20
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator login denials or failures are elevated
+            description: More than twenty denied or failed administrator login results were recorded in the last 24 hours.
+        - alert: KAIAdminSecurityDenialSpike
+          expr: max(cloudpay_admin_security_denials_24h) > 50
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator security denials are elevated
+            description: Origin, session, CSRF or permission denials exceeded the reviewed 24-hour threshold.
+        - alert: KAIAdminActiveSessionsHigh
+          expr: max(cloudpay_admin_active_sessions) > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator active session count is anomalous
+            description: More than one hundred unexpired active administrator sessions have persisted for ten minutes.
+        - alert: KAIAdminRevokedSessionsHigh
+          expr: max(cloudpay_admin_revoked_sessions_24h) > 50
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Administrator session revocations are elevated
+            description: More than fifty administrator sessions were revoked during the last 24 hours.

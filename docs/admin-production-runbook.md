@@ -26,6 +26,9 @@ OIDC 注册、Group-role 映射、管理员 Secret、数据库迁移和生产开
   通配符、未验证邮箱或仅在单一 Token 来源出现的邮箱。提供方恢复专用 Group Claim 后应迁回 Group 模式；
 - Token/JWKS/UserInfo endpoint 必须使用代码中固定的 auth.kai.com 合同；
 - redirect URI 不允许通配符、query 或 fragment。
+- 身份侧 Group/账号撤权必须提供 back-channel、SCIM 或受审计运维同步信号，使本地角色映射或身份
+  状态随之更新并撤销 Session。若身份系统暂不支持，必须把“更新本地映射并撤销全部相关 Session”
+  设为同一撤权工单的强制步骤；在该流程未验收前不得宣称 IdP 变更可即时生效。
 
 ### 2.2 配置清单
 
@@ -71,20 +74,31 @@ ADMIN_REAUTH_FRESHNESS_SECONDS
 在目标提交构建后执行：
 
 ```powershell
+Set-Location admin
+npm ci --ignore-scripts --no-audit --no-fund
+npm run typecheck
+npm test
+npm run build
+Set-Location ..
 Set-Location backend
 npm ci --ignore-scripts --no-audit --no-fund
 npm run typecheck
 npm test -- test/config.test.ts test/admin-permissions.test.ts test/admin-schema.test.ts test/admin-stores-postgres.test.ts test/admin-audit-postgres.test.ts
 npm test -- test/kai-oidc-core.test.ts test/kai-oidc.test.ts
+if ([string]::IsNullOrWhiteSpace($env:ADMIN_POSTGRES_TEST_URL)) { throw "ADMIN_POSTGRES_TEST_URL is required" }
+npm test -- test/admin-session-postgres-concurrency.test.ts
 npm run build
 Set-Location ..
 node backend/scripts/verify-admin-boundary.mjs --root .
-Set-Location backend
+npm ci --ignore-scripts --no-audit --no-fund
 npm run contract:verify
-npm run deployment:verify
+npm --prefix backend run deployment:verify
 ```
 
-还必须运行管理员 auth-service、routes、Cookie、CORS、CSRF、并发轮换和日志捕获专项测试。任何跳过项都要记录负责人、原因、风险接受人和补测截止时间；安全边界脚本、迁移链和日志脱敏测试不允许跳过。
+`admin-session-postgres-concurrency.test.ts` 必须连接一次性隔离 PostgreSQL 15，并通过进程环境中的
+`ADMIN_POSTGRES_TEST_URL` 注入连接地址；结果必须为 2 项通过、0 项跳过。还必须运行管理员
+auth-service、routes、Cookie、CORS、CSRF、并发轮换和日志捕获专项测试。任何跳过项都要记录
+负责人、原因、风险接受人和补测截止时间；安全边界脚本、迁移链和日志脱敏测试不允许跳过。
 
 检查工作树，确认发布只包含审核过的文件。不得使用 `git clean`、`git reset --hard` 或覆盖并发改动。
 
@@ -107,24 +121,44 @@ npm run deployment:verify
 - 验证移动 health/readiness、移动登录、订单和结算合同不变。
 - 验证 `/admin/v1` 未错误接受移动 Bearer。
 - 检查日志管道已对 query、Cookie、Authorization 和 Set-Cookie 脱敏。
+- 应用 `backend/deploy/kubernetes/admin-app.yaml` 后运行管理员路由 canary，使用
+  `--auth-state disabled` 和新的绝对报告路径。只有报告为 `decision=keep_admin_routes` 才能保留
+  两个管理员 Ingress；失败时只移除管理员 Ingress，不修改移动入口、后端、迁移或审计数据。
 
 ### 阶段 B：配置校验
 
 - 注入管理员配置和 Secret，仍保持开关关闭。
-- 使用不打印变量值的生产环境验证器确认 readiness。
+- 保持 `ADMIN_AUTH_ENABLED=false` 滚动更新全部实例，使新配置与 Secret 生效；在每个新实例中运行
+  `npm --prefix backend run production:admin-env:verify`（容器内使用等价的
+  `node scripts/verify-production-env.mjs --admin-only`）。验证器必须返回成功，而且只允许输出配置项名称，
+  不得输出值。容器镜像已包含该离线验证器；不得为了验证配置而提前开启管理员路由。
 - 双人核对管理员 Web Origin、API callback origin、Client ID 标识、scope 和映射版本。
+- 应用 `backend/deploy/kubernetes/admin-monitoring.yaml`，确认 Prometheus 已抓到管理员登录、拒绝、
+  操作失败、审计写入失败、5xx、活动 Session 与撤销 Session 指标，并确认告警规则已加载。
 
 ### 阶段 C：小范围启用
 
-- 设置 `ADMIN_AUTH_ENABLED=true` 并滚动发布一个实例。
+- 不修改主 ConfigMap；应用 `backend/deploy/kubernetes/admin-api-canary.yaml`，创建与主后端镜像摘要
+  完全相同、但显式 `ADMIN_AUTH_ENABLED=true` 的隔离单副本 Deployment/Service。
+- 等待 `deployment/cloudpay-admin-api-canary` rollout 成功，并在该 Pod 内运行
+  `node scripts/verify-production-env.mjs --admin-only`。确认 canary 与主 Service selector 不相交。
+- 只把 `ingress/cloudpay-admin-api` 的后端从 `cloudpay-backend` 切到
+  `cloudpay-admin-api-canary`；不得修改管理员 Web Ingress 或 mobile Ingress。
 - 确认 readiness 中 `adminAuth.available=true`，且响应不含 Secret 或 Group。
 - 使用专用测试管理员完成一次登录、`/auth/me`、登出和全部登出。
 - 检查审计数量和稳定 action，不查看或输出敏感值。
 - 扩容前观察至少一个登录事务 TTL 周期。
+- 使用 `--auth-state enabled` 和新的绝对报告路径再次运行管理员路由 canary；不得覆盖阶段 A 报告。
 
 ### 阶段 D：全量
 
-- 逐步扩大实例比例。
+- 将主 ConfigMap 的 `ADMIN_AUTH_ENABLED` 改为 `true`。ConfigMap `envFrom` 不会自动重启 Pod，必须
+  显式执行 `kubectl rollout restart deployment/cloudpay-backend -n cloudpay` 并等待
+  `kubectl rollout status` 成功。
+- 对 selector `app.kubernetes.io/name=cloudpay-backend` 返回的每个 Pod 运行管理员 `--admin-only`
+  离线门禁；任何 Pod 失败都不得切换 Ingress。
+- 只把 `ingress/cloudpay-admin-api` 从 canary Service 切回主 Service，使用新报告路径再次执行
+  `--auth-state enabled` 路由 canary；成功后才删除 `admin-api-canary.yaml` 的全部资源。
 - 验证负载均衡不需要粘性 Session；状态必须完全在 PostgreSQL 中。
 - 确认所有实例使用同一版本的权限定义和同一组 Secret 版本。
 
@@ -139,7 +173,10 @@ npm run deployment:verify
 5. 使用移动 Bearer 调用管理员端点，应 401；管理员 Cookie 调用移动端点不能产生管理员权限。
 6. 等待或测试缩短的轮换窗口，验证并发请求不导致 Cookie 回退、误登出或绝对 TTL 延长。
 7. 登出后原 Cookie 立即失效；全部登出使同一身份的其他浏览器 Session 失效。
-8. 停用测试身份或移除 Group，现有 Session 立即失败关闭。
+8. 在本地停用测试身份，或从当前管理员映射配置移除对应 Group/邮箱并完成全部实例滚动更新，
+   现有 Session 必须在下一次请求失败关闭。仅在身份提供方移除 Group、但没有 back-channel/SCIM/
+   运维同步信号时，本服务无法感知该外部变化；生产启用前必须接入撤权通知，或建立受审计的同步与
+   全 Session 撤销流程，禁止把“下次重新登录才同步”表述为即时撤权。
 9. 在日志和审计中搜索本次专用 canary 标识，确认不存在 code、state、Cookie、原始 Group 或 provider 描述。
 
 禁止使用生产 Secret 作为 canary 搜索字符串。
@@ -159,6 +196,13 @@ npm run deployment:verify
 - 管理员数据库连接、Schema readiness 和迁移校验。
 
 告警内容只包含稳定错误码、计数、服务端 request ID 和时间，不附带请求 URL 查询串或上游正文。
+
+仓库内的 `backend/deploy/kubernetes/admin-monitoring.yaml` 已覆盖：登录成功/拒绝/失败、固定四类
+安全拒绝、管理员操作失败、真实审计 append 失败、管理员 API 5xx、活动 Session 和撤销 Session。
+以下项目仍必须由生产监控平台或 Ingress/PostgreSQL 指标补齐：OIDC endpoint 延迟与非成功响应、
+管理员路由 401/403/429 分布、数据库连接、Schema readiness、迁移校验、Prometheus 抓取失败和告警
+通知链路。上述外部规则没有全部加载并完成一次测试告警前，不得进入阶段 C；禁止把仓库清单的通过
+误写成整套生产监控已经完成。
 
 ## 8. 常见故障处理
 
@@ -212,11 +256,16 @@ npm run deployment:verify
 
 紧急停止管理员入口的首选动作：
 
-1. 设置 `ADMIN_AUTH_ENABLED=false`；
-2. 滚动所有实例并确认管理员路由不可用；
+1. 将主 ConfigMap 设置为 `ADMIN_AUTH_ENABLED=false`；不得假设 ConfigMap 更新会自动进入进程；
+2. 显式 `kubectl rollout restart deployment/cloudpay-backend -n cloudpay`，等待 rollout status 成功，
+   并逐 Pod 确认 `ADMIN_AUTH_ENABLED=false`；
 3. 必要时在数据库撤销所有活动管理员 Session；
 4. 保留 admin 表和审计事件，不删除迁移或证据；
 5. 验证移动 API、移动 OIDC 和交易功能仍正常。
+6. 若必须撤回公网入口，只删除 `ingress/cloudpay-admin-web` 与
+   `ingress/cloudpay-admin-api`，随后删除隔离 canary 清单；保留移动 Ingress、主后端 Deployment、
+   迁移与管理员审计数据。即使 Ingress 当时仍指向显式开启的 canary，也必须先完成主后端关闭 rollout，
+   再撤入口和删除 canary。
 
 应用版本回滚必须满足：旧版本不会注册不安全的 admin 路由；权限定义和 Schema 兼容；部署后重新运行边界脚本。不得为快速恢复启用 refunds、disputes、invoices 或 Vast 管理路由。
 

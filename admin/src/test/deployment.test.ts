@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import dockerfile from '../../Dockerfile?raw';
 import nginxConfig from '../../default.conf.template?raw';
+import packageJson from '../../package.json';
 import readme from '../../README.md?raw';
+import createRelease from '../../scripts/create-release.mjs?raw';
+import releaseVerifier from '../../scripts/verify-release.mjs?raw';
 
 describe('administrator web deployment contract', () => {
   it('uses a multi-stage Node 24 build and non-root nginx runtime', () => {
@@ -57,5 +60,18 @@ describe('administrator web deployment contract', () => {
     expect(nginxConfig.match(/add_header Content-Security-Policy/g)?.length).toBe(5);
     expect(nginxConfig.match(/add_header Strict-Transport-Security/g)?.length).toBe(5);
     expect(nginxConfig.match(/add_header X-Content-Type-Options/g)?.length).toBe(5);
+  });
+
+  it('gates and verifies a standalone production release', () => {
+    expect(packageJson.scripts.release).toBe('node scripts/create-release.mjs');
+    expect(packageJson.scripts['release:verify']).toBe('node scripts/verify-release.mjs');
+    expect(createRelease).toContain("runNpm(['ci', '--ignore-scripts', '--no-audit', '--no-fund'])");
+    expect(createRelease).toContain("runNpm(['run', 'typecheck'])");
+    expect(createRelease).toContain("runNpm(['test'])");
+    expect(createRelease).toContain("runNpm(['run', 'build'])");
+    expect(createRelease).toContain("path.join(repositoryDirectory, 'artifacts', 'admin')");
+    expect(releaseVerifier).toContain('requireExpectedOrigin: true');
+    expect(readme).toContain('SHA-256 for every payload file');
+    expect(readme).toContain('ADMIN_API_ORIGIN=https://admin-api.example.invalid');
   });
 });

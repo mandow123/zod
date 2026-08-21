@@ -10,6 +10,7 @@ import type { KaiIdTokenVerifier } from '../identity/kai-id-token-verifier.js';
 import type { AdminAuditStore } from './audit-store.js';
 import type { AdminIdentityStore } from './identity-store.js';
 import type { AdminLoginTransactionStore } from './login-transaction-store.js';
+import { adminProcessMetrics, type AdminMetricRecorder } from './metrics.js';
 import {
   permissionsForAdminRoles,
   stableAdminPermissionDigestInput,
@@ -92,6 +93,12 @@ function stableFailureCode(error: unknown): string {
   return /^[A-Z0-9_]{1,80}$/u.test(candidate) ? candidate : 'ADMIN_LOGIN_FAILED';
 }
 
+function loginFailureOutcome(error: unknown): 'denied' | 'failed' {
+  return error instanceof AppError && error.statusCode >= 400 && error.statusCode < 500
+    ? 'denied'
+    : 'failed';
+}
+
 function loginFailure(error: unknown): AppError {
   if (error instanceof AppError && error.code.startsWith('ADMIN_')) return error;
   return new AppError('ADMIN_LOGIN_FAILED', 401, '管理员登录失败，请重新尝试。');
@@ -111,6 +118,7 @@ export class AdminAuthService {
     private readonly oidc: AdminOidcClient,
     private readonly verifier: AdminIdTokenVerifier,
     private readonly settings: AdminAuthRuntimeSettings,
+    private readonly metrics: AdminMetricRecorder = adminProcessMetrics,
   ) {}
 
   async startLogin(returnPathInput: unknown, context: AdminRequestContext): Promise<AdminLoginStart> {
@@ -211,9 +219,6 @@ export class AdminAuthService {
         this.settings.oidcGroupRoleMappings,
         this.settings.oidcGroupPepper,
       );
-      if (desiredRoles.length === 0) {
-        throw new AppError('ADMIN_OIDC_ROLE_REQUIRED', 403, '管理员账户未获得授权。');
-      }
       const verifiedEmail = userInfo.profile.emailVerified ? userInfo.profile.email
         : verified.identity.emailVerified ? verified.identity.email : null;
       const identityResult = await this.identities.createOrGet({
@@ -231,6 +236,9 @@ export class AdminAuthService {
       if (!['pending', 'active'].includes(identity.status)) {
         throw new AppError('ADMIN_IDENTITY_DISABLED', 403, '管理员账户不可用。');
       }
+      if (desiredRoles.length === 0 && identity.status === 'pending') {
+        throw new AppError('ADMIN_OIDC_ROLE_REQUIRED', 403, '管理员账户未获得授权。');
+      }
       const synchronized = await this.rbac.syncOidcRoles({
         adminIdentityId: identity.id,
         roles: desiredRoles,
@@ -238,6 +246,9 @@ export class AdminAuthService {
         now,
       });
       roles = synchronized.roles;
+      if (desiredRoles.length === 0) {
+        throw new AppError('ADMIN_OIDC_ROLE_REQUIRED', 403, '管理员账户未获得授权。');
+      }
       const permissions = permissionsForAdminRoles(roles);
       const sessionToken = generateOpaqueToken();
       const csrfToken = this.csrfForSessionToken(sessionToken);
@@ -285,7 +296,7 @@ export class AdminAuthService {
       try {
         await this.appendAudit({
           context, now, identity, session: null, permissions: permissionsForAdminRoles(roles),
-          action: 'admin.auth.login.failed', outcome: 'denied', errorCode: failureCode,
+          action: 'admin.auth.login.failed', outcome: loginFailureOutcome(error), errorCode: failureCode,
           metadata: { failureCode },
         });
       } catch { /* Authentication remains fail-closed when the audit sink is unavailable. */ }
@@ -306,10 +317,17 @@ export class AdminAuthService {
     }
     const usingPreviousToken = !constantTimeEqual(session.tokenHash, suppliedTokenHash);
     const identity = await this.requireActiveIdentity(session.adminIdentityId);
-    const roles = await this.rbac.activeRoles(identity.id, now);
+    const assignments = await this.rbac.activeAssignments(identity.id, now);
+    const oidcAssignments = assignments.filter((assignment) => assignment.source === 'oidc');
+    const allowedOidcAssignments = new Set(this.settings.oidcGroupRoleMappings.map((mapping) =>
+      `${mapping.roleCode}\u0000${secretHash(`oidc-group:${mapping.group}`, this.settings.oidcGroupPepper)}`));
+    const oidcAuthorizationCurrent = oidcAssignments.length > 0 && oidcAssignments.every((assignment) =>
+      assignment.sourceReferenceDigest !== null
+      && allowedOidcAssignments.has(`${assignment.roleCode}\u0000${assignment.sourceReferenceDigest}`));
+    const roles = Object.freeze([...new Set(assignments.map((assignment) => assignment.roleCode))].sort());
     const permissions = permissionsForAdminRoles(roles);
     const expectedPermissionDigest = this.permissionDigest(permissions);
-    if (roles.length === 0 || session.authzVersionAtIssue !== identity.authzVersion
+    if (!oidcAuthorizationCurrent || roles.length === 0 || session.authzVersionAtIssue !== identity.authzVersion
       || session.permissionDefinitionVersion !== ADMIN_PERMISSION_DEFINITION_VERSION
       || !constantTimeEqual(session.permissionSnapshotDigest, expectedPermissionDigest)) {
       await this.sessions.revoke({ sessionId: session.id, adminIdentityId: identity.id,
@@ -490,6 +508,27 @@ export class AdminAuthService {
     });
   }
 
+  async recordFailedRead(
+    authenticated: AuthenticatedAdmin,
+    action: AdminReadAuditAction,
+    failureCode: string,
+    context: AdminRequestContext,
+  ): Promise<void> {
+    const stableCode = /^[A-Z0-9_]{1,80}$/u.test(failureCode) ? failureCode : 'ADMIN_READ_FAILED';
+    const identity = await this.requireActiveIdentity(authenticated.principal.identityId);
+    await this.appendAudit({
+      context,
+      now: nowFrom(context),
+      identity,
+      session: authenticated.session,
+      permissions: authenticated.principal.permissions,
+      action,
+      outcome: 'failed',
+      errorCode: stableCode,
+      metadata: { failureCode: stableCode },
+    });
+  }
+
   private async requireActiveIdentity(identityId: string): Promise<AdminIdentity> {
     const identity = await this.identities.findById(identityId);
     if (!identity || identity.status !== 'active') {
@@ -549,27 +588,32 @@ export class AdminAuthService {
     errorCode: string | null;
     metadata: Readonly<Record<string, unknown>>;
   }>): Promise<void> {
-    await this.audit.append({
-      occurredAt: input.now,
-      adminIdentityId: input.identity?.id ?? null,
-      adminSessionId: input.session?.id ?? null,
-      effectivePermissions: input.permissions,
-      action: input.action,
-      targetType: null,
-      targetId: null,
-      requestId: randomUUID(),
-      ticketReference: null,
-      reasonCode: null,
-      reasonDigest: null,
-      idempotencyKeyHash: null,
-      beforeStateDigest: null,
-      afterStateDigest: null,
-      ipHash: this.ipHash(input.context.ip),
-      userAgentHash: this.userAgentHash(input.context.userAgent),
-      outcome: input.outcome,
-      errorCode: input.errorCode,
-      sensitiveAccess: false,
-      metadata: input.metadata,
-    });
+    try {
+      await this.audit.append({
+        occurredAt: input.now,
+        adminIdentityId: input.identity?.id ?? null,
+        adminSessionId: input.session?.id ?? null,
+        effectivePermissions: input.permissions,
+        action: input.action,
+        targetType: null,
+        targetId: null,
+        requestId: randomUUID(),
+        ticketReference: null,
+        reasonCode: null,
+        reasonDigest: null,
+        idempotencyKeyHash: null,
+        beforeStateDigest: null,
+        afterStateDigest: null,
+        ipHash: this.ipHash(input.context.ip),
+        userAgentHash: this.userAgentHash(input.context.userAgent),
+        outcome: input.outcome,
+        errorCode: input.errorCode,
+        sensitiveAccess: false,
+        metadata: input.metadata,
+      });
+    } catch (error) {
+      this.metrics.recordAuditAppendFailure();
+      throw error;
+    }
   }
 }
