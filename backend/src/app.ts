@@ -58,6 +58,8 @@ import type { AdminAuthService } from './admin/auth-service.js';
 import type { AdminAuthRuntimeSettings } from './admin/runtime.js';
 import { registerAdminP0Routes } from './admin/p0-routes.js';
 import type { AdminP0Service } from './admin/p0-service.js';
+import { registerKaiCloudVerificationRoutes } from './kai-cloud/routes.js';
+import type { KaiCloudVerificationService } from './kai-cloud/service.js';
 
 type BuildAppOptions = Readonly<{
   config: RuntimeConfig;
@@ -86,10 +88,11 @@ type BuildAppOptions = Readonly<{
   adminAuthService?: AdminAuthService;
   adminAuthSettings?: AdminAuthRuntimeSettings;
   adminP0Service?: AdminP0Service;
+  kaiCloudVerificationService?: KaiCloudVerificationService;
   logger?: boolean;
 }>;
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, kaiCloudVerificationService, logger = true }: BuildAppOptions) {
   const app = Fastify({
     logger: logger ? {
       redact: {
@@ -97,6 +100,7 @@ export async function buildApp({ config, database, accountService, subjectServic
           'req.headers.authorization', 'req.headers.cookie', 'req.headers.wechatpay-signature',
           'req.headers.wechatpay-nonce', 'req.headers.wechatpay-serial', 'res.headers.set-cookie',
           'req.body.trackingNumber',
+          'req.headers.x-kai-signature',
         ],
         censor: '[REDACTED]',
       },
@@ -190,6 +194,7 @@ export async function buildApp({ config, database, accountService, subjectServic
         computeFulfillment: config.readiness.capabilities.computeFulfillment.available,
         vastAi: config.readiness.capabilities.vastAi.available,
         creatorCommissions: config.readiness.capabilities.creatorCommissions.available,
+        kaiCloudPublicApi: config.readiness.capabilities.kaiCloudPublicApi.available,
         adminAuth: config.readiness.capabilities.adminAuth.available,
       },
       database: { connected: databaseConnected, schema },
@@ -219,6 +224,9 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && creditOrderService) await registerCreditOrderRoutes(app, accountService, creditOrderService);
   if (accountService && fulfillmentService) await registerFulfillmentRoutes(app, accountService, fulfillmentService);
   if (accountService && nodeEnrollmentService) await registerNodeEnrollmentRoutes(app, accountService, nodeEnrollmentService);
+  if (accountService && kaiCloudVerificationService) {
+    await registerKaiCloudVerificationRoutes(app, accountService, kaiCloudVerificationService);
+  }
   if (accountService && assetPortfolioService) await registerAssetPortfolioRoutes(app, accountService, assetPortfolioService);
   if (accountService && vastMarketService) await registerVastMarketRoutes(app,accountService,vastMarketService);
   if (accountService && creatorCommissionService) await registerCreatorCommissionRoutes(app,accountService,creatorCommissionService);
