@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-002",
+  "auditedAt": "2026-08-20T16:32:42+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准发布独立管理员在线演示站点，全部使用模拟数据且不连接生产认证、API 或数据库。",
+  "baseCommit": "b2adcc088543a25725ed46bb8287454478150c85",
+  "stagedDiffSha256": "31f0adff3f1f321f832525037974285597ead584548054a5c44a20ab62bd6df1"
+}

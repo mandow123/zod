@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { can, PERMISSIONS, type ConsolePermission } from '../auth/permissions';
 import { Icon, type IconName } from './Icon';
+import { isAdminDemo } from '../demo';
 
 type NavItem = Readonly<{ to: string; label: string; eyebrow: string; icon: IconName; permission: ConsolePermission }>;
 
@@ -15,7 +16,7 @@ const navigation: readonly NavItem[] = [
 ];
 
 export function Shell() {
-  const isDemo = import.meta.env.MODE === 'demo';
+  const isDemo = isAdminDemo;
   const { me, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -48,7 +49,7 @@ export function Shell() {
           <div><strong>KAI</strong><small>CONTROL PLANE</small></div>
           <button className="icon-button close-menu" type="button" aria-label="关闭导航" onClick={() => setMenuOpen(false)}><Icon name="close" /></button>
         </div>
-        <div className="environment"><i />ADMINISTRATOR WORKSPACE</div>
+        <div className="environment"><i />{isDemo ? 'ONLINE DEMO WORKSPACE' : 'ADMINISTRATOR WORKSPACE'}</div>
         <nav>
           {allowed.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={() => setMenuOpen(false)}>
@@ -58,7 +59,7 @@ export function Shell() {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-security"><Icon name="shield" /><div><b>独立安全域</b><span>Session 由安全 Cookie 管理</span></div></div>
+        <div className="sidebar-security"><Icon name="shield" /><div><b>{isDemo ? '演示环境' : '独立安全域'}</b><span>{isDemo ? '纯模拟数据 · 不连接生产' : 'Session 由安全 Cookie 管理'}</span></div></div>
         <div className="profile-card">
           <span className="avatar">{me.admin.displayName.slice(0, 1).toUpperCase()}</span>
           <div><b>{me.admin.displayName}</b><span>{me.admin.roles.join(' · ')}</span></div>
@@ -67,11 +68,12 @@ export function Shell() {
       </aside>
       {menuOpen ? <button className="sidebar-backdrop" type="button" aria-label="关闭导航" onClick={() => setMenuOpen(false)} /> : null}
       <div className="workspace">
+        {isDemo ? <div className="demo-banner" role="status">在线演示环境 · 全部为模拟数据 · 不连接生产系统</div> : null}
         <header className="topbar">
           <button className="icon-button menu-button" type="button" aria-label="打开导航" onClick={() => setMenuOpen(true)}><Icon name="menu" /></button>
           <div><span className="topbar-context">KAI / ADMIN</span><strong>{current}</strong></div>
           <div className="topbar-actions">
-            <span className="live-indicator"><i />{isDemo ? '本地演示数据' : '系统已连接'}</span>
+            <span className="live-indicator"><i />{isDemo ? '在线演示数据' : '系统已连接'}</span>
             <span className="topbar-avatar">{me.admin.displayName.slice(0, 1).toUpperCase()}</span>
           </div>
         </header>

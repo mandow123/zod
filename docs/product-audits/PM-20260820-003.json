@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-003",
+  "auditedAt": "2026-08-20T17:06:28+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准修复管理员在线演示站的路由上下文与模拟数据客户端加载问题，保持不连接生产系统。",
+  "baseCommit": "1eacd581ce1dd6c369d18b85f4d01fd0825693e7",
+  "stagedDiffSha256": "4a1f23d43b1db5cd6a5bc8d314f16ea2042caf6b42bb12d8eea58e1a021c41e4"
+}
