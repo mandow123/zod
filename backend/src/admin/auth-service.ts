@@ -20,7 +20,7 @@ import type { AdminRbacStore } from './rbac-store.js';
 import type { AdminAuthRuntimeSettings } from './runtime.js';
 import {
   ADMIN_PERMISSION_DEFINITION_VERSION,
-  authoritativeGroups,
+  authoritativeOidcAuthorizationValues,
   canonicalReturnPath,
   mappedOidcRoles,
   newPkce,
@@ -199,9 +199,12 @@ export class AdminAuthService {
       if (!constantTimeEqual(verified.identity.subject, userInfo.profile.subject)) {
         throw new AppError('ADMIN_OIDC_SUBJECT_MISMATCH', 401, '管理员登录已失效，请重新尝试。');
       }
-      const groups = authoritativeGroups(
+      const groups = authoritativeOidcAuthorizationValues(
+        this.settings.oidcGroupClaim,
         verified.claims[this.settings.oidcGroupClaim],
         userInfo.claims[this.settings.oidcGroupClaim],
+        verified.identity,
+        userInfo.profile,
       );
       const desiredRoles = mappedOidcRoles(
         groups,

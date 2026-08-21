@@ -101,6 +101,47 @@ export function authoritativeGroups(
   return idTokenGroups ?? userInfoGroups!;
 }
 
+type VerifiedEmailSource = Readonly<{
+  email: string | null;
+  emailVerified: boolean;
+}>;
+
+function canonicalVerifiedEmail(source: VerifiedEmailSource): string | null {
+  if (!source.emailVerified || !source.email) return null;
+  const email = source.email.toLowerCase();
+  if (email !== source.email || email.length > 320 || controlCharacters.test(email)
+    || !/^[^\s@]+@[^\s@]+$/u.test(email)) {
+    throw new AppError('ADMIN_OIDC_EMAIL_CLAIM_INVALID', 403, '管理员账户未获得授权。');
+  }
+  return email;
+}
+
+/**
+ * KAI Auth does not currently publish an application-specific Group claim.
+ * An operator may explicitly select the standard `email` claim instead, but
+ * only as a verified, exact, lower-case allowlist. The normal Group contract
+ * remains unchanged for every other configured claim name.
+ */
+export function authoritativeOidcAuthorizationValues(
+  claimName: string,
+  idTokenClaim: unknown,
+  userInfoClaim: unknown,
+  idTokenIdentity: VerifiedEmailSource,
+  userInfoProfile: VerifiedEmailSource,
+): readonly string[] {
+  if (claimName !== 'email') return authoritativeGroups(idTokenClaim, userInfoClaim);
+  const idTokenEmail = canonicalVerifiedEmail(idTokenIdentity);
+  const userInfoEmail = canonicalVerifiedEmail(userInfoProfile);
+  if (!idTokenEmail || !userInfoEmail) {
+    throw new AppError('ADMIN_OIDC_EMAIL_NOT_VERIFIED', 403, '管理员账户未获得授权。');
+  }
+  if (idTokenClaim !== idTokenIdentity.email || userInfoClaim !== userInfoProfile.email
+    || idTokenEmail !== userInfoEmail) {
+    throw new AppError('ADMIN_OIDC_EMAIL_CLAIM_MISMATCH', 403, '管理员账户未获得授权。');
+  }
+  return Object.freeze([idTokenEmail]);
+}
+
 export function mappedOidcRoles(
   groups: readonly string[],
   mappings: readonly Readonly<{ group: string; roleCode: AdminRoleCode }>[],
