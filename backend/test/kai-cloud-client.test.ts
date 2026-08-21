@@ -18,13 +18,14 @@ describe('KAI Cloud public API client', () => {
   it('uses client credentials, caches the scoped token, sends no Cookie, and ignores unknown response fields', async () => {
     const http = vi.fn().mockResolvedValueOnce(response(token)).mockImplementation(async () => response({ record }));
     const client = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-      'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), http as typeof fetch);
+      'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), http as typeof fetch);
     const created = await client.createVerification({ organizationReference: 'organization_1',
       resourceReference: 'resource_1', productCode: 'H100', region: 'cn-east', specifications: { gpuCount: 8 },
       idempotencyKey: 'verification-request-0001' });
     await client.getVerification(created.id);
     expect(created).toEqual({ id: record.id, version: 1, status: 'running', updatedAt: record.updatedAt, failure: null });
     expect(http).toHaveBeenCalledTimes(3);
+    expect(http.mock.calls[0]![0]).toBe('https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token');
     const tokenRequest = http.mock.calls[0]![1] as RequestInit;
     expect(tokenRequest.headers).toMatchObject({ authorization: expect.stringMatching(/^Basic /u) });
     expect(new URLSearchParams(String(tokenRequest.body)).get('scope')).toBe('resource:read verification:write');
@@ -40,14 +41,14 @@ describe('KAI Cloud public API client', () => {
       .mockResolvedValueOnce(response({ error: { code: 'UNAVAILABLE' } }, 503))
       .mockResolvedValueOnce(response({ record }));
     const reader = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-      'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), readHttp as typeof fetch);
+      'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), readHttp as typeof fetch);
     await expect(reader.getVerification(record.id)).resolves.toMatchObject({ status: 'running' });
     expect(readHttp).toHaveBeenCalledTimes(3);
 
     const writeHttp = vi.fn().mockResolvedValueOnce(response(token))
       .mockResolvedValueOnce(response({ error: { code: 'RATE_LIMITED' } }, 429));
     const writer = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-      'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), writeHttp as typeof fetch);
+      'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), writeHttp as typeof fetch);
     await expect(writer.createVerification({ organizationReference: 'organization_1', resourceReference: 'resource_1',
       productCode: 'H100', region: 'cn-east', specifications: {}, idempotencyKey: 'verification-request-0002' }))
       .rejects.toMatchObject({ code: 'KAI_CLOUD_RATE_LIMITED', outcomeUnknown: true });
@@ -59,25 +60,25 @@ describe('KAI Cloud public API client', () => {
     'maps HTTP %i to %s', async (status, code) => {
       const http = vi.fn().mockResolvedValueOnce(response(token)).mockImplementation(async () => response({ error: { code } }, status));
       const client = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-        'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), http as typeof fetch);
+        'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), http as typeof fetch);
       await expect(client.getVerification(record.id)).rejects.toMatchObject({ code });
     });
 
   it('rejects missing scopes and malformed success responses', async () => {
     const badScope = vi.fn().mockResolvedValue(response({ ...token, scope: 'resource:read' }));
     const client = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-      'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), badScope as typeof fetch);
+      'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), badScope as typeof fetch);
     await expect(client.getVerification(record.id)).rejects.toBeInstanceOf(KaiCloudError);
     const malformed = vi.fn().mockResolvedValueOnce(response(token)).mockResolvedValue(response({ record: { status: 'passed' } }));
     const second = new KaiCloudPublicClient('https://sandbox-api.cloud.kai.com',
-      'https://sandbox-auth.cloud.kai.com/oauth/token', 'client-id', 'S'.repeat(32), malformed as typeof fetch);
+      'https://sandbox-auth.cloud.kai.com/api/public/v1/oauth/token', 'client-id', 'S'.repeat(32), malformed as typeof fetch);
     await expect(second.getVerification(record.id)).rejects.toMatchObject({ code: 'KAI_CLOUD_INVALID_RESPONSE' });
   });
 });
 
 describe('KAI Cloud integration configuration and webhook', () => {
   const configured = { NODE_ENV: 'test', KAI_CLOUD_PUBLIC_API_URL: 'http://127.0.0.1:4410',
-    KAI_CLOUD_PUBLIC_TOKEN_URL: 'http://127.0.0.1:4410/oauth/token', KAI_CLOUD_PUBLIC_CLIENT_ID: 'sandbox-client',
+    KAI_CLOUD_PUBLIC_TOKEN_URL: 'http://127.0.0.1:4410/api/public/v1/oauth/token', KAI_CLOUD_PUBLIC_CLIENT_ID: 'sandbox-client',
     KAI_CLOUD_PUBLIC_CLIENT_SECRET: 'C'.repeat(32), KAI_CLOUD_PUBLIC_WEBHOOK_SECRET: 'W'.repeat(32) } as const;
   it('is optional and fail-closed, while complete independent sandbox settings become available', () => {
     expect(loadConfig({ NODE_ENV: 'test' }).readiness.capabilities.kaiCloudPublicApi.available).toBe(false);

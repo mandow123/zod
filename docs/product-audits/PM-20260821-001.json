@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260821-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-21T02:13:13.134Z",
+  "baseCommit": "136a977fbdef0129ccdec02215f64a7fa40fc7a6",
+  "stagedDiffSha256": "60ba43ad37d8eca4c5727ad489b9f82b165bd11109d1b34f8155f1b79e5c58a4",
+  "summary": "批准将 cloud- PR #2 的公共 API 契约逐字同步到 ZOD，并更新来源记录、最小权限认证断言和客户端契约测试；不修改生产代码、迁移、移动端行为、凭据、交易或发布能力，真实沙箱闭环仍为 Draft 验收门禁。"
+}

@@ -1,7 +1,7 @@
 # KAI Cloud 公共 API 接入基线
 
 状态：阶段 2 沙箱契约；生产默认关闭
-上游参考：KAI Cloud API v1.0，代码基线 `ef656ce`，2026-08-20
+上游参考：[`mandow123/cloud-`](https://github.com/mandow123/cloud-) 的 `docs/contracts/kai-cloud-public-v1.openapi.yaml`，commit `c30f38cadc7f9030c8fb59fbf91c6182d9d4cb9c`，Git blob `70b0bc523d92706a16f5633510c68371e005f51e`；KAI Cloud API v1.0，2026-08-20
 本文件只保留脱敏后的接口结论，不复制群内原始文档。
 
 ## 结论
@@ -30,8 +30,9 @@ KAI Cloud -> 签名 Webhook -> 本项目 backend
 
 ## 安全契约
 
-- 使用 OAuth 2.0 Client Credentials 并按操作最小授权：本项目 backend 仅申请 `resource:read verification:write`；Sidecar/Agent 使用独立凭据申请 `agent:write`。
+- 使用 OAuth 2.0 Client Credentials，token endpoint 为 `/api/public/v1/oauth/token`，并按操作最小授权：本项目 backend 仅申请 `resource:read verification:write`；Sidecar/Agent 使用独立凭据申请 `agent:write`。
 - OAuth client secret 与 Webhook secret 独立，均只由服务端密钥系统注入。
+- Agent challenge 受 OAuth `agent:write` 保护；设备注册 `registerSignedDevice` 不使用 OAuth，而是一次性 challenge 加 Ed25519 证明；设备心跳 `recordSignedDeviceHeartbeat` 不使用 OAuth，而是注册设备密钥和单调 `sequence`。
 - 写入携带 16–128 位 `Idempotency-Key`；同键异载荷返回 409。
 - Webhook 使用 `x-kai-delivery-id`、Unix 秒时间戳与 `sha256=HMAC(secret, timestamp.rawBody)`；允许时钟偏差 5 分钟。
 - 未配置、401/403、超时、503、签名错误或无效响应均 fail-closed，不产生“已验证”状态。
