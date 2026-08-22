@@ -1,0 +1,5431 @@
+<!doctype html>
+<html lang="zh-CN" data-palette="sky" data-type-scale="32" data-font="source" data-hero-type="cut" data-particles="routes" data-role="buyer" data-network-state="restored">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eaf3f9">
+  <link rel="icon" href="data:,">
+  <title>Zod 移动端目标态预览</title>
+  <script>document.documentElement.classList.add("js");</script>
+  <style>
+    :root,
+    html[data-theme="light"] {
+      color-scheme: light;
+      --brand: #1976d2;
+      --brand-strong: #0d5fae;
+      --accent: #72b6ea;
+      --wash: #dceeff;
+      --wash-2: #eef6ff;
+      --wash-3: #f7fbff;
+      --review-bg: #eaf3f9;
+      --review-grid: rgba(27, 76, 112, .06);
+      --review-text: #15334a;
+      --review-muted: #5e7788;
+      --app-bg: #f5f9fc;
+      --app-bg-soft: #eaf2f7;
+      --surface: #ffffff;
+      --surface-alt: #eff6fa;
+      --text: #132b3d;
+      --muted: #5a7180;
+      --line: #c7d7e1;
+      --line-strong: #8da7b8;
+      --nav-bg: rgba(250, 253, 255, .96);
+      --paper: #ffffff;
+      --shadow: 0 28px 74px rgba(28, 67, 92, .2);
+      --soft-shadow: 0 14px 30px rgba(28, 67, 92, .11);
+      --hero-fade: #f5f9fc;
+      --focus: #f1934a;
+      --on-brand: #ffffff;
+      --illustration-fill: rgba(91, 158, 209, .12);
+      --illustration-strong: rgba(91, 158, 209, .2);
+      --splash-mid: #ffffff;
+      --splash-text: #17334a;
+      --splash-muted: #5d7384;
+      --display-font: "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+      --body-font: "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+      --utility-font: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      --display-weight: 600;
+      --copy-lead-opacity: .76;
+      --copy-body-opacity: .68;
+      --copy-soft-opacity: .60;
+      --copy-label-opacity: .62;
+      --copy-accent-opacity: .76;
+    }
+
+    :root[data-font="deng"] {
+      --display-font: "DengXian", "Noto Sans SC", sans-serif;
+      --body-font: "DengXian", "Noto Sans SC", sans-serif;
+      --display-weight: 600;
+    }
+
+    :root[data-font="native"] {
+      --display-font: "Segoe UI", "Microsoft YaHei UI", "Noto Sans SC", sans-serif;
+      --body-font: "Segoe UI", "Microsoft YaHei UI", "Noto Sans SC", sans-serif;
+      --display-weight: 600;
+    }
+
+    :root[data-font="serif"] {
+      --display-font: "Noto Serif SC", "SimSun", serif;
+      --body-font: "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+      --display-weight: 600;
+    }
+
+    :root[data-palette="breeze"],
+    html[data-theme="light"][data-palette="breeze"] {
+      --brand: #277dd6;
+      --brand-strong: #1463b5;
+      --accent: #55c8c3;
+      --wash: #ddf7f4;
+      --wash-2: #e7f4ff;
+      --wash-3: #f6fcfb;
+      --review-bg: #e7f4f3;
+      --app-bg: #f5fbfb;
+      --app-bg-soft: #e5f4f3;
+      --surface-alt: #e9f8f6;
+      --line: #c2deda;
+      --line-strong: #7ba9a7;
+      --hero-fade: #f5fbfb;
+      --illustration-fill: rgba(85, 200, 195, .12);
+      --illustration-strong: rgba(85, 200, 195, .2);
+    }
+
+    :root[data-palette="sun"],
+    html[data-theme="light"][data-palette="sun"] {
+      --brand: #2d7fe8;
+      --brand-strong: #1765c4;
+      --accent: #f5c85b;
+      --wash: #fff3c7;
+      --wash-2: #e6f1ff;
+      --wash-3: #fffdf7;
+      --review-bg: #edf4f7;
+      --app-bg: #f8fafb;
+      --app-bg-soft: #edf3f6;
+      --surface-alt: #fff9e6;
+      --line: #d7d7c9;
+      --line-strong: #a3a58e;
+      --hero-fade: #f8fafb;
+      --illustration-fill: rgba(245, 200, 91, .14);
+      --illustration-strong: rgba(245, 200, 91, .23);
+    }
+
+    :root[data-palette="cotton"],
+    html[data-theme="light"][data-palette="cotton"] {
+      --brand: #5e7fd6;
+      --brand-strong: #4565ba;
+      --accent: #aab8cb;
+      --wash: #d9e2ed;
+      --wash-2: #eff2f6;
+      --wash-3: #fcfdff;
+      --review-bg: #edf1f6;
+      --app-bg: #f8fafc;
+      --app-bg-soft: #e9eef4;
+      --surface-alt: #eef2f7;
+      --line: #cbd3de;
+      --line-strong: #929fb1;
+      --hero-fade: #f8fafc;
+      --illustration-fill: rgba(135, 155, 190, .13);
+      --illustration-strong: rgba(135, 155, 190, .22);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --brand: #5ba9ff;
+        --brand-strong: #83beff;
+        --accent: #80bced;
+        --wash: #143b5b;
+        --wash-2: #102b42;
+        --wash-3: #0a1c2b;
+        --review-bg: #071523;
+        --review-grid: rgba(139, 186, 219, .07);
+        --review-text: #f1f7fb;
+        --review-muted: #b8c9d3;
+        --app-bg: #071523;
+        --app-bg-soft: #0c2030;
+        --surface: #102638;
+        --surface-alt: #153148;
+        --text: #f4f8fb;
+        --muted: #c5d3dc;
+        --line: #38566a;
+        --line-strong: #607a8c;
+        --nav-bg: rgba(7, 21, 35, .96);
+        --paper: #102638;
+        --shadow: 0 28px 80px rgba(0, 0, 0, .48);
+        --soft-shadow: 0 16px 34px rgba(0, 0, 0, .28);
+        --hero-fade: #071523;
+        --focus: #ffb869;
+        --on-brand: #071523;
+        --illustration-fill: rgba(91, 169, 255, .16);
+        --illustration-strong: rgba(91, 169, 255, .25);
+        --splash-mid: #102638;
+        --splash-text: #f4f8fb;
+        --splash-muted: #a9bbc6;
+        --copy-lead-opacity: .92;
+        --copy-body-opacity: .86;
+        --copy-soft-opacity: .82;
+        --copy-label-opacity: .86;
+        --copy-accent-opacity: .94;
+      }
+
+      :root:not([data-theme])[data-palette="breeze"] {
+        --brand: #70b3ff;
+        --accent: #67d4cd;
+        --wash: #174442;
+        --wash-2: #123739;
+        --wash-3: #0b272c;
+        --illustration-fill: rgba(103, 212, 205, .17);
+        --illustration-strong: rgba(103, 212, 205, .27);
+      }
+
+      :root:not([data-theme])[data-palette="sun"] {
+        --brand: #6eb1ff;
+        --accent: #ffd168;
+        --wash: #403821;
+        --wash-2: #2b302e;
+        --wash-3: #162328;
+        --illustration-fill: rgba(255, 209, 104, .17);
+        --illustration-strong: rgba(255, 209, 104, .27);
+      }
+
+      :root:not([data-theme])[data-palette="cotton"] {
+        --brand: #9ab3ff;
+        --accent: #aebce8;
+        --wash: #2a3555;
+        --wash-2: #222e47;
+        --wash-3: #131f31;
+        --illustration-fill: rgba(174, 188, 232, .16);
+        --illustration-strong: rgba(174, 188, 232, .25);
+      }
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --brand: #5ba9ff;
+      --brand-strong: #83beff;
+      --accent: #80bced;
+      --wash: #143b5b;
+      --wash-2: #102b42;
+      --wash-3: #0a1c2b;
+      --review-bg: #071523;
+      --review-grid: rgba(139, 186, 219, .07);
+      --review-text: #f1f7fb;
+      --review-muted: #b8c9d3;
+      --app-bg: #071523;
+      --app-bg-soft: #0c2030;
+      --surface: #102638;
+      --surface-alt: #153148;
+      --text: #f4f8fb;
+      --muted: #c5d3dc;
+      --line: #38566a;
+      --line-strong: #607a8c;
+      --nav-bg: rgba(7, 21, 35, .96);
+      --paper: #102638;
+      --shadow: 0 28px 80px rgba(0, 0, 0, .48);
+      --soft-shadow: 0 16px 34px rgba(0, 0, 0, .28);
+      --hero-fade: #071523;
+      --focus: #ffb869;
+      --on-brand: #071523;
+      --illustration-fill: rgba(91, 169, 255, .16);
+      --illustration-strong: rgba(91, 169, 255, .25);
+      --splash-mid: #102638;
+      --splash-text: #f4f8fb;
+      --splash-muted: #a9bbc6;
+      --copy-lead-opacity: .92;
+      --copy-body-opacity: .86;
+      --copy-soft-opacity: .82;
+      --copy-label-opacity: .86;
+      --copy-accent-opacity: .94;
+    }
+
+    html[data-theme="dark"][data-palette="breeze"] {
+      --brand: #70b3ff;
+      --accent: #67d4cd;
+      --wash: #174442;
+      --wash-2: #123739;
+      --wash-3: #0b272c;
+      --illustration-fill: rgba(103, 212, 205, .17);
+      --illustration-strong: rgba(103, 212, 205, .27);
+    }
+
+    html[data-theme="dark"][data-palette="sun"] {
+      --brand: #6eb1ff;
+      --accent: #ffd168;
+      --wash: #403821;
+      --wash-2: #2b302e;
+      --wash-3: #162328;
+      --illustration-fill: rgba(255, 209, 104, .17);
+      --illustration-strong: rgba(255, 209, 104, .27);
+    }
+
+    html[data-theme="dark"][data-palette="cotton"] {
+      --brand: #9ab3ff;
+      --accent: #aebce8;
+      --wash: #2a3555;
+      --wash-2: #222e47;
+      --wash-3: #131f31;
+      --illustration-fill: rgba(174, 188, 232, .16);
+      --illustration-strong: rgba(174, 188, 232, .25);
+    }
+
+    :root[data-type-scale="30"] {
+      --page-title-size: max(28px, 7.3cqw);
+      --hero-title-size: max(30px, 7.8cqw);
+      --body-size: max(16px, 3.9cqw);
+      --module-title-size: 22px;
+    }
+
+    :root[data-type-scale="32"] {
+      --page-title-size: max(28px, 7.8cqw);
+      --hero-title-size: max(30px, 8.3cqw);
+      --body-size: max(16px, 4cqw);
+      --module-title-size: 23px;
+    }
+
+    :root[data-type-scale="34"] {
+      --page-title-size: max(28px, 8.3cqw);
+      --hero-title-size: max(31px, 8.8cqw);
+      --body-size: max(16px, 4.1cqw);
+      --module-title-size: 24px;
+    }
+
+    :root[data-type-scale="36"] {
+      --page-title-size: max(28px, 8.8cqw);
+      --hero-title-size: max(32px, 9.2cqw);
+      --body-size: max(16px, 4.25cqw);
+      --module-title-size: 25px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html {
+      scroll-behavior: auto;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        linear-gradient(var(--review-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--review-grid) 1px, transparent 1px),
+        var(--review-bg);
+      background-size: 32px 32px;
+      color: var(--review-text);
+      font-family: var(--body-font);
+      text-rendering: optimizeLegibility;
+    }
+
+    button,
+    select,
+    a {
+      font: inherit;
+      -webkit-tap-highlight-color: rgba(25, 118, 210, .12);
+      touch-action: manipulation;
+    }
+
+    button,
+    select {
+      color: inherit;
+    }
+
+    button:focus-visible,
+    select:focus-visible,
+    a:focus-visible,
+    [tabindex="-1"]:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 300;
+      top: 12px;
+      left: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #071523;
+      transform: translateY(-160%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .review-header {
+      width: min(1360px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 34px 0 22px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 28px;
+    }
+
+    .review-kicker {
+      margin: 0 0 10px;
+      color: var(--review-muted);
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .review-header h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(34px, 5vw, 64px);
+      line-height: .98;
+      letter-spacing: -.045em;
+      text-wrap: balance;
+    }
+
+    .review-header > p {
+      max-width: 450px;
+      margin: 0;
+      color: var(--review-muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .review-layout {
+      width: min(1360px, calc(100% - 36px));
+      margin: 0 auto;
+      padding-bottom: 60px;
+      display: grid;
+      grid-template-columns: minmax(520px, 1fr) 360px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .preview-stage {
+      min-height: 1040px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 78%, transparent);
+      box-shadow: var(--shadow);
+    }
+
+    .preview-toolbar {
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 10px;
+    }
+
+    .tool-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .tool-group > span,
+    .tool-group > label {
+      color: var(--review-muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .tool-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tool-button,
+    .tool-select {
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      color: var(--review-text);
+      font-size: 14px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+
+    .tool-button:hover,
+    .tool-select:hover {
+      border-color: var(--brand);
+      background: var(--wash-3);
+    }
+
+    .tool-button[aria-pressed="true"] {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: var(--on-brand);
+    }
+
+    .tool-button.palette-button {
+      min-width: 138px;
+      border-color: var(--brand);
+      background: linear-gradient(120deg, var(--wash-2), var(--wash));
+      color: var(--brand-strong);
+    }
+
+    .readout-strip {
+      flex: 1 0 100%;
+      min-height: 48px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--brand);
+      background: var(--wash-3);
+      color: var(--review-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 18px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .readout-strip strong {
+      color: var(--review-text);
+    }
+
+    .phone-wrap {
+      min-height: 928px;
+      display: grid;
+      place-items: start center;
+    }
+
+    .phone {
+      --phone-w: 411px;
+      --phone-h: 914px;
+      position: relative;
+      width: var(--phone-w);
+      height: var(--phone-h);
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 38px;
+      background: var(--app-bg);
+      color: var(--text);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, .28);
+      container-type: inline-size;
+      isolation: isolate;
+    }
+
+    .phone[data-size="393"] {
+      --phone-w: 393px;
+      --phone-h: 873px;
+    }
+
+    .phone[data-size="360"] {
+      --phone-w: 360px;
+      --phone-h: 800px;
+    }
+
+    .status-bar {
+      position: absolute;
+      z-index: 140;
+      inset: 0 0 auto;
+      height: 30px;
+      padding: 9px 18px 0;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .phone[data-route="home"] .status-bar {
+      color: #ffffff;
+      text-shadow: 0 1px 5px rgba(0, 0, 0, .72);
+    }
+
+    .phone:has(.splash:not([hidden])) .status-bar {
+      color: #15334a;
+      text-shadow: none;
+    }
+
+    .screen-scroll {
+      position: absolute;
+      inset: 0 0 82px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      background: var(--app-bg);
+      container-type: size;
+    }
+
+    .screen-scroll::-webkit-scrollbar,
+    .sub-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-main {
+      min-height: 100%;
+    }
+
+    .app-view {
+      min-height: 100cqh;
+      overflow: hidden;
+      border-bottom: 12px solid var(--app-bg-soft);
+      background: var(--app-bg);
+    }
+
+    .app-view:last-child {
+      border-bottom: 0;
+    }
+
+    .js .app-view {
+      display: none;
+    }
+
+    .js .app-view.is-active {
+      display: block;
+      animation: page-enter 220ms ease-out both;
+    }
+
+    @keyframes page-enter {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page-head {
+      min-block-size: var(--zone-head);
+      padding: 43px 20px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+    }
+
+    .page-head h2 {
+      margin: 0;
+      font-size: var(--page-title-size);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.02em;
+      text-wrap: balance;
+    }
+
+    .page-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: var(--body-size);
+      line-height: 1.48;
+      text-wrap: pretty;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      line-height: 1.15;
+      letter-spacing: -.015em;
+      text-wrap: balance;
+    }
+
+    .body-copy {
+      color: var(--muted);
+      font-size: var(--body-size);
+      line-height: 1.5;
+    }
+
+    .zod-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 22px;
+      font-weight: 780;
+      letter-spacing: -.03em;
+    }
+
+    .zod-mark::before {
+      width: 13px;
+      height: 13px;
+      border-radius: 50% 50% 3px 50%;
+      background: var(--brand);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .home-view[data-layout="info"] {
+      --home-hero: 36cqh;
+      --home-account: 12cqh;
+      --home-tasks: 32cqh;
+      --home-resource: 20cqh;
+    }
+
+    .home-view[data-layout="balanced"] {
+      --home-hero: 42cqh;
+      --home-account: 10cqh;
+      --home-tasks: 30cqh;
+      --home-resource: 18cqh;
+    }
+
+    .home-view[data-layout="focus"] {
+      --home-hero: 50cqh;
+      --home-account: 10cqh;
+      --home-tasks: 26cqh;
+      --home-resource: 14cqh;
+    }
+
+    .home-hero {
+      position: relative;
+      min-block-size: var(--home-hero);
+      padding: 47px 20px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      color: #ffffff;
+      background: #071523;
+    }
+
+    .hero-media {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: linear-gradient(145deg, #0b263c, #050b11 72%);
+    }
+
+    .hero-poster,
+    .hero-media video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero-poster {
+      background:
+        linear-gradient(120deg, rgba(5, 13, 20, .42), rgba(5, 13, 20, .08)),
+        url("./server-room-poster.jpg") center / cover no-repeat;
+    }
+
+    .hero-media video {
+      filter: saturate(.72) contrast(1.06);
+    }
+
+    .hero-media::after {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(3, 10, 16, .1), rgba(3, 10, 16, .38) 56%, rgba(3, 10, 16, .84) 88%, var(--hero-fade) 100%),
+        linear-gradient(90deg, rgba(3, 10, 16, .7), rgba(3, 10, 16, .05) 85%);
+      content: "";
+    }
+
+    .hero-top,
+    .hero-copy {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .hero-top .zod-mark::before {
+      background: #6cc4ff;
+      box-shadow: 0 0 18px rgba(108, 196, 255, .66);
+    }
+
+    .media-toggle {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 50%;
+      background: rgba(5, 16, 25, .64);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    .media-toggle:hover {
+      background: rgba(12, 45, 68, .8);
+    }
+
+    .media-toggle svg {
+      width: 21px;
+      height: 21px;
+      fill: currentColor;
+    }
+
+    .hero-copy {
+      padding-top: 42px;
+    }
+
+    .hero-copy h2 {
+      margin: 0;
+      font-size: var(--hero-title-size);
+      font-weight: 700;
+      line-height: 1.04;
+      letter-spacing: -.025em;
+    }
+
+    .hero-copy h2 span {
+      display: block;
+    }
+
+    .hero-copy p {
+      max-width: 342px;
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, .82);
+      font-size: var(--body-size);
+      line-height: 1.45;
+    }
+
+    .hero-signal {
+      position: absolute;
+      z-index: 3;
+      left: 20px;
+      right: 20px;
+      bottom: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, .3);
+      overflow: hidden;
+    }
+
+    .hero-signal::after {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 32%;
+      background: #ffffff;
+      content: "";
+      animation: signal-pass 3.4s ease-in-out infinite;
+    }
+
+    @keyframes signal-pass {
+      0%, 100% { transform: translateX(-105%); }
+      58% { transform: translateX(315%); }
+    }
+
+    .account-zone {
+      min-block-size: var(--home-account);
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      background: var(--app-bg);
+    }
+
+    .account-zone small {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .account-zone strong {
+      display: block;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      line-height: 1.15;
+    }
+
+    .pill-link {
+      min-height: 48px;
+      padding: 0 17px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .pill-link:hover {
+      border-color: var(--brand);
+      background: var(--wash-2);
+      color: var(--brand-strong);
+    }
+
+    .task-zone {
+      min-block-size: var(--home-tasks);
+      padding: 14px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-content: stretch;
+    }
+
+    .task-link {
+      min-height: 92px;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 680;
+      line-height: 1.22;
+    }
+
+    .task-link:hover,
+    .task-link:focus-visible {
+      border-color: var(--brand);
+      background: var(--wash-2);
+    }
+
+    .task-link:first-child {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: var(--on-brand);
+    }
+
+    .ui-icon {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    .ui-icon .icon-soft {
+      fill: var(--wash);
+      stroke: none;
+    }
+
+    .task-link:first-child .ui-icon .icon-soft {
+      fill: rgba(255, 255, 255, .18);
+    }
+
+    .resource-zone {
+      min-block-size: var(--home-resource);
+      padding: 12px 20px 18px;
+    }
+
+    .resource-link {
+      min-height: 100%;
+      padding: 17px 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(120deg, var(--surface-alt), var(--surface));
+      color: var(--text);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .resource-link:hover {
+      border-color: var(--brand);
+    }
+
+    .resource-link h3 {
+      margin: 0;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      letter-spacing: -.015em;
+    }
+
+    .resource-link p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .resource-link > span {
+      color: var(--brand);
+      font-size: 28px;
+    }
+
+    .market-view[data-layout="info"] {
+      --zone-head: 20cqh;
+      --market-carousel: 44cqh;
+      --market-controls: 8cqh;
+      --market-gateway: 28cqh;
+    }
+
+    .market-view[data-layout="balanced"] {
+      --zone-head: 18cqh;
+      --market-carousel: 52cqh;
+      --market-controls: 8cqh;
+      --market-gateway: 22cqh;
+    }
+
+    .market-view[data-layout="focus"] {
+      --zone-head: 16cqh;
+      --market-carousel: 60cqh;
+      --market-controls: 8cqh;
+      --market-gateway: 16cqh;
+    }
+
+    .market-zone {
+      min-block-size: var(--market-carousel);
+      padding: 0 18px;
+      display: flex;
+    }
+
+    .market-stage {
+      flex: 1;
+      min-height: 330px;
+      padding: 10px;
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .market-rail {
+      height: 100%;
+      min-height: 310px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+    }
+
+    .market-slide {
+      min-height: 100%;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      background:
+        radial-gradient(circle at 82% 15%, var(--illustration-strong), transparent 28%),
+        linear-gradient(145deg, var(--wash-2), var(--surface));
+      color: var(--text);
+    }
+
+    .js .market-slide {
+      display: none;
+    }
+
+    .js .market-slide.is-current {
+      display: grid;
+      animation: slide-enter 220ms ease-out both;
+    }
+
+    @keyframes slide-enter {
+      from { opacity: 0; transform: translateX(12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .slide-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .market-mock {
+      align-self: center;
+      min-height: 164px;
+      padding: 14px;
+      border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+      border-radius: 13px;
+      background: color-mix(in srgb, var(--surface) 84%, transparent);
+      display: grid;
+      grid-template-columns: 1fr 76px;
+      gap: 12px;
+    }
+
+    .mock-lines {
+      display: grid;
+      align-content: center;
+      gap: 11px;
+    }
+
+    .mock-lines i {
+      height: 12px;
+      border-radius: 999px;
+      background: var(--wash);
+    }
+
+    .mock-lines i:nth-child(2) { width: 76%; }
+    .mock-lines i:nth-child(3) { width: 58%; }
+
+    .mock-figure {
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, transparent 47%, color-mix(in srgb, var(--brand) 20%, transparent) 48% 52%, transparent 53%),
+        linear-gradient(0deg, var(--illustration-fill), var(--wash-2));
+      position: relative;
+    }
+
+    .mock-figure::after {
+      position: absolute;
+      inset: 18px 14px;
+      border: 2px solid var(--brand);
+      border-radius: 7px;
+      opacity: .45;
+      content: "";
+    }
+
+    .slide-copy h3 {
+      margin: 0;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      letter-spacing: -.015em;
+    }
+
+    .slide-copy p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: var(--body-size);
+      line-height: 1.45;
+    }
+
+    .market-controls-zone {
+      min-block-size: var(--market-controls);
+      padding: 7px 18px;
+      display: grid;
+      grid-template-columns: 48px 1fr 48px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .carousel-button {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .carousel-button:hover {
+      border-color: var(--brand);
+      color: var(--brand);
+    }
+
+    .carousel-button svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+    }
+
+    .carousel-dot {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .carousel-dot::before {
+      width: 18px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--line-strong);
+      content: "";
+    }
+
+    .carousel-dot[aria-pressed="true"]::before {
+      background: var(--brand);
+    }
+
+    .gateway-zone {
+      min-block-size: var(--gateway-height);
+      padding: 12px 18px 18px;
+      display: flex;
+    }
+
+    .secondary-gateway {
+      --gateway-fill: var(--illustration-fill);
+      width: 100%;
+      min-height: 116px;
+      padding: 16px 17px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(120deg, var(--wash-3), var(--surface));
+      color: var(--text);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 104px;
+      gap: 12px;
+      align-items: center;
+      text-decoration: none;
+      box-shadow: var(--soft-shadow);
+      transform: translateY(0);
+      transition: transform 250ms ease;
+      transform-origin: center;
+    }
+
+    .secondary-gateway:hover,
+    .secondary-gateway:focus-visible,
+    .secondary-gateway:focus-within {
+      --gateway-fill: var(--illustration-strong);
+      border-color: var(--brand);
+      transform: translateY(-4px);
+    }
+
+    .secondary-gateway:active {
+      transform: translateY(-1px);
+    }
+
+    .gateway-copy {
+      min-width: 0;
+    }
+
+    .gateway-copy h3 {
+      margin: 0;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      line-height: 1.15;
+      letter-spacing: -.015em;
+    }
+
+    .gateway-copy p {
+      margin: 7px 0 10px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .gateway-action {
+      color: var(--brand-strong);
+      font-size: 16px;
+      font-weight: 720;
+    }
+
+    .gateway-illustration {
+      width: 104px;
+      height: 90px;
+      overflow: visible;
+      opacity: .84;
+      transition: opacity 250ms ease;
+    }
+
+    .gateway-illustration .ill-soft {
+      fill: var(--gateway-fill);
+    }
+
+    .gateway-illustration .ill-line {
+      fill: none;
+      stroke: var(--brand);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2.2;
+      opacity: .7;
+    }
+
+    .gateway-illustration g {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+
+    .secondary-gateway:hover .gateway-illustration,
+    .secondary-gateway:focus-visible .gateway-illustration,
+    .secondary-gateway:focus-within .gateway-illustration {
+      opacity: 1;
+    }
+
+    .market-gateway-zone {
+      --gateway-height: var(--market-gateway);
+    }
+
+    .publish-view[data-layout="info"] {
+      --zone-head: 20cqh;
+      --publish-flow: 44cqh;
+      --publish-action: 12cqh;
+      --publish-gateway: 24cqh;
+    }
+
+    .publish-view[data-layout="balanced"] {
+      --zone-head: 18cqh;
+      --publish-flow: 54cqh;
+      --publish-action: 11cqh;
+      --publish-gateway: 17cqh;
+    }
+
+    .publish-view[data-layout="focus"] {
+      --zone-head: 16cqh;
+      --publish-flow: 62cqh;
+      --publish-action: 10cqh;
+      --publish-gateway: 12cqh;
+    }
+
+    .publish-flow-zone {
+      min-block-size: var(--publish-flow);
+      padding: 0 20px;
+      display: flex;
+    }
+
+    .verification-flow {
+      flex: 1;
+      padding: 20px;
+      border-top: 6px solid var(--brand);
+      background: var(--surface);
+      box-shadow: 10px 10px 0 var(--wash);
+    }
+
+    .flow-intro {
+      margin-bottom: 12px;
+    }
+
+    .flow-intro strong {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--brand-strong);
+      font-size: 16px;
+    }
+
+    .flow-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: flow;
+    }
+
+    .flow-list li {
+      position: relative;
+      min-height: 86px;
+      padding: 14px 0 14px 55px;
+      border-top: 1px solid var(--line);
+      counter-increment: flow;
+    }
+
+    .flow-list li::before {
+      position: absolute;
+      top: 15px;
+      left: 0;
+      width: 38px;
+      height: 38px;
+      border: 2px solid var(--brand);
+      border-radius: 11px;
+      color: var(--brand-strong);
+      display: grid;
+      place-items: center;
+      content: counter(flow, decimal-leading-zero);
+      font-size: 16px;
+      font-weight: 750;
+    }
+
+    .flow-list h3 {
+      margin: 0;
+      font-size: 19px;
+      font-weight: 680;
+    }
+
+    .flow-list p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .publish-action-zone {
+      min-block-size: var(--publish-action);
+      padding: 11px 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    .primary-button {
+      width: 100%;
+      min-height: 56px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--brand);
+      color: var(--on-brand);
+      font-size: 17px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+
+    .primary-button:hover {
+      background: var(--brand-strong);
+    }
+
+    .publish-gateway-zone {
+      --gateway-height: var(--publish-gateway);
+    }
+
+    .messages-view[data-layout="info"] {
+      --zone-head: 20cqh;
+      --message-receipt: 42cqh;
+      --message-pending: 22cqh;
+      --message-action: 16cqh;
+    }
+
+    .messages-view[data-layout="balanced"] {
+      --zone-head: 18cqh;
+      --message-receipt: 50cqh;
+      --message-pending: 18cqh;
+      --message-action: 14cqh;
+    }
+
+    .messages-view[data-layout="focus"] {
+      --zone-head: 16cqh;
+      --message-receipt: 58cqh;
+      --message-pending: 14cqh;
+      --message-action: 12cqh;
+    }
+
+    .receipt-zone {
+      min-block-size: var(--message-receipt);
+      padding: 4px 20px 12px;
+      display: flex;
+    }
+
+    .receipt {
+      position: relative;
+      flex: 1;
+      padding: 20px;
+      background: var(--paper);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .receipt::before,
+    .receipt::after {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 9px;
+      background: radial-gradient(circle at 5px 0, transparent 5px, var(--paper) 5.8px) repeat-x;
+      background-size: 18px 9px;
+      content: "";
+    }
+
+    .receipt::before {
+      top: -8px;
+      transform: rotate(180deg);
+    }
+
+    .receipt::after {
+      bottom: -8px;
+    }
+
+    .receipt-head {
+      padding-bottom: 13px;
+      border-bottom: 2px dashed var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .receipt-head span {
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .message-timeline {
+      margin: 0;
+      padding: 4px 0 0;
+      list-style: none;
+    }
+
+    .message-timeline li {
+      position: relative;
+      padding: 13px 0 13px 30px;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .message-timeline li::before {
+      position: absolute;
+      top: 19px;
+      left: 2px;
+      width: 10px;
+      height: 10px;
+      border: 3px solid var(--paper);
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 0 2px var(--brand);
+      content: "";
+    }
+
+    .message-timeline h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 680;
+    }
+
+    .message-timeline p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .pending-zone {
+      --gateway-height: var(--message-pending);
+    }
+
+    .message-action-zone {
+      min-block-size: var(--message-action);
+      padding: 12px 20px 18px;
+      display: flex;
+      align-items: start;
+    }
+
+    .outline-button {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 18px;
+      border: 1px solid var(--brand);
+      border-radius: 14px;
+      background: transparent;
+      color: var(--brand-strong);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 17px;
+      font-weight: 710;
+    }
+
+    .outline-button:hover {
+      background: var(--wash-2);
+    }
+
+    .profile-view[data-layout="info"] {
+      --zone-head: 20cqh;
+      --profile-gate: 40cqh;
+      --profile-settings: 40cqh;
+    }
+
+    .profile-view[data-layout="balanced"] {
+      --zone-head: 18cqh;
+      --profile-gate: 48cqh;
+      --profile-settings: 34cqh;
+    }
+
+    .profile-view[data-layout="focus"] {
+      --zone-head: 16cqh;
+      --profile-gate: 56cqh;
+      --profile-settings: 28cqh;
+    }
+
+    .role-zone {
+      min-block-size: var(--profile-gate);
+      padding: 0 16px;
+      display: flex;
+    }
+
+    .role-gate {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      border-radius: 22px;
+      background: #0a1a28;
+      color: #ffffff;
+      box-shadow: var(--soft-shadow);
+    }
+
+    .role-door {
+      position: relative;
+      min-width: 0;
+      padding: 20px 17px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .role-door + .role-door {
+      border-left: 1px solid rgba(255, 255, 255, .28);
+      background: var(--brand);
+      color: var(--on-brand);
+    }
+
+    .role-door::after {
+      position: absolute;
+      right: -38px;
+      bottom: -42px;
+      width: 140px;
+      height: 140px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      opacity: .24;
+      content: "";
+    }
+
+    .role-door > span {
+      position: relative;
+      z-index: 1;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .role-door h3 {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-size: var(--module-title-size);
+      font-weight: 680;
+      line-height: 1.14;
+      letter-spacing: -.015em;
+    }
+
+    .role-door p {
+      position: relative;
+      z-index: 1;
+      margin: 8px 0 0;
+      color: currentColor;
+      font-size: 16px;
+      line-height: 1.4;
+      opacity: .74;
+    }
+
+    .role-door .role-arrow {
+      position: relative;
+      z-index: 1;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .role-door:hover,
+    .role-door:focus-visible {
+      box-shadow: inset 0 0 0 2px currentColor;
+    }
+
+    .settings-zone {
+      min-block-size: var(--profile-settings);
+      padding: 16px 20px 22px;
+    }
+
+    .profile-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .profile-list a {
+      min-height: 64px;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      text-decoration: none;
+      font-size: var(--body-size);
+      font-weight: 650;
+    }
+
+    .profile-list a:hover {
+      color: var(--brand-strong);
+    }
+
+    .profile-list span {
+      color: var(--brand);
+      font-size: 22px;
+    }
+
+    /* Iteration 03: typography hierarchy and task-specific composition */
+    .phone {
+      font-family: var(--body-font);
+      font-weight: 400;
+    }
+
+    .phone h1,
+    .phone h2,
+    .phone h3,
+    .hero-copy h2,
+    .page-head h2,
+    .section-title,
+    .splash-copy h2 {
+      font-family: var(--display-font);
+      font-weight: var(--display-weight);
+    }
+
+    .page-head h2,
+    .hero-copy h2 {
+      font-weight: var(--display-weight);
+    }
+
+    .page-head p,
+    .hero-copy p {
+      font-weight: 400;
+      opacity: .76;
+    }
+
+    .zod-mark,
+    .account-zone strong,
+    .resource-link h3,
+    .slide-copy h3,
+    .gateway-copy h3,
+    .flow-list h3,
+    .message-timeline h3,
+    .receipt-head h3 {
+      font-weight: 600;
+    }
+
+    .account-zone small,
+    .slide-label,
+    .flow-intro strong,
+    .receipt-head span {
+      font-weight: 400;
+      opacity: .62;
+    }
+
+    .pill-link,
+    .primary-button,
+    .outline-button,
+    .gateway-action,
+    .media-toggle,
+    .splash-skip {
+      font-weight: 600;
+    }
+
+    .resource-link p,
+    .slide-copy p,
+    .gateway-copy p,
+    .flow-list p,
+    .message-timeline p {
+      font-weight: 400;
+      opacity: .68;
+    }
+
+    .gateway-copy p {
+      opacity: .6;
+    }
+
+    .gateway-action {
+      opacity: .96;
+    }
+
+    .flow-showcase {
+      position: relative;
+      min-block-size: var(--home-tasks);
+      padding: 20px;
+      border-block: 1px solid var(--line);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(116px, 1fr);
+      gap: 12px;
+      background:
+        radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 32%),
+        linear-gradient(135deg, var(--surface-alt), color-mix(in srgb, var(--wash-2) 70%, var(--surface)));
+    }
+
+    .flow-showcase::before {
+      position: absolute;
+      right: -44px;
+      bottom: -78px;
+      width: 210px;
+      height: 210px;
+      border: 1px solid color-mix(in srgb, var(--brand) 26%, transparent);
+      border-radius: 50%;
+      content: "";
+    }
+
+    .flow-copy {
+      position: relative;
+      z-index: 1;
+      max-width: 320px;
+    }
+
+    .flow-kicker {
+      color: var(--brand-strong);
+      font-family: var(--utility-font);
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: .04em;
+    }
+
+    .flow-copy h3 {
+      margin: 7px 0 0;
+      font-size: var(--module-title-size);
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: -.015em;
+    }
+
+    .flow-copy p {
+      max-width: 306px;
+      margin: 8px 0 0;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.45;
+      opacity: .62;
+    }
+
+    .flow-track {
+      position: relative;
+      z-index: 1;
+      align-self: end;
+      min-width: 0;
+      min-height: 106px;
+      padding-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: end;
+    }
+
+    .flow-track::before {
+      position: absolute;
+      left: 15%;
+      right: 15%;
+      top: 43px;
+      height: 2px;
+      background: color-mix(in srgb, var(--brand) 35%, var(--line));
+      content: "";
+    }
+
+    .flow-track::after {
+      position: absolute;
+      top: 38px;
+      left: 12%;
+      width: 12px;
+      height: 12px;
+      border: 3px solid var(--surface);
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent);
+      content: "";
+      opacity: 0;
+    }
+
+    .home-view.is-active .flow-track::after {
+      animation: route-flow-pass 1.8s 260ms cubic-bezier(.2, .7, .2, 1) 1 forwards;
+    }
+
+    @keyframes route-flow-pass {
+      0% { left: 12%; opacity: 0; }
+      12% { opacity: 1; }
+      88% { opacity: 1; }
+      100% { left: 82%; opacity: 0; }
+    }
+
+    .flow-step {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .flow-step:nth-child(2) {
+      transform: translateY(-14px);
+    }
+
+    .flow-node {
+      width: 52px;
+      height: 52px;
+      border: 1px solid color-mix(in srgb, var(--brand) 46%, var(--line));
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--surface) 82%, var(--wash));
+      color: var(--brand-strong);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 18px color-mix(in srgb, var(--brand) 10%, transparent);
+    }
+
+    .flow-node svg {
+      width: 25px;
+      height: 25px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+
+    .flow-step strong {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+
+    .flow-step small {
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.2;
+      opacity: .72;
+    }
+
+    .role-zone {
+      padding-inline: 18px;
+    }
+
+    .role-gate {
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      overflow: visible;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .role-door,
+    .role-door + .role-door {
+      min-width: 0;
+      min-height: 146px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background:
+        linear-gradient(115deg, color-mix(in srgb, var(--surface) 86%, var(--wash-2)), var(--surface));
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      box-shadow: var(--soft-shadow);
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .role-door + .role-door {
+      border-left: 1px solid var(--line);
+      background:
+        linear-gradient(115deg, color-mix(in srgb, var(--wash) 52%, var(--surface)), color-mix(in srgb, var(--surface) 90%, var(--wash-2)));
+    }
+
+    .role-door::after {
+      display: none;
+    }
+
+    .role-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+      color: var(--brand-strong);
+      display: grid;
+      place-items: center;
+    }
+
+    .role-door + .role-door .role-icon {
+      background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+    }
+
+    .role-icon svg {
+      width: 30px;
+      height: 30px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+
+    .role-copy {
+      min-width: 0;
+    }
+
+    .role-label {
+      display: block;
+      color: var(--brand-strong);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.2;
+      opacity: .76;
+    }
+
+    .role-door h3 {
+      margin-top: 6px;
+      color: var(--text);
+      font-size: var(--module-title-size);
+      font-weight: 600;
+      line-height: 1.12;
+    }
+
+    .role-door p {
+      margin-top: 7px;
+      color: var(--text);
+      font-weight: 400;
+      opacity: .58;
+    }
+
+    .role-door .role-arrow {
+      color: var(--brand-strong);
+      font-family: var(--utility-font);
+      font-size: 26px;
+      font-weight: 400;
+      opacity: .88;
+    }
+
+    .role-door:hover,
+    .role-door:focus-visible {
+      border-color: var(--brand);
+      box-shadow: var(--soft-shadow);
+      transform: translateY(-2px);
+    }
+
+    .profile-list a {
+      font-weight: 500;
+    }
+
+    .nav-link {
+      font-weight: 400;
+    }
+
+    .nav-link[aria-current="page"] {
+      font-weight: 600;
+    }
+
+    .splash-copy h2 {
+      font-weight: var(--display-weight);
+    }
+
+    .splash-copy p {
+      font-weight: 400;
+      opacity: .74;
+    }
+
+    .splash-copy .splash-en {
+      font-weight: 500;
+      opacity: .86;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .home-view.is-active .flow-track::after {
+        animation: none;
+        opacity: .58;
+        transform: translateX(250%);
+      }
+
+      .role-door {
+        transition: none;
+      }
+    }
+
+    .bottom-nav {
+      position: absolute;
+      z-index: 80;
+      inset: auto 0 0;
+      height: 82px;
+      padding: 6px max(7px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left));
+      border-top: 1px solid var(--line);
+      background: var(--nav-bg);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      backdrop-filter: blur(16px);
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .phone[data-subview] .bottom-nav {
+      opacity: 0;
+      transform: translateY(100%);
+      pointer-events: none;
+    }
+
+    .nav-link {
+      min-width: 0;
+      min-height: 64px;
+      border-radius: 15px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1;
+    }
+
+    .nav-link:hover {
+      background: var(--wash-3);
+      color: var(--brand-strong);
+    }
+
+    .nav-link svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    .nav-link .nav-soft {
+      fill: var(--illustration-fill);
+      stroke: none;
+    }
+
+    .nav-link[aria-current="page"] {
+      background: var(--wash-2);
+      color: var(--brand-strong);
+      font-weight: 760;
+    }
+
+    .nav-link[aria-current="page"] .nav-soft {
+      fill: var(--illustration-strong);
+    }
+
+    .splash {
+      position: absolute;
+      z-index: 120;
+      inset: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent) 25%, transparent), transparent 35%),
+        linear-gradient(150deg, var(--wash-2), var(--splash-mid) 62%, var(--wash));
+      color: var(--splash-text);
+      display: none;
+      grid-template-rows: 30% 50% 20%;
+    }
+
+    .js .splash {
+      display: grid;
+    }
+
+    .splash.is-leaving {
+      animation: splash-out 240ms ease forwards;
+    }
+
+    @keyframes splash-out {
+      to { opacity: 0; }
+    }
+
+    .splash-skip {
+      position: absolute;
+      z-index: 3;
+      top: 35px;
+      right: 18px;
+      min-width: 58px;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid color-mix(in srgb, var(--splash-text) 28%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--splash-mid) 68%, transparent);
+      color: var(--splash-text);
+      font-size: 16px;
+      font-weight: 680;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    .splash-copy {
+      align-self: end;
+      padding: 0 28px 16px;
+      opacity: 0;
+    }
+
+    .splash.is-running .splash-copy {
+      animation: splash-copy-in 600ms 180ms ease-out forwards;
+    }
+
+    @keyframes splash-copy-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .splash-copy h2 {
+      margin: 0;
+      font-size: max(34px, 9cqw);
+      font-weight: 680;
+      line-height: 1.14;
+      letter-spacing: -.025em;
+    }
+
+    .splash-copy h2 span {
+      display: block;
+      background: linear-gradient(90deg, var(--brand-strong), color-mix(in srgb, var(--brand) 72%, #8567d8));
+      background-clip: text;
+      color: transparent;
+    }
+
+    .splash-copy p {
+      margin: 14px 0 0;
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .splash-copy .splash-en {
+      margin-top: 8px;
+      color: var(--brand-strong);
+      font-size: 16px;
+      font-weight: 650;
+      letter-spacing: .08em;
+    }
+
+    .splash-figure {
+      width: 100%;
+      height: 100%;
+      padding: 0 15px;
+      opacity: 0;
+    }
+
+    .splash.is-running .splash-figure {
+      animation: splash-figure-in 760ms 480ms ease-out forwards;
+    }
+
+    @keyframes splash-figure-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .splash-figure .node-soft {
+      fill: color-mix(in srgb, var(--brand) 12%, var(--splash-mid));
+      stroke: color-mix(in srgb, var(--brand) 34%, var(--splash-mid));
+      stroke-width: 1.5;
+    }
+
+    .splash-figure .node-line {
+      fill: none;
+      stroke: color-mix(in srgb, var(--brand) 55%, var(--splash-mid));
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    .splash-figure .signal-dot {
+      fill: var(--brand);
+      opacity: 0;
+    }
+
+    .splash.is-running .signal-dot {
+      animation: splash-signal 680ms 1360ms ease-in-out forwards;
+    }
+
+    @keyframes splash-signal {
+      0% { opacity: 0; transform: translateX(-30px); }
+      30% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(96px); }
+    }
+
+    .splash-brand {
+      padding: 10px 28px max(28px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+    }
+
+    .splash.is-running .splash-brand {
+      animation: splash-brand-in 480ms 1060ms ease-out forwards;
+    }
+
+    @keyframes splash-brand-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .splash-brand strong {
+      font-size: 24px;
+      font-weight: 780;
+      letter-spacing: -.03em;
+    }
+
+    .splash-brand span {
+      color: var(--splash-muted);
+      font-size: 16px;
+    }
+
+    .subview {
+      position: absolute;
+      z-index: 90;
+      inset: 0;
+      background: var(--app-bg);
+      color: var(--text);
+      animation: page-enter 220ms ease-out both;
+    }
+
+    .sub-scroll {
+      position: absolute;
+      inset: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      container-type: size;
+    }
+
+    .sub-head {
+      min-height: 16cqh;
+      padding: 40px 20px 14px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .sub-back {
+      min-width: 56px;
+      min-height: 48px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .sub-head h2 {
+      margin: 0;
+      font-size: var(--page-title-size);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.02em;
+    }
+
+    .sub-illustration {
+      min-height: 24cqh;
+      margin: 0 20px;
+      border-radius: 22px;
+      background: linear-gradient(145deg, var(--wash-2), var(--surface));
+      display: grid;
+      place-items: center;
+    }
+
+    .sub-illustration svg {
+      width: min(210px, 58cqw);
+      height: 170px;
+    }
+
+    .sub-content {
+      min-height: 44cqh;
+      padding: 22px 20px;
+    }
+
+    .field-list,
+    .check-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .field-list li,
+    .check-list li {
+      min-height: 66px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .field-list strong,
+    .check-list strong {
+      font-size: 17px;
+      font-weight: 680;
+    }
+
+    .field-list span,
+    .check-list span {
+      color: var(--muted);
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .sub-action {
+      min-height: 16cqh;
+      padding: 14px 20px 24px;
+    }
+
+    #sub-verification .sub-head {
+      min-height: 18cqh;
+    }
+
+    #sub-verification .sub-content {
+      min-height: 43cqh;
+    }
+
+    #sub-verification .sub-action {
+      min-height: 15cqh;
+    }
+
+    .drawer-layer {
+      position: absolute;
+      z-index: 110;
+      inset: 0;
+      background: rgba(3, 13, 21, .46);
+      display: flex;
+      align-items: end;
+      animation: drawer-fade 220ms ease-out both;
+    }
+
+    @keyframes drawer-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .drawer-sheet {
+      width: 100%;
+      min-height: 68%;
+      max-height: 78%;
+      padding: 14px 20px max(22px, env(safe-area-inset-bottom));
+      border-radius: 28px 28px 0 0;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 -18px 50px rgba(0, 0, 0, .2);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      animation: drawer-up 240ms ease-out both;
+    }
+
+    @keyframes drawer-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .drawer-handle {
+      width: 44px;
+      height: 5px;
+      margin: 0 auto 16px;
+      border-radius: 999px;
+      background: var(--line-strong);
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .drawer-head h2 {
+      margin: 0;
+      font-size: var(--page-title-size);
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .drawer-close {
+      min-width: 54px;
+      min-height: 46px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-alt);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .drawer-visual {
+      height: 190px;
+      margin: 18px 0;
+      border-radius: 20px;
+      background: var(--wash-2);
+      display: grid;
+      place-items: center;
+    }
+
+    .drawer-visual svg {
+      width: 180px;
+      height: 140px;
+    }
+
+    .drawer-sheet p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: var(--body-size);
+      line-height: 1.5;
+    }
+
+    .live-region {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    .design-notes {
+      position: sticky;
+      top: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .note-panel {
+      padding: 21px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .note-panel h2 {
+      margin: 0 0 12px;
+      font-size: 21px;
+      letter-spacing: -.025em;
+    }
+
+    .note-panel p,
+    .note-panel li {
+      color: var(--review-muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .note-panel p {
+      margin: 0;
+    }
+
+    .note-panel ul {
+      margin: 0;
+      padding-left: 21px;
+    }
+
+    .note-panel li + li {
+      margin-top: 7px;
+    }
+
+    .state-list {
+      display: grid;
+      gap: 0;
+    }
+
+    .state-list div {
+      padding: 11px 0;
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 12px;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .state-list span {
+      color: var(--review-muted);
+    }
+
+    /* Final weight guard: readable hierarchy, never blanket bold */
+    .phone h2,
+    .phone h3 {
+      font-family: var(--display-font);
+      font-weight: var(--display-weight);
+    }
+
+    .phone p,
+    .phone small {
+      font-weight: 400;
+    }
+
+    .phone a,
+    .phone button {
+      font-weight: 500;
+    }
+
+    .phone strong,
+    .phone .pill-link,
+    .phone .primary-button,
+    .phone .outline-button,
+    .phone .gateway-action {
+      font-weight: 600;
+    }
+
+    .phone .nav-link {
+      font-weight: 400;
+    }
+
+    .phone .nav-link[aria-current="page"] {
+      font-weight: 600;
+    }
+
+    .phone .splash-copy h2 {
+      font-weight: var(--display-weight);
+    }
+
+    .phone .splash-copy p {
+      font-weight: 400;
+      opacity: .74;
+    }
+
+    .phone .splash-copy .splash-en,
+    .phone .splash-skip {
+      font-weight: 500;
+    }
+
+
+    /* Iteration 04: readable dark hierarchy, tap hold, hero lettering */
+    .phone :is(.page-head p, .hero-copy p) {
+      opacity: var(--copy-lead-opacity);
+    }
+
+    .phone :is(.resource-link p, .slide-copy p, .flow-list p, .message-timeline p, .flow-step small) {
+      opacity: var(--copy-body-opacity);
+    }
+
+    .phone :is(.gateway-copy p, .flow-copy p, .role-door p) {
+      opacity: var(--copy-soft-opacity);
+    }
+
+    .phone :is(.account-zone small, .slide-label, .flow-intro strong, .receipt-head span) {
+      opacity: var(--copy-label-opacity);
+    }
+
+    .phone .role-label {
+      opacity: var(--copy-accent-opacity);
+    }
+
+    .phone .hero-copy h2 {
+      position: relative;
+      width: fit-content;
+      max-width: 100%;
+      color: #ffffff;
+      font-synthesis: none;
+      text-wrap: balance;
+      isolation: isolate;
+    }
+
+    .phone .hero-copy h2 span {
+      width: max-content;
+      max-width: 100%;
+    }
+
+    .phone .hero-copy h2::before,
+    .phone .hero-copy h2::after {
+      position: absolute;
+      pointer-events: none;
+      content: "";
+    }
+
+    html[data-hero-type="cut"] .phone .hero-copy h2 {
+      padding-left: 13px;
+      font-family: "SimHei", "Source Han Sans SC", sans-serif;
+      font-weight: 700;
+      letter-spacing: -.055em;
+      line-height: .98;
+      text-shadow: 0 3px 20px rgba(0, 0, 0, .82);
+    }
+
+    html[data-hero-type="cut"] .phone .hero-copy h2::before {
+      z-index: -1;
+      left: 0;
+      top: 5%;
+      width: 5px;
+      height: 90%;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #66c8ff, var(--brand));
+      transform: skewY(-14deg);
+    }
+
+    html[data-hero-type="cut"] .phone .hero-copy h2 span:first-child {
+      font-size: .88em;
+    }
+
+    html[data-hero-type="cut"] .phone .hero-copy h2 span:last-child {
+      margin-top: .08em;
+      color: #ffffff;
+      font-size: 1.22em;
+      letter-spacing: .05em;
+      text-shadow:
+        2px 2px 0 color-mix(in srgb, var(--brand) 82%, #ffffff),
+        0 4px 22px rgba(0, 0, 0, .9);
+    }
+
+    html[data-hero-type="outline"] .phone .hero-copy h2 {
+      font-family: "Source Han Sans SC", "Noto Sans SC", sans-serif;
+      font-weight: 700;
+      letter-spacing: -.025em;
+      line-height: 1.03;
+      -webkit-text-stroke: 1px color-mix(in srgb, var(--brand) 72%, #ffffff);
+      paint-order: stroke fill;
+      text-shadow:
+        0 0 2px rgba(255, 255, 255, .6),
+        0 4px 22px rgba(0, 0, 0, .92);
+    }
+
+    html[data-hero-type="outline"] .phone .hero-copy h2::before {
+      z-index: -1;
+      inset: -8px -12px -7px -10px;
+      border-left: 1px solid rgba(154, 215, 255, .72);
+      border-bottom: 1px solid rgba(154, 215, 255, .42);
+      background: linear-gradient(90deg, rgba(7, 21, 35, .28), transparent 76%);
+    }
+
+    html[data-hero-type="outline"] .phone .hero-copy h2 span:last-child {
+      letter-spacing: .16em;
+    }
+
+    html[data-hero-type="serif"] .phone .hero-copy h2 {
+      font-family: "Noto Serif SC", "SimSun", serif;
+      font-weight: 700;
+      letter-spacing: .015em;
+      line-height: 1.08;
+      text-shadow:
+        0 2px 1px rgba(0, 0, 0, .8),
+        0 7px 24px rgba(0, 0, 0, .86);
+    }
+
+    html[data-hero-type="serif"] .phone .hero-copy h2::after {
+      left: 0;
+      bottom: -9px;
+      width: 68px;
+      height: 2px;
+      background: linear-gradient(90deg, #ffffff, var(--brand), transparent);
+    }
+
+    html[data-hero-type="serif"] .phone .hero-copy h2 span:first-child {
+      font-size: .84em;
+    }
+
+    html[data-hero-type="serif"] .phone .hero-copy h2 span:last-child {
+      margin-top: .08em;
+      font-size: 1.18em;
+      letter-spacing: .18em;
+    }
+
+    html[data-hero-type="air"] .phone .hero-copy h2 {
+      padding-bottom: 13px;
+      font-family: "DengXian", "Noto Sans SC", sans-serif;
+      font-weight: 600;
+      letter-spacing: .055em;
+      line-height: 1.12;
+      text-shadow: 0 4px 22px rgba(0, 0, 0, .88);
+    }
+
+    html[data-hero-type="air"] .phone .hero-copy h2::after {
+      left: 0;
+      bottom: 0;
+      width: 104px;
+      height: 2px;
+      background:
+        radial-gradient(circle at 2px 1px, #ffffff 0 2px, transparent 2.5px),
+        linear-gradient(90deg, transparent 8px, color-mix(in srgb, var(--brand) 78%, #ffffff) 8px 68px, transparent 68px);
+    }
+
+    html[data-hero-type="air"] .phone .hero-copy h2 span:first-child {
+      font-size: .82em;
+    }
+
+    html[data-hero-type="air"] .phone .hero-copy h2 span:last-child {
+      margin-top: .08em;
+      font-size: 1.2em;
+      letter-spacing: .24em;
+    }
+
+    .js .app-view.is-active {
+      animation-duration: 320ms;
+    }
+
+    @keyframes page-leave {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+    }
+
+    .phone.is-route-leaving .app-view.is-active {
+      animation: page-leave 180ms ease-in both;
+      pointer-events: none;
+    }
+
+    .nav-link {
+      position: relative;
+      overflow: hidden;
+      transition:
+        transform 220ms ease,
+        background-color 220ms ease,
+        color 220ms ease,
+        box-shadow 220ms ease,
+        opacity 220ms ease;
+    }
+
+    .nav-link::after {
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      bottom: 4px;
+      height: 3px;
+      border-radius: 999px;
+      background: currentColor;
+      content: "";
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+
+    .nav-link.is-tap-preview {
+      z-index: 2;
+      background: var(--brand);
+      color: var(--on-brand);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 34%, transparent);
+      transform: translateY(-6px) scale(1.035);
+    }
+
+    .nav-link.is-tap-preview::after {
+      animation: nav-hold-progress 180ms linear forwards;
+    }
+
+    .nav-link.is-tap-preview svg {
+      transform: scale(1.08);
+    }
+
+    .bottom-nav.is-previewing .nav-link:not(.is-tap-preview) {
+      opacity: .78;
+    }
+
+    @keyframes nav-hold-progress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    /* Iteration 05: optional compute packets and packet-loss state */
+    .particle-field {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    html[data-particles="on"] .particle-field {
+      opacity: 1;
+    }
+
+    .compute-particle {
+      position: absolute;
+      left: var(--particle-x);
+      top: var(--particle-y);
+      width: var(--particle-size, 5px);
+      height: var(--particle-size, 5px);
+      opacity: 0;
+      animation: packet-drift var(--particle-duration, 8s) var(--particle-delay, 0s) linear infinite;
+    }
+
+    .compute-particle::before,
+    .compute-particle::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      box-shadow: 8px 0 0 currentColor;
+    }
+
+    .compute-particle::before {
+      color: #68c9ff;
+      background: currentColor;
+    }
+
+    .compute-particle::after {
+      color: var(--accent);
+      background: currentColor;
+      opacity: 0;
+      animation: packet-color-cycle 7.2s var(--particle-delay, 0s) ease-in-out infinite;
+    }
+
+    .compute-particle:nth-child(1) { --particle-x: 8%; --particle-y: 76%; --particle-duration: 8.8s; --particle-delay: -2.4s; }
+    .compute-particle:nth-child(2) { --particle-x: 19%; --particle-y: 45%; --particle-duration: 10.6s; --particle-delay: -6.2s; --particle-size: 4px; }
+    .compute-particle:nth-child(3) { --particle-x: 31%; --particle-y: 82%; --particle-duration: 9.7s; --particle-delay: -4.7s; }
+    .compute-particle:nth-child(4) { --particle-x: 43%; --particle-y: 58%; --particle-duration: 11.8s; --particle-delay: -8.1s; --particle-size: 3px; }
+    .compute-particle:nth-child(5) { --particle-x: 56%; --particle-y: 88%; --particle-duration: 8.4s; --particle-delay: -1.3s; --particle-size: 4px; }
+    .compute-particle:nth-child(6) { --particle-x: 66%; --particle-y: 52%; --particle-duration: 12.2s; --particle-delay: -7.4s; }
+    .compute-particle:nth-child(7) { --particle-x: 78%; --particle-y: 79%; --particle-duration: 9.1s; --particle-delay: -5.6s; --particle-size: 3px; }
+    .compute-particle:nth-child(8) { --particle-x: 90%; --particle-y: 63%; --particle-duration: 10.9s; --particle-delay: -3.5s; --particle-size: 4px; }
+    .compute-particle:nth-child(9) { --particle-x: 14%; --particle-y: 94%; --particle-duration: 12.6s; --particle-delay: -9.2s; --particle-size: 3px; }
+    .compute-particle:nth-child(10) { --particle-x: 72%; --particle-y: 96%; --particle-duration: 11.2s; --particle-delay: -6.8s; --particle-size: 4px; }
+
+    @keyframes packet-drift {
+      0% { opacity: 0; transform: translate3d(-8px, 18px, 0) scale(.75); }
+      18% { opacity: .48; }
+      76% { opacity: .3; }
+      100% { opacity: 0; transform: translate3d(20px, -118px, 0) scale(1.08); }
+    }
+
+    @keyframes packet-color-cycle {
+      0%, 18%, 100% { opacity: 0; }
+      36%, 68% { opacity: 1; }
+      84% { opacity: .25; }
+    }
+
+    .packet-loss-state {
+      position: absolute;
+      z-index: 115;
+      inset: 0;
+      padding: max(46px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      background-color: var(--app-bg);
+      background-image:
+        linear-gradient(color-mix(in srgb, var(--line) 42%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--line) 42%, transparent) 1px, transparent 1px),
+        radial-gradient(circle at 50% 28%, var(--wash-2), transparent 46%);
+      background-size: 16px 16px, 16px 16px, 100% 100%;
+      color: var(--text);
+      animation: packet-state-in 220ms ease-out both;
+    }
+
+    .packet-loss-state[hidden] {
+      display: none;
+    }
+
+    @keyframes packet-state-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loss-close {
+      position: absolute;
+      top: max(34px, env(safe-area-inset-top));
+      right: 18px;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      font-size: 25px;
+      cursor: pointer;
+    }
+
+    .loss-kicker {
+      margin: 12px 0 0;
+      color: var(--brand-strong);
+      font-family: var(--utility-font);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .06em;
+    }
+
+    .garlic-stage {
+      min-height: 310px;
+      margin: 14px -4px 8px;
+      display: grid;
+      place-items: center;
+    }
+
+    .garlic-mascot {
+      width: min(248px, 68cqw);
+      height: auto;
+      filter: drop-shadow(0 18px 24px color-mix(in srgb, var(--brand) 18%, transparent));
+    }
+
+    .garlic-mascot .pixel-outline { fill: color-mix(in srgb, var(--brand-strong) 72%, #10283a); }
+    .garlic-mascot .pixel-body { fill: color-mix(in srgb, #f4f8ff 90%, var(--wash)); }
+    .garlic-mascot .pixel-shade { fill: color-mix(in srgb, var(--brand) 24%, #dcecff); }
+    .garlic-mascot .pixel-shadow { fill: color-mix(in srgb, var(--brand-strong) 26%, transparent); }
+    .garlic-mascot .pixel-accent { fill: var(--accent); }
+    .garlic-mascot .pixel-face { fill: #10283a; }
+    .garlic-mascot .pixel-cheek { fill: color-mix(in srgb, #ff9e9e 56%, var(--surface)); }
+
+    .loss-copy {
+      text-align: center;
+    }
+
+    .loss-copy h2 {
+      max-width: 330px;
+      margin: 0 auto;
+      font-family: var(--display-font);
+      font-size: max(30px, 8cqw);
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -.02em;
+      text-wrap: balance;
+    }
+
+    .loss-copy > p {
+      max-width: 332px;
+      margin: 12px auto 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.55;
+      text-wrap: pretty;
+    }
+
+    .loss-status {
+      max-width: 332px;
+      min-height: 54px;
+      margin: 18px auto 0;
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .loss-status::before {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      content: "";
+      box-shadow: 14px 0 0 color-mix(in srgb, var(--accent) 55%, transparent), 28px 0 0 color-mix(in srgb, var(--accent) 24%, transparent);
+      transform: translateX(-14px);
+    }
+
+    .packet-loss-state.is-retrying .loss-status::before {
+      animation: retry-packets 660ms ease-in-out infinite;
+    }
+
+    @keyframes retry-packets {
+      50% { opacity: .35; transform: translateX(0); }
+    }
+
+    .loss-actions {
+      max-width: 332px;
+      margin: 18px auto 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .loss-actions button {
+      min-height: 52px;
+      padding: 0 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .loss-actions .loss-retry {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: var(--on-brand);
+    }
+
+    .loss-actions button:hover {
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 16%, transparent);
+      transform: translateY(-1px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .compute-particle,
+      .compute-particle::after,
+      .packet-loss-state.is-retrying .loss-status::before {
+        animation: none;
+      }
+
+      html[data-particles="on"] .particle-field {
+        opacity: .22;
+      }
+
+      .compute-particle:nth-child(-n+4) {
+        opacity: .4;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .js .app-view.is-active,
+      .phone.is-route-leaving .app-view.is-active {
+        animation-duration: .01ms;
+        transform: none;
+      }
+
+      .nav-link,
+      .nav-link.is-tap-preview,
+      .nav-link.is-tap-preview svg {
+        transition: none;
+        transform: none;
+      }
+
+      .nav-link.is-tap-preview::after {
+        animation: none;
+        transform: scaleX(1);
+      }
+    }
+
+
+    @media (max-width: 1040px) {
+      .review-header {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .review-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .design-notes {
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .review-header,
+      .review-layout {
+        width: min(100% - 20px, 1360px);
+      }
+
+      .review-header {
+        padding-top: 24px;
+      }
+
+      .preview-stage {
+        min-height: auto;
+        padding: 12px 0 18px;
+        border-left: 0;
+        border-right: 0;
+      }
+
+      .preview-toolbar {
+        padding: 0 10px;
+      }
+
+      .phone-wrap {
+        min-height: 800px;
+        overflow-x: auto;
+        justify-content: start;
+      }
+
+      .phone {
+        margin: 0 auto;
+      }
+
+      .design-notes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+
+      .hero-media video {
+        display: none;
+      }
+
+      .secondary-gateway:hover,
+      .secondary-gateway:focus-visible,
+      .secondary-gateway:focus-within {
+        transform: none;
+      }
+    }
+  
+    /* ===== Iteration 06: dual-role product structure ===== */
+    :root {
+      --particle-a: var(--brand);
+      --particle-b: var(--accent);
+      --particle-c: color-mix(in srgb, var(--brand) 48%, #ffffff);
+    }
+
+    html[data-role="provider"] .buyer-only,
+    html[data-role="buyer"] .provider-only { display: none !important; }
+
+    .role-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .role-button[aria-pressed="true"] {
+      color: var(--button-text);
+      background: var(--brand);
+      border-color: var(--brand);
+    }
+
+    .app-view.v3-view {
+      min-height: 100%;
+      padding: 22px 18px calc(108px + env(safe-area-inset-bottom));
+      gap: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: .04em;
+    }
+
+    .v3-stack { display: grid; gap: 13px; }
+
+    .v3-card,
+    .v3-feature,
+    .role-quick,
+    .market-mode-card {
+      position: relative;
+      overflow: hidden;
+      color: var(--ink);
+      background: color-mix(in srgb, var(--surface) 92%, var(--wash));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 12px 34px color-mix(in srgb, var(--brand) 8%, transparent);
+    }
+
+    .v3-card { padding: 17px; }
+    .v3-card > :first-child { margin-top: 0; }
+    .v3-card > :last-child { margin-bottom: 0; }
+
+    .v3-card h3,
+    .v3-feature h3,
+    .market-mode-card h3 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.12;
+      font-weight: 680;
+      letter-spacing: -.02em;
+    }
+
+    .v3-card p,
+    .v3-feature p,
+    .market-mode-card p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .v3-feature {
+      min-height: 218px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 86% 12%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 38%),
+        linear-gradient(145deg, color-mix(in srgb, var(--wash) 72%, var(--surface)), var(--surface));
+    }
+
+    .v3-feature::after {
+      content: "";
+      width: 142px;
+      height: 142px;
+      position: absolute;
+      right: -38px;
+      bottom: -42px;
+      border: 18px solid color-mix(in srgb, var(--brand) 12%, transparent);
+      border-radius: 42px;
+      transform: rotate(24deg);
+    }
+
+    .v3-number {
+      display: block;
+      margin-top: 14px;
+      font-size: clamp(38px, 12cqw, 52px);
+      line-height: 1;
+      font-weight: 520;
+      letter-spacing: -.06em;
+    }
+
+    .state-pills,
+    .market-mode-tabs,
+    .asset-tabs {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px;
+    }
+    .state-pills::-webkit-scrollbar,
+    .market-mode-tabs::-webkit-scrollbar,
+    .asset-tabs::-webkit-scrollbar { display: none; }
+
+    .state-pill,
+    .market-mode-tab,
+    .asset-tab {
+      min-height: 42px;
+      padding: 0 14px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 580;
+    }
+
+    .state-pill.is-active,
+    .market-mode-tab[aria-selected="true"],
+    .asset-tab[aria-selected="true"] {
+      color: var(--brand-strong);
+      background: var(--wash);
+      border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+    }
+
+    .order-ticket {
+      display: grid;
+      grid-template-columns: 46px minmax(0,1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      background: var(--surface);
+    }
+
+    .order-ticket + .order-ticket { margin-top: 10px; }
+
+    .ticket-icon,
+    .v3-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      color: var(--brand-strong);
+      background: var(--wash);
+    }
+
+    .ticket-icon svg,
+    .v3-icon svg {
+      width: 25px;
+      height: 25px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .ticket-copy { min-width: 0; }
+    .ticket-copy strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 650;
+    }
+    .ticket-copy span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .ticket-arrow { color: var(--brand); font-size: 22px; }
+
+    .empty-honest {
+      padding: 26px 20px;
+      text-align: center;
+      border: 1px dashed color-mix(in srgb, var(--brand) 34%, var(--line));
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--wash) 46%, transparent);
+    }
+    .empty-honest strong {
+      display: block;
+      font-size: 20px;
+      font-weight: 650;
+    }
+    .empty-honest p {
+      max-width: 25ch;
+      margin: 7px auto 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .market-mode-tabs {
+      margin: 0 18px 12px;
+    }
+
+    .market-mode-panel[hidden] { display: none; }
+
+    .market-mode-card {
+      min-height: 188px;
+      margin: 0 18px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .market-mode-card::before {
+      content: "";
+      position: absolute;
+      inset: 18px 18px auto auto;
+      width: 88px;
+      height: 76px;
+      border-radius: 20px 20px 8px 20px;
+      background:
+        linear-gradient(90deg, transparent 18%, color-mix(in srgb,var(--brand) 18%,transparent) 18% 24%, transparent 24% 48%, color-mix(in srgb,var(--brand) 18%,transparent) 48% 54%, transparent 54%),
+        var(--wash);
+    }
+
+    .profile-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+    }
+
+    .role-quick {
+      min-height: 166px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-decoration: none;
+    }
+    .role-quick strong {
+      font-size: 22px;
+      font-weight: 680;
+    }
+    .role-quick span {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .role-quick[data-set-role="provider"] {
+      background: linear-gradient(145deg, color-mix(in srgb,var(--accent) 19%,var(--surface)), var(--surface));
+    }
+
+    .soft-link {
+      width: 100%;
+      min-height: 50px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--line);
+    }
+    .soft-link:last-child { border-bottom: 0; }
+    .soft-link > span:first-child { font-size: 17px; font-weight: 560; }
+    .soft-link small { color: var(--muted); font-size: 14px; font-weight: 400; }
+
+    .bottom-nav {
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    .nav-link {
+      touch-action: manipulation;
+      transition: color 90ms ease, transform 90ms ease, background 90ms ease;
+    }
+    .nav-link.is-tap-preview {
+      transform: translateY(-2px) scale(.97);
+      background: color-mix(in srgb, var(--wash) 72%, transparent);
+    }
+
+    /* Four restrained particle systems */
+    .particle-field {
+      display: block !important;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: .9;
+    }
+    .mobile-main,
+    .bottom-nav { position: relative; z-index: 2; }
+
+    html[data-particles="off"] .particle-field { display: none !important; }
+    html[data-particles]:not([data-particles="off"]) .particle-field { display: block !important; }
+
+    .compute-particle,
+    .compute-particle::before,
+    .compute-particle::after {
+      box-sizing: border-box;
+    }
+
+    .compute-particle {
+      width: 6px;
+      height: 6px;
+      border: 0;
+      border-radius: 2px;
+      background: var(--particle-a);
+      box-shadow: none;
+      opacity: .34;
+      animation:
+        v3-particle-color 24s ease-in-out infinite,
+        v3-route 9s linear infinite;
+      animation-delay: var(--particle-delay,0s);
+      will-change: transform, opacity;
+    }
+
+    .compute-particle::before,
+    .compute-particle::after { display: none; }
+
+    .compute-particle:nth-child(2n) { animation-delay: -3s; }
+    .compute-particle:nth-child(3n) { animation-delay: -6s; }
+    .compute-particle:nth-child(4n) { animation-delay: -8s; }
+
+    html[data-particles="mist"] .compute-particle {
+      width: clamp(42px, 15cqw, 64px);
+      height: clamp(42px, 15cqw, 64px);
+      border-radius: 50%;
+      filter: blur(12px);
+      opacity: .12;
+      animation-name: v3-particle-color, v3-mist;
+      animation-duration: 24s, 15s;
+    }
+
+    html[data-particles="nodes"] .compute-particle {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      opacity: .18;
+      animation-name: v3-particle-color, v3-node;
+      animation-duration: 24s, 5.4s;
+    }
+
+    html[data-particles="streams"] .compute-particle {
+      width: 32px;
+      height: 3px;
+      border-radius: 99px;
+      opacity: .27;
+      transform: rotate(-18deg);
+      animation-name: v3-particle-color, v3-stream;
+      animation-duration: 24s, 7.6s;
+    }
+
+    html.is-page-hidden .particle-field * { animation-play-state: paused !important; }
+
+    @keyframes v3-particle-color {
+      0%, 26% { background-color: var(--particle-a); }
+      33%, 59% { background-color: var(--particle-b); }
+      66%, 93% { background-color: var(--particle-c); }
+      100% { background-color: var(--particle-a); }
+    }
+    @keyframes v3-route {
+      0% { transform: translate3d(-18px, 24px, 0); opacity: 0; }
+      10% { opacity: .4; }
+      58% { transform: translate3d(54px, -44px, 0); opacity: .38; }
+      100% { transform: translate3d(118px, -88px, 0); opacity: 0; }
+    }
+    @keyframes v3-mist {
+      0%,100% { transform: translate3d(-12px,10px,0) scale(.9); opacity:.07; }
+      50% { transform: translate3d(28px,-22px,0) scale(1.12); opacity:.15; }
+    }
+    @keyframes v3-node {
+      0%,70%,100% { transform: scale(.72); opacity:.15; }
+      78% { transform: scale(1.55); opacity:.55; }
+      87% { transform: scale(1); opacity:.25; }
+    }
+    @keyframes v3-stream {
+      0% { transform: translate3d(-72px,62px,0) rotate(-18deg); opacity:0; }
+      12% { opacity:.3; }
+      100% { transform: translate3d(172px,-82px,0) rotate(-18deg); opacity:0; }
+    }
+
+    /* Whole-bulb mascot and four network states */
+    .garlic-mascot {
+      width: min(224px, 64vw);
+      height: auto;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 12px 0 color-mix(in srgb,var(--brand) 10%,transparent));
+    }
+    .garlic-mascot .garlic-body { fill: color-mix(in srgb,#fffdf5 88%,var(--wash)); }
+    .garlic-mascot .garlic-shade { fill: color-mix(in srgb,var(--brand) 18%,#e9edf6); }
+    .garlic-mascot .garlic-line { fill: color-mix(in srgb,var(--brand-strong) 84%,#132c40); }
+    .garlic-mascot .garlic-leaf { fill: color-mix(in srgb,var(--accent) 76%,var(--brand)); }
+    .garlic-mascot .garlic-cheek { fill: #ef9a9a; opacity:.65; }
+    .garlic-state { display:none; }
+    html[data-network-state="loss"] .garlic-state.state-loss,
+    html[data-network-state="reconnecting"] .garlic-state.state-reconnecting,
+    html[data-network-state="restored"] .garlic-state.state-restored,
+    html[data-network-state="failed"] .garlic-state.state-failed { display:block; }
+
+    .packet-loss-state[data-state="restored"] .loss-retry { display:none; }
+    .packet-loss-state[data-state="restored"] .loss-status {
+      color: var(--brand-strong);
+      background: var(--wash);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) .garlic-mascot .garlic-body { fill:#f2f4eb; }
+      html:not([data-theme="light"]) .garlic-mascot .garlic-line { fill:#071523; }
+    }
+    html[data-theme="dark"] .garlic-mascot .garlic-body { fill:#f2f4eb; }
+    html[data-theme="dark"] .garlic-mascot .garlic-line { fill:#071523; }
+    /* K / A / I mascot family */
+    .mascot-render {
+      width:100%;
+      min-height:208px;
+      display:grid;
+      place-items:center;
+    }
+    .mascot-art {
+      display:block;
+      height:auto;
+      image-rendering:pixelated;
+    }
+    .kai-mascot {
+      width:min(320px, 86vw);
+      max-height:208px;
+      --kai-outline:#091322;
+      --kai-k:#3549bd;
+      --kai-k-shadow:#273585;
+      --kai-a:#ff8218;
+      --kai-a-shadow:#d95317;
+      --kai-i:#ffd21a;
+      --kai-i-shadow:#efa80a;
+      --kai-blue:#2b377f;
+      --kai-cream:#fff7d7;
+      --kai-cable:#7f96ad;
+      filter:drop-shadow(0 12px 0 color-mix(in srgb,var(--brand) 9%,transparent));
+    }
+    .kai-mascot .kai-outline { fill:var(--kai-outline); }
+    .kai-mascot .kai-k-fill { fill:var(--kai-k); }
+    .kai-mascot .kai-k-shadow { fill:var(--kai-k-shadow); }
+    .kai-mascot .kai-a-fill { fill:var(--kai-a); }
+    .kai-mascot .kai-a-shadow { fill:var(--kai-a-shadow); }
+    .kai-mascot .kai-i-fill { fill:var(--kai-i); }
+    .kai-mascot .kai-i-shadow { fill:var(--kai-i-shadow); }
+    .kai-mascot .kai-blue { fill:var(--kai-blue); }
+    .kai-mascot .kai-cream { fill:var(--kai-cream); }
+    .kai-mascot .kai-cable { fill:var(--kai-cable); }
+    .kai-mascot .kai-character {
+      transform-box:fill-box;
+      transform-origin:center;
+      animation:kai-character-in 240ms cubic-bezier(.2,.8,.2,1) both;
+    }
+    .kai-mascot .kai-a { animation-delay:120ms; }
+    .kai-mascot .kai-i { animation-delay:240ms; }
+    .kai-mascot .kai-chain { animation:kai-chain-in 120ms 360ms ease-out both; }
+    .kai-mascot .kai-state { display:none; }
+    html[data-network-state="loss"] .kai-mascot .state-loss,
+    html[data-network-state="reconnecting"] .kai-mascot .state-reconnecting,
+    html[data-network-state="restored"] .kai-mascot .state-restored,
+    html[data-network-state="failed"] .kai-mascot .state-failed { display:block; }
+    .kai-mascot .kai-packet { animation:kai-packet-pass 520ms linear infinite; }
+    .kai-mascot .kai-packet.packet-two { animation-delay:180ms; }
+    @keyframes kai-character-in {
+      from { opacity:0; transform:translate3d(-18px,8px,0); }
+      to { opacity:1; transform:translate3d(0,0,0); }
+    }
+    @keyframes kai-chain-in {
+      from { opacity:0; transform:scaleX(.7); }
+      to { opacity:1; transform:scaleX(1); }
+    }
+    @keyframes kai-packet-pass {
+      0% { opacity:0; transform:translateX(-24px); }
+      16%,76% { opacity:1; }
+      100% { opacity:0; transform:translateX(42px); }
+    }
+    @media (prefers-color-scheme:dark) {
+      html:not([data-theme="light"]) .kai-mascot {
+        --kai-outline:#050b12;
+        --kai-cream:#fff9e9;
+        --kai-cable:#c5d2df;
+      }
+    }
+    html[data-theme="dark"] .kai-mascot {
+      --kai-outline:#050b12;
+      --kai-cream:#fff9e9;
+      --kai-cable:#c5d2df;
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .kai-mascot .kai-character,
+      .kai-mascot .kai-chain,
+      .kai-mascot .kai-packet { animation:none !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html[data-particles]:not([data-particles="off"]) .compute-particle {
+        animation: none !important;
+        opacity: .16;
+        transform: none !important;
+      }
+      html[data-particles]:not([data-particles="off"]) .compute-particle:nth-child(n+7) { display:none; }
+      .nav-link.is-tap-preview { transform:none; }
+    }
+
+    .bottom-nav { display:block; padding:0; }
+    .nav-set {
+      width:100%;
+      min-height:inherit;
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      align-items:stretch;
+    }
+    .nav-set .nav-link { min-width:0; }
+    .target-state-note {
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+</style>
+<style>/* KAI mobile integration v4 */
+.kai-v4-stage{width:252px;height:252px;display:grid;grid-template-columns:102fr 96fr 81fr;align-items:end;position:relative}.kai-v4-stage:before,.kai-v4-stage:after{content:"";position:absolute;top:62%;width:16%;height:3px;background:var(--brand);z-index:-1}.kai-v4-stage:before{left:29%}.kai-v4-stage:after{right:23%}.kai-v4-stage[data-state="loss"]:before,.kai-v4-stage[data-state="loss"]:after{background:repeating-linear-gradient(90deg,var(--brand) 0 9px,transparent 9px 17px)}.kai-v4-stage[data-state="failed"]:before,.kai-v4-stage[data-state="failed"]:after{background:#d44954}.kai-v4-stage[data-state="restored"]:before,.kai-v4-stage[data-state="restored"]:after{animation:kai-v4-on .42s ease-out}.kai-v4-stage span{height:100%;display:grid;place-items:end center}.kai-v4-stage img{width:100%;height:auto;max-height:100%;object-fit:contain;object-position:center bottom}.kai-v4-stage span.bad img{display:none}.kai-v4-stage span.bad:after{content:attr(data-letter);display:grid;place-items:center;width:70%;aspect-ratio:1;border:1px dashed var(--line);border-radius:14px;font:800 28px ui-monospace}.kai-v4-stage.enter span{animation:kai-v4-enter .16s both}.kai-v4-stage.enter span:nth-child(2){animation-delay:.16s}.kai-v4-stage.enter span:nth-child(3){animation-delay:.32s}.packet-loss-state{display:grid;grid-template-rows:8fr 40fr 22fr 10fr 20fr;overflow:hidden;padding:24px 20px}.loss-actions[data-v4-single]{grid-template-columns:1fr}html[data-network-open="true"] .particle-field{display:none!important}@keyframes kai-v4-enter{from{opacity:0;transform:translate(-12px,8px)}to{opacity:1;transform:none}}@keyframes kai-v4-on{from{opacity:.1}to{opacity:1}}@media(max-width:374px){.kai-v4-stage{width:232px;height:232px;grid-template-columns:94fr 89fr 75fr}}@media(min-width:400px){.kai-v4-stage{width:264px;height:264px;grid-template-columns:107fr 101fr 85fr}}@media(prefers-reduced-motion:reduce){.kai-v4-stage *{animation:none!important}}</style>
+</head>
+<body>
+  <a class="skip-link" href="#mobile-main">跳到移动端界面</a>
+
+  <header class="review-header">
+    <div>
+      <p class="review-kicker">Zod / Mobile target-state preview</p>
+      <h1>买卖双视角、KAI 吉祥物与随机断链叙事</h1>
+    </div>
+    <p>本次预览呈现目标态产品结构；断链时按 80/20 随机出现 KAI 三角色或蒜粒，并保留四种可切换的算力粒子。</p><p class="target-state-note">说明：双视角底栏是供评审的目标态信息架构；当前仓库实际底栏仍为固定五项，内部功能通过二级路由进入。</p>
+  </header>
+
+  <main class="review-layout">
+    <section class="preview-stage" aria-label="Zod 移动端可交互预览">
+      <div class="preview-toolbar">
+        <div class="tool-group">
+          <span>尺寸</span>
+          <div class="tool-row" aria-label="预览尺寸">
+            <button class="tool-button size-button" type="button" data-size-choice="411" aria-pressed="true">411</button>
+            <button class="tool-button size-button" type="button" data-size-choice="393" aria-pressed="false">393</button>
+            <button class="tool-button size-button" type="button" data-size-choice="360" aria-pressed="false">360</button>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <span id="theme-label">主题 · 系统</span>
+          <div class="tool-row" aria-label="白昼与黑夜主题">
+            <button class="tool-button theme-button" type="button" data-theme-choice="system" aria-pressed="true">系统</button>
+            <button class="tool-button theme-button" type="button" data-theme-choice="light" aria-pressed="false">白昼</button>
+            <button class="tool-button theme-button" type="button" data-theme-choice="dark" aria-pressed="false">黑夜</button>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <span>配色</span>
+          <button class="tool-button palette-button" id="palette-cycle" type="button">澄空蓝白 · 换一组</button>
+        </div>
+
+        <div class="tool-group">
+          <label for="layout-select">当前页比例</label>
+          <select class="tool-select" id="layout-select">
+            <option value="info">信息型</option>
+            <option value="balanced" selected>均衡型</option>
+            <option value="focus">聚焦型</option>
+          </select>
+        </div>
+
+        <div class="tool-group">
+          <label for="font-select">字体气质</label>
+          <select class="tool-select" id="font-select">
+            <option value="source" selected>思源清晰</option>
+            <option value="deng">等线轻盈</option>
+            <option value="native">系统简洁</option>
+            <option value="serif">宋体人文</option>
+          </select>
+        </div>
+
+        <div class="tool-group">
+          <label for="hero-type-select">视频艺术字</label>
+          <select class="tool-select" id="hero-type-select">
+            <option value="cut" selected>算力切面</option>
+            <option value="outline">蓝图描边</option>
+            <option value="serif">云端宋韵</option>
+            <option value="air">等线留白</option>
+          </select>
+        </div>
+
+        <div class="tool-group role-tool">
+          <span>当前视角</span>
+          <div class="role-switch" aria-label="切换使用方与提供方视角">
+            <button class="tool-button role-button" type="button" data-role-choice="buyer" aria-pressed="true">使用算力</button>
+            <button class="tool-button role-button" type="button" data-role-choice="provider" aria-pressed="false">提供算力</button>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <span>算力粒子</span>
+          <button class="tool-button" id="particle-toggle" type="button" aria-pressed="true">粒子 · 数据包轨道</button>
+        </div>
+
+        <div class="tool-group">
+          <span>网络状态</span>
+          <button class="tool-button" id="packet-loss-demo" type="button" aria-pressed="false">状态 · 连接正常</button>
+        </div>
+
+        <div class="tool-group">
+          <label for="type-select">标题字号</label>
+          <select class="tool-select" id="type-select">
+            <option value="30">30px · 7.3%</option>
+            <option value="32" selected>32px · 7.8%</option>
+            <option value="34">34px · 8.3%</option>
+            <option value="36">36px · 8.8%</option>
+          </select>
+        </div>
+          <span id="particle-readout"><strong>算力粒子</strong> · 数据包轨道</span>
+
+        <div class="tool-group">
+          <span>启动界面</span>
+          <button class="tool-button" id="replay-splash" type="button">重播闪屏</button>
+        </div>
+
+        <div class="readout-strip" aria-live="polite">
+          <span id="layout-readout"><strong>首页 · 均衡型</strong>：视频 42% · 账户 10% · 算力流向 30% · 资源入口 18%</span>
+          <span id="type-readout"><strong>思源清晰</strong> · 标题 32px · 屏宽 7.8% · 2 行</span>
+          <span id="hero-type-readout"><strong>视频艺术字</strong> · 算力切面</span>
+        </div>
+      </div>
+
+      <div class="phone-wrap">
+        <article class="phone" id="phone-preview" data-size="411" data-route="home" aria-label="Zod 手机界面">
+          <div class="status-bar" aria-hidden="true">
+            <span>09:41</span>
+            <span>5G&nbsp;&nbsp;100%</span>
+          </div>
+
+                  <div class="particle-field" aria-hidden="true">
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                    <span class="compute-particle"></span>
+                  </div>
+
+          <div class="screen-scroll" id="screen-scroll">
+            <main class="mobile-main" id="mobile-main">
+              <section class="app-view home-view is-active buyer-only" id="app-home" data-route="home" data-layout="balanced" aria-labelledby="home-title">
+                <div class="home-hero">
+                  <div class="hero-media">
+                    <div class="hero-poster" aria-hidden="true"></div>
+                    <video id="hero-video" width="411" height="420" autoplay muted loop playsinline controls preload="metadata" poster="./server-room-poster.jpg" aria-label="装饰性机房场景视频，页面信息不依赖此视频">
+                      <source src="./server-room-preview.mp4" type="video/mp4">
+                    </video>
+                  </div>
+
+                  <div class="hero-top">
+                    <div class="zod-mark" translate="no">Zod</div>
+                    <button class="media-toggle" id="media-toggle" type="button" aria-label="暂停背景视频" aria-pressed="false">
+                      <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 5h4v14h-4zM13.5 5h4v14h-4z"/></svg>
+                      <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 4.8v14.4L19 12 7 4.8z"/></svg>
+                    </button>
+                  </div>
+
+                  <div class="hero-copy">
+                    <h2 id="home-title" tabindex="-1"><span>找到正在可用的</span><span>算力</span></h2>
+                    <p>从真实资源、预约需求到设备采购，只连接此刻真正需要的计算。</p>
+                  </div>
+                  <div class="hero-signal" aria-hidden="true"></div>
+                </div>
+
+                <section class="account-zone" aria-labelledby="account-title">
+                  <div>
+                    <small id="account-title">KAI 卡时账户</small>
+                    <strong>登录后查看</strong>
+                  </div>
+                  <a class="pill-link" href="#app-profile">去登录</a>
+                </section>
+
+                <section class="flow-showcase" aria-labelledby="home-flow-title">
+                  <div class="flow-copy">
+                    <span class="flow-kicker">算力正在流动</span>
+                    <h3 id="home-flow-title">需求出现，算力就有去处</h3>
+                    <p>从提出需求到资源开机，连接会把每一步带到同一条线上。</p>
+                  </div>
+                  <div class="flow-track" aria-label="需求、匹配、开机三步算力流向">
+                    <div class="flow-step">
+                      <span class="flow-node" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M7 4h10v16H7zM10 8h4M10 12h4"/></svg>
+                      </span>
+                      <strong>需求</strong>
+                      <small>说清任务</small>
+                    </div>
+                    <div class="flow-step">
+                      <span class="flow-node" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M8.5 15.5 6 18a3 3 0 0 1-4-4l4-4a3 3 0 0 1 4 0M15.5 8.5 18 6a3 3 0 0 1 4 4l-4 4a3 3 0 0 1-4 0M8 16l8-8"/></svg>
+                      </span>
+                      <strong>匹配</strong>
+                      <small>找到资源</small>
+                    </div>
+                    <div class="flow-step">
+                      <span class="flow-node" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M18 9h4M2 15h4M18 15h4M10 10h4v4h-4z"/></svg>
+                      </span>
+                      <strong>开机</strong>
+                      <small>开始计算</small>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="resource-zone">
+                  <a class="resource-link demo-link" href="#app-home">
+                    <div>
+                      <h3>NVIDIA DGX Spark</h3>
+                      <p>查看真实设备入口与采购说明。</p>
+                    </div>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </section>
+              </section>
+
+              <section class="app-view market-view buyer-only" id="app-market" data-route="market" data-layout="balanced" aria-labelledby="market-title">
+                <header class="page-head">
+                  <h2 id="market-title" tabindex="-1">看见真实市场</h2>
+                  <p>真实资源、询价与设备市场，按任务进入。</p>
+                </header>
+
+
+                <div class="market-mode-tabs" role="tablist" aria-label="选择市场类型">
+                  <button class="market-mode-tab" type="button" role="tab" data-market-mode="0" aria-selected="true">算力租赁</button>
+                  <button class="market-mode-tab" type="button" role="tab" data-market-mode="1" aria-selected="false">定向需求</button>
+                  <button class="market-mode-tab" type="button" role="tab" data-market-mode="2" aria-selected="false">设备购买</button>
+                </div>
+                <section class="market-zone" aria-label="真实市场视图轮播">
+                  <div class="market-stage">
+                    <div class="market-rail" id="market-carousel" aria-live="polite">
+                      <article class="market-slide is-current" data-slide="0">
+                        <div class="slide-label"><span>即时算力</span><span>01 / 03</span></div>
+                        <div class="market-mock" aria-hidden="true">
+                          <div class="mock-lines"><i></i><i></i><i></i></div>
+                          <div class="mock-figure"></div>
+                        </div>
+                        <div class="slide-copy">
+                          <h3>即时算力市场</h3>
+                          <p>预留真实资源卡、地区、计价与可用状态视图。</p>
+                        </div>
+                      </article>
+                      <article class="market-slide" data-slide="1">
+                        <div class="slide-label"><span>预约需求</span><span>02 / 03</span></div>
+                        <div class="market-mock" aria-hidden="true">
+                          <div class="mock-lines"><i></i><i></i><i></i></div>
+                          <div class="mock-figure"></div>
+                        </div>
+                        <div class="slide-copy">
+                          <h3>预约与定向需求</h3>
+                          <p>承载 H100、H200、B300 等真实询价流程。</p>
+                        </div>
+                      </article>
+                      <article class="market-slide" data-slide="2">
+                        <div class="slide-label"><span>设备采购</span><span>03 / 03</span></div>
+                        <div class="market-mock" aria-hidden="true">
+                          <div class="mock-lines"><i></i><i></i><i></i></div>
+                          <div class="mock-figure"></div>
+                        </div>
+                        <div class="slide-copy">
+                          <h3>设备采购市场</h3>
+                          <p>以 NVIDIA DGX Spark 为真实设备入口。</p>
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="market-controls-zone">
+                  <button class="carousel-button" id="slide-prev" type="button" aria-label="上一张市场视图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+                  <div class="carousel-dots" aria-label="选择市场视图">
+                    <button class="carousel-dot" type="button" data-slide-to="0" aria-label="第 1 张：即时算力市场" aria-pressed="true"></button>
+                    <button class="carousel-dot" type="button" data-slide-to="1" aria-label="第 2 张：预约与定向需求" aria-pressed="false"></button>
+                    <button class="carousel-dot" type="button" data-slide-to="2" aria-label="第 3 张：设备采购市场" aria-pressed="false"></button>
+                  </div>
+                  <button class="carousel-button" id="slide-next" type="button" aria-label="下一张市场视图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+                </div>
+
+                <section class="gateway-zone market-gateway-zone">
+                  <a class="secondary-gateway subview-link" href="?subview=market#app-market" data-open-subview="market">
+                    <div class="gateway-copy">
+                      <h3>实时市场明细</h3>
+                      <p>型号、地区与计价字段。</p>
+                      <span class="gateway-action">查看市场明细 →</span>
+                    </div>
+                    <svg class="gateway-illustration" viewBox="0 0 120 100" aria-hidden="true">
+                      <g class="ill-soft"><rect x="18" y="14" width="56" height="72" rx="9"/><path d="M78 28h25v46H78Z"/></g>
+                      <g class="ill-line"><rect x="18" y="14" width="56" height="72" rx="9"/><path d="M28 29h35M28 44h35M28 59h22M86 40v22M80 51h12"/><path d="M12 86h96"/></g>
+                    </svg>
+                  </a>
+                </section>
+              </section>
+
+
+              <section class="app-view v3-view buyer-only" id="app-orders" data-route="orders" data-layout="balanced" aria-labelledby="orders-title">
+                <header class="page-head">
+                  <p class="eyebrow">使用算力 / 订单</p>
+                  <h2 id="orders-title" tabindex="-1">每笔算力，都有来路</h2>
+                  <p>合同、交付、验收和售后，都回到同一笔订单。</p>
+                </header>
+                <section class="v3-feature" aria-labelledby="order-focus-title">
+                  <div>
+                    <p class="eyebrow">订单全程视图</p>
+                    <h3 id="order-focus-title">从付款到验收，不丢步骤</h3>
+                    <p>这里只展示流程结构。登录后再读取你的真实订单。</p>
+                  </div>
+                  <div class="state-pills" aria-label="订单状态">
+                    <button class="state-pill is-active" type="button">全部</button>
+                    <button class="state-pill" type="button">待付款</button>
+                    <button class="state-pill" type="button">交付中</button>
+                    <button class="state-pill" type="button">待验收</button>
+                  </div>
+                </section>
+                <section class="v3-stack" aria-label="订单入口">
+                  <button class="order-ticket subview-link" type="button" data-open-subview="order-detail">
+                    <span class="ticket-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3"/></svg></span>
+                    <span class="ticket-copy"><strong>订单详情结构</strong><span>查看合同、交付与验收字段</span></span>
+                    <span class="ticket-arrow" aria-hidden="true">→</span>
+                  </button>
+                  <div class="empty-honest"><strong>登录后查看订单</strong><p>预览不填入虚构订单，也不会制造待办数量。</p></div>
+                </section>
+              </section>
+
+              <section class="app-view v3-view provider-only" id="app-workspace" data-route="workspace" data-layout="balanced" aria-labelledby="workspace-title">
+                <header class="page-head">
+                  <p class="eyebrow">提供算力 / 工作台</p>
+                  <h2 id="workspace-title" tabindex="-1">今天先处理什么？</h2>
+                  <p>接单、交付和审核状态，集中放在这里。</p>
+                </header>
+                <section class="v3-feature" aria-labelledby="workspace-focus">
+                  <div>
+                    <p class="eyebrow">下一步行动</p>
+                    <h3 id="workspace-focus">把最要紧的一件事放在最前</h3>
+                    <p>登录后按真实业务状态给出下一步，不用猜数字。</p>
+                  </div>
+                  <a class="outline-button subview-link" href="?subview=wallet#app-workspace" data-open-subview="wallet">打开卡时账户与结算</a>
+                </section>
+                <section class="v3-stack" aria-label="提供方任务">
+                  <div class="v3-card"><h3>接单与报价</h3><p>定向需求和市场询价会在此出现。</p></div>
+                  <div class="v3-card"><h3>交付与验收</h3><p>沿订单上下文处理开通、使用和确认。</p></div>
+                </section>
+              </section>
+
+              <section class="app-view v3-view provider-only" id="app-resources" data-route="resources" data-layout="balanced" aria-labelledby="resources-title">
+                <header class="page-head">
+                  <p class="eyebrow">提供算力 / 资源</p>
+                  <h2 id="resources-title" tabindex="-1">你的算力，放在一张图里</h2>
+                  <p>看清哪些资源可售、审核中或需要补材料。</p>
+                </header>
+                <section class="v3-feature" aria-labelledby="resource-map-title">
+                  <div>
+                    <p class="eyebrow">资源地图</p>
+                    <h3 id="resource-map-title">先看状态，再决定怎么卖</h3>
+                    <p>真实设备、节点和 Vast.ai 来源接入后在这里汇总。</p>
+                  </div>
+                  <a class="outline-button subview-link" href="?subview=assets#app-resources" data-open-subview="assets">查看统一资产</a>
+                </section>
+                <section class="v3-stack">
+                  <div class="empty-honest"><strong>还没有接入资源</strong><p>添加资源后，会显示核验、可售和交付状态。</p></div>
+                  <a class="primary-button" href="#app-publish">去上架算力</a>
+                </section>
+              </section>
+              <section class="app-view publish-view provider-only" id="app-publish" data-route="publish" data-layout="balanced" aria-labelledby="publish-title">
+                <header class="page-head">
+                  <h2 id="publish-title" tabindex="-1">让资源可信地上架</h2>
+                  <p>按权属、配置与可用性完成核验。</p>
+                </header>
+
+                <section class="publish-flow-zone" aria-labelledby="flow-title">
+                  <div class="verification-flow">
+                    <div class="flow-intro">
+                      <strong>资源核验流程</strong>
+                      <h3 class="section-title" id="flow-title">三步完成算力上架</h3>
+                    </div>
+                    <ol class="flow-list">
+                      <li><h3>添加算力资源</h3><p>填写型号、规模、地区与交付时间。</p></li>
+                      <li><h3>提交核验材料</h3><p>提供权属、配置与可用性证明。</p></li>
+                      <li><h3>审核通过后上架</h3><p>展示真实、可交易的资源信息。</p></li>
+                    </ol>
+                  </div>
+                </section>
+
+                <div class="publish-action-zone">
+                  <button class="primary-button demo-button" type="button">开始添加资源</button>
+                </div>
+
+                <section class="gateway-zone publish-gateway-zone">
+                  <a class="secondary-gateway subview-link" href="?subview=verification#app-publish" data-open-subview="verification">
+                    <div class="gateway-copy">
+                      <h3>核验材料清单</h3>
+                      <p>提前查看所需材料。</p>
+                      <span class="gateway-action">查看材料清单 →</span>
+                    </div>
+                    <svg class="gateway-illustration" viewBox="0 0 120 100" aria-hidden="true">
+                      <g class="ill-soft"><path d="M22 12h54l19 19v56H22Z"/><rect x="70" y="55" width="35" height="30" rx="7"/></g>
+                      <g class="ill-line"><path d="M22 12h54l19 19v56H22Z"/><path d="M76 12v20h19M34 43h35M34 56h24"/><rect x="70" y="55" width="35" height="30" rx="7"/><path d="m78 70 7 7 13-14"/></g>
+                    </svg>
+                  </a>
+                </section>
+              </section>
+
+              <section class="app-view messages-view" id="app-messages" data-route="messages" data-layout="balanced" aria-labelledby="messages-title">
+                <header class="page-head">
+                  <h2 id="messages-title" tabindex="-1">消息围绕交易发生</h2>
+                  <p>支付、交付、验收与争议，都回到对应订单。</p>
+                </header>
+
+                <section class="receipt-zone" aria-labelledby="receipt-title">
+                  <div class="receipt">
+                    <header class="receipt-head">
+                      <h3 class="section-title" id="receipt-title">订单消息票据</h3>
+                      <span>结构示意</span>
+                    </header>
+                    <ol class="message-timeline">
+                      <li><h3>付款与合同</h3><p>需处理的支付节点与合同变更。</p></li>
+                      <li><h3>资源交付</h3><p>接入、开通与使用期间的关键进度。</p></li>
+                      <li><h3>验收与售后</h3><p>验收、退款或争议回到同一上下文。</p></li>
+                    </ol>
+                  </div>
+                </section>
+
+                <section class="gateway-zone pending-zone">
+                  <button class="secondary-gateway" id="pending-trigger" type="button" data-open-drawer="pending">
+                    <div class="gateway-copy">
+                      <h3>待处理事件</h3>
+                      <p>不虚构未读数量。</p>
+                      <span class="gateway-action">查看待处理事件 →</span>
+                    </div>
+                    <svg class="gateway-illustration" viewBox="0 0 120 100" aria-hidden="true">
+                      <g class="ill-soft"><path d="M17 58h25l8 11h21l8-11h24v29H17Z"/><path d="M31 20h56v43H31Z"/></g>
+                      <g class="ill-line"><path d="M17 58h25l8 11h21l8-11h24v29H17Z"/><path d="M31 58V20h56v38M44 36h31M44 48h22"/><path d="M95 19v12M89 25h12"/></g>
+                    </svg>
+                  </button>
+                </section>
+
+                <div class="message-action-zone">
+                  <a class="outline-button" href="#app-profile">登录后查看真实消息</a>
+                </div>
+              </section>
+
+
+              <section class="app-view profile-view v3-view" id="app-profile" data-route="profile" data-layout="balanced" aria-labelledby="profile-title">
+                <header class="page-head">
+                  <p class="eyebrow">一套账户，两种用法</p>
+                  <h2 id="profile-title" tabindex="-1">你现在想做什么？</h2>
+                  <p>要算力就去找，要卖算力就切到卖家。都用这一个账户。</p>
+                </header>
+                <section class="profile-actions" aria-label="选择使用方或提供方视角">
+                  <a class="role-quick" href="#app-home" data-set-role="buyer">
+                    <span>我是买家</span>
+                    <strong>我要找算力</strong>
+                    <span>逛市场、下订单、看交付 →</span>
+                  </a>
+                  <a class="role-quick" href="#app-workspace" data-set-role="provider">
+                    <span>我是卖家</span>
+                    <strong>我要卖算力</strong>
+                    <span>管资源、接订单、做结算 →</span>
+                  </a>
+                </section>
+                <section class="v3-card" aria-label="账户常用入口">
+                  <a class="soft-link subview-link" href="?subview=wallet#app-profile" data-open-subview="wallet"><span>KAI 卡时账户</span><small>充值与结算 →</small></a>
+                  <a class="soft-link subview-link" href="?subview=assets#app-profile" data-open-subview="assets"><span>我的资产</span><small>已购 / 已提供 →</small></a>
+                  <a class="soft-link demo-link" href="#app-profile"><span>身份认证</span><small>登录后查看 →</small></a>
+                  <a class="soft-link demo-link" href="#app-profile"><span>需要帮助</span><small>常见问题 →</small></a>
+                </section>
+              </section>
+            </main>
+          </div>
+
+
+          <nav class="bottom-nav" id="bottom-nav" aria-label="目标态主导航">
+            <div class="nav-set buyer-only" data-role-nav="buyer">
+              <a class="nav-link" href="#app-home" data-nav-route="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M4 10 12 4l8 6v10H4Z"/><path d="M4 10.5 12 4l8 6.5V20h-6v-6h-4v6H4v-9.5Z"/></svg><span>首页</span></a>
+              <a class="nav-link" href="#app-market" data-nav-route="market"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M4 8h16v12H4Z"/><path d="M4 8h16l-1-4H5L4 8Zm1 0v12h14V8M8 12h3v3H8v-3Z"/></svg><span>市场</span></a>
+              <a class="nav-link" href="#app-orders" data-nav-route="orders"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M5 3h14v18H5Z"/><path d="M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"/></svg><span>订单</span></a>
+              <a class="nav-link" href="#app-messages" data-nav-route="messages"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M4 5h16v12H8l-4 3Z"/><path d="M4 5h16v12H8l-4 3V5Z"/></svg><span>消息</span></a>
+              <a class="nav-link" href="#app-profile" data-nav-route="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="nav-soft" cx="12" cy="8" r="4"/><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-4.1 3-6.2 7-6.2s6.3 2.1 7 6.2"/></svg><span>我的</span></a>
+            </div>
+            <div class="nav-set provider-only" data-role-nav="provider">
+              <a class="nav-link" href="#app-workspace" data-nav-route="workspace"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M4 5h16v15H4Z"/><path d="M4 5h16v15H4zM8 10h3v3H8zM14 9h2M14 13h3M8 17h9"/></svg><span>工作台</span></a>
+              <a class="nav-link" href="#app-resources" data-nav-route="resources"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M5 4h14v16H5Z"/><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span>资源</span></a>
+              <a class="nav-link" href="#app-publish" data-nav-route="publish"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M8 14h8v6H8Z"/><path d="M12 20V5M6.5 10.5 12 5l5.5 5.5M5 20h14"/></svg><span>上架</span></a>
+              <a class="nav-link" href="#app-messages" data-nav-route="messages"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-soft" d="M4 5h16v12H8l-4 3Z"/><path d="M4 5h16v12H8l-4 3V5Z"/></svg><span>消息</span></a>
+              <a class="nav-link" href="#app-profile" data-nav-route="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle class="nav-soft" cx="12" cy="8" r="4"/><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-4.1 3-6.2 7-6.2s6.3 2.1 7 6.2"/></svg><span>我的</span></a>
+            </div>
+          </nav>
+
+          <section class="packet-loss-state" id="packet-loss-state" aria-labelledby="packet-loss-title" hidden>
+            <button class="loss-close" id="loss-close" type="button" aria-label="关闭断链预览">×</button>
+            <p class="loss-kicker" lang="en">NETWORK / LINK BREAK</p>
+            <div class="garlic-stage">
+              
+              <div class="mascot-render" id="mascot-render"></div>
+<template id="mascot-garlic-template"><svg class="garlic-mascot mascot-art" viewBox="0 0 224 208" role="img" shape-rendering="crispEdges">
+                <title>整头蒜吉祥物蒜粒</title>
+                <desc>原创低像素整头蒜，五瓣球体、中央蒜茎和根须组成，会随网络状态改变表情与道具。</desc>
+                <rect x="48" y="184" width="128" height="8" rx="0" fill="color-mix(in srgb,var(--brand) 14%,transparent)"/>
+                <path class="garlic-line" d="M96 8h32v8h16v16h-8v16h16v8h16v16h16v16h8v56h-8v16h-16v16h-24v8h-16v8H96v-8H80v-8H56v-16H40v-16h-8V88h8V72h16V56h16v-8h16V32h-8V16h16Z"/>
+                <path class="garlic-body" d="M104 16h16v8h8v24h16v16h16v16h16v16h8v40h-8v16h-16v16h-24v8h-48v-8H64v-16H48v-16h-8V96h8V80h16V64h24V48h16Z"/>
+                <path class="garlic-shade" d="M144 64h16v16h16v16h8v40h-8v16h-16v16h-24v8h-16V72h8V48h16Z"/>
+                <path class="garlic-leaf" d="M96 8h32v8h16v16h-16v16h-24V24H96Z"/>
+                <path class="garlic-line" opacity=".23" d="M72 72h8v24h-8zM96 56h8v40h-8zM120 56h8v40h-8zM144 72h8v24h-8z"/>
+                <path class="garlic-line" opacity=".24" d="M72 112h8v40H64v-8h8zM104 104h8v64h-8zM144 112h8v32h8v8h-16z"/>
+                <path class="garlic-line" d="M72 176h24v16H64v-8h8zM104 176h16v16h-16zM128 176h24v8h8v8h-32z"/>
+
+                <g class="garlic-state state-loss">
+                  <path class="garlic-line" d="M64 94h32v8H64zM128 102h32v8h-32z"/>
+                  <rect class="garlic-line" x="80" y="112" width="8" height="16"/>
+                  <rect class="garlic-line" x="136" y="112" width="8" height="16"/>
+                  <path class="garlic-line" d="M88 152h8v-8h32v8h8v8h-8v-8H96v8h-8Z"/>
+                  <rect class="garlic-cheek" x="56" y="136" width="16" height="8"/>
+                  <rect class="garlic-cheek" x="152" y="136" width="16" height="8"/>
+                  <path class="garlic-leaf" d="M184 80h8v16h8v16h-24V96h8Z"/>
+                  <path class="garlic-line" d="M32 120h16v8H32zM16 128h16v8H16zM184 128h16v8h-16z"/>
+                  <rect class="garlic-leaf" x="8" y="112" width="8" height="8"/>
+                  <rect class="garlic-leaf" x="200" y="112" width="8" height="8"/>
+                </g>
+
+                <g class="garlic-state state-reconnecting">
+                  <rect class="garlic-line" x="72" y="104" width="16" height="16"/>
+                  <rect class="garlic-line" x="136" y="104" width="16" height="16"/>
+                  <rect class="garlic-body" x="72" y="104" width="8" height="8"/>
+                  <rect class="garlic-body" x="136" y="104" width="8" height="8"/>
+                  <path class="garlic-line" d="M96 144h32v8H96z"/>
+                  <path class="garlic-line" d="M32 128h40v8H32zM152 128h32v8h-32z"/>
+                  <path class="garlic-leaf" d="M8 120h24v24h16v8H16v-8H8ZM184 120h24v32h-32v-8h16v-16h-8Z"/>
+                  <rect class="garlic-body" x="16" y="128" width="8" height="8"/>
+                  <rect class="garlic-body" x="192" y="128" width="8" height="8"/>
+                </g>
+
+                <g class="garlic-state state-restored">
+                  <rect class="garlic-line" x="72" y="104" width="16" height="16"/>
+                  <rect class="garlic-line" x="136" y="104" width="16" height="16"/>
+                  <rect class="garlic-body" x="72" y="104" width="8" height="8"/>
+                  <rect class="garlic-body" x="136" y="104" width="8" height="8"/>
+                  <path class="garlic-line" d="M88 144h8v8h32v-8h8v16H88Z"/>
+                  <rect class="garlic-body" x="104" y="152" width="16" height="8"/>
+                  <rect class="garlic-cheek" x="56" y="132" width="16" height="8"/>
+                  <rect class="garlic-cheek" x="152" y="132" width="16" height="8"/>
+                  <path class="garlic-leaf" d="M24 96h8V80h8v16h16v8H40v16h-8v-16H16v-8ZM192 72h8V56h8v16h16v8h-16v16h-8V80h-16v-8Z"/>
+                </g>
+
+                <g class="garlic-state state-failed">
+                  <path class="garlic-line" d="M68 104h8v8h8v-8h8v8h-8v8h8v8h-8v-8h-8v8h-8v-8h8v-8h-8ZM132 104h8v8h8v-8h8v8h-8v8h8v8h-8v-8h-8v8h-8v-8h8v-8h-8Z"/>
+                  <path class="garlic-line" d="M88 152h8v-8h32v8h8v8h-8v-8H96v8h-8Z"/>
+                  <path class="garlic-line" d="M24 128h40v8H24zM160 128h40v8h-40z"/>
+                  <path class="garlic-leaf" d="M8 112h16v8H16v16H8ZM200 112h16v24h-8v-16h-8Z"/>
+                  <path class="garlic-line" d="M184 88h8v8h8v-8h8v8h8v8h-8v8h-8v-8h-8v8h-8v-8h-8v-8h8Z"/>
+                </g>
+              </svg></template>
+<template id="mascot-kai-template"><div class="kai-v4-stage" role="img" aria-label="K、A、I 网络状态"><span data-letter="K"><img alt=""></span><span data-letter="A"><img alt=""></span><span data-letter="I"><img alt=""></span></div></template>
+
+            </div>
+            <div class="loss-copy">
+              <h2 id="packet-loss-title" tabindex="-1">算力还在，连接走丢了</h2>
+              <p>检测到网络丢包，当前操作结果尚未确认。连接恢复后，请先查看最新状态。</p>
+              <div class="loss-status" id="loss-status" role="status">蒜粒正在捡回数据包</div>
+            </div>
+            <div class="loss-actions">
+              <button class="loss-retry" id="loss-retry" type="button">重新连接</button>
+              <button id="loss-home" type="button">先回首页</button>
+            </div>
+          </section>
+
+
+          <section class="subview" id="sub-order-detail" data-subview-id="order-detail" aria-labelledby="sub-order-detail-title" hidden>
+            <div class="sub-scroll">
+              <header class="sub-head"><button class="sub-back" type="button" data-close-subview>返回</button><h2 id="sub-order-detail-title" tabindex="-1">订单详情</h2></header>
+              <div class="sub-illustration" aria-hidden="true"><svg viewBox="0 0 220 170"><g fill="var(--illustration-fill)"><rect x="44" y="18" width="132" height="134" rx="18"/><rect x="66" y="42" width="88" height="18" rx="6"/></g><g fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round"><rect x="44" y="18" width="132" height="134" rx="18"/><path d="M68 48h84M68 78h84M68 101h58M68 124h42"/></g></svg></div>
+              <div class="sub-content"><ul class="field-list">
+                <li><strong>合同与付款</strong><span>登录后读取真实状态</span></li>
+                <li><strong>资源交付</strong><span>接入、开通与使用期间</span></li>
+                <li><strong>验收与售后</strong><span>确认、评价、退款与争议</span></li>
+              </ul></div>
+              <div class="sub-action"><button class="primary-button demo-button" type="button">登录后查看订单</button></div>
+            </div>
+          </section>
+
+          <section class="subview" id="sub-wallet" data-subview-id="wallet" aria-labelledby="sub-wallet-title" hidden>
+            <div class="sub-scroll">
+              <header class="sub-head"><button class="sub-back" type="button" data-close-subview>返回</button><h2 id="sub-wallet-title" tabindex="-1">KAI 卡时账户</h2></header>
+              <div class="sub-illustration" aria-hidden="true"><svg viewBox="0 0 220 170"><g fill="var(--illustration-fill)"><rect x="28" y="43" width="164" height="94" rx="22"/><circle cx="156" cy="90" r="25"/></g><g fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round"><rect x="28" y="43" width="164" height="94" rx="22"/><path d="M28 70h164M55 104h48"/><circle cx="156" cy="90" r="25"/><path d="M147 90h18M156 81v18"/></g></svg></div>
+              <div class="sub-content"><ul class="field-list">
+                <li><strong>卡时余额</strong><span>登录后查看</span></li>
+                <li><strong>买家充值</strong><span>进入真实充值流程</span></li>
+                <li><strong>卖家结算</strong><span>按主体与订单核对</span></li>
+                <li><strong>收支记录</strong><span>不在预览中虚构金额</span></li>
+              </ul></div>
+              <div class="sub-action"><button class="primary-button demo-button" type="button">登录后打开账户</button></div>
+            </div>
+          </section>
+
+          <section class="subview" id="sub-assets" data-subview-id="assets" aria-labelledby="sub-assets-title" hidden>
+            <div class="sub-scroll">
+              <header class="sub-head"><button class="sub-back" type="button" data-close-subview>返回</button><h2 id="sub-assets-title" tabindex="-1">我的资产</h2></header>
+              <div class="sub-content">
+                <div class="asset-tabs" role="tablist" aria-label="资产身份">
+                  <button class="asset-tab" type="button" role="tab" aria-selected="true">我买到的</button>
+                  <button class="asset-tab" type="button" role="tab" aria-selected="false">我提供的</button>
+                </div>
+                <div class="empty-honest" style="margin-top:18px"><strong>登录后查看资产</strong><p>算力订单、设备订单和已接入资源会在这里按身份归档。</p></div>
+              </div>
+              <div class="sub-action"><button class="primary-button demo-button" type="button">登录后查看</button></div>
+            </div>
+          </section>
+          <section class="splash" id="splash" aria-labelledby="splash-title">
+            <button class="splash-skip" id="splash-skip" type="button">跳过</button>
+            <div class="splash-copy">
+              <h2 id="splash-title"><span>算力不闲置，</span><span>创造不等待</span></h2>
+              <p>让每一份算力，去往需要之处。</p>
+              <p class="splash-en" lang="en">COMPUTE IN MOTION</p>
+            </div>
+            <svg class="splash-figure" viewBox="0 0 390 420" aria-hidden="true">
+              <path class="node-line" d="M40 214C104 170 126 244 184 204s94-108 165-62"/>
+              <path class="node-line" d="M38 286c74 38 104-18 153 8s87 31 156-11" opacity=".48"/>
+              <g class="node-soft"><rect x="32" y="166" width="94" height="104" rx="22"/><rect x="150" y="150" width="110" height="128" rx="26"/><rect x="282" y="95" width="76" height="94" rx="20"/><rect x="277" y="244" width="86" height="100" rx="22"/></g>
+              <g class="node-line"><path d="M54 190h48M54 207h48M54 224h31"/><path d="M178 179h54M178 199h54M178 219h33"/><path d="M300 121h40M300 138h28"/><path d="M298 272h42M298 290h30M298 308h20"/></g>
+              <circle class="signal-dot" cx="75" cy="212" r="8"/>
+            </svg>
+            <div class="splash-brand"><strong translate="no">Zod</strong><span>算力连接与租赁网络</span></div>
+          </section>
+
+          <section class="subview" id="sub-market" data-subview-id="market" aria-labelledby="sub-market-title" hidden>
+            <div class="sub-scroll">
+              <header class="sub-head">
+                <button class="sub-back" type="button" data-close-subview>返回</button>
+                <h2 id="sub-market-title" tabindex="-1">实时市场明细</h2>
+              </header>
+              <div class="sub-illustration" aria-hidden="true">
+                <svg viewBox="0 0 220 170">
+                  <g class="ill-soft" fill="var(--illustration-fill)"><rect x="29" y="19" width="104" height="128" rx="15"/><path d="M145 48h48v78h-48Z"/></g>
+                  <g class="ill-line" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="29" y="19" width="104" height="128" rx="15"/><path d="M48 46h65M48 72h65M48 98h42M158 70v34M146 87h24M20 147h180"/></g>
+                </svg>
+              </div>
+              <div class="sub-content">
+                <ul class="field-list">
+                  <li><strong>资源型号</strong><span>接入真实市场数据</span></li>
+                  <li><strong>所在地区</strong><span>登录后查看</span></li>
+                  <li><strong>计价方式</strong><span>登录后查看</span></li>
+                  <li><strong>可用状态</strong><span>登录后查看</span></li>
+                </ul>
+              </div>
+              <div class="sub-action"><button class="primary-button demo-button" type="button">进入真实市场</button></div>
+            </div>
+          </section>
+
+          <section class="subview" id="sub-verification" data-subview-id="verification" aria-labelledby="sub-verification-title" hidden>
+            <div class="sub-scroll">
+              <header class="sub-head">
+                <button class="sub-back" type="button" data-close-subview>返回</button>
+                <h2 id="sub-verification-title" tabindex="-1">核验材料清单</h2>
+              </header>
+              <div class="sub-illustration" aria-hidden="true">
+                <svg viewBox="0 0 220 170">
+                  <g fill="var(--illustration-fill)"><path d="M38 16h99l34 35v102H38Z"/><rect x="126" y="88" width="67" height="55" rx="12"/></g>
+                  <g fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M38 16h99l34 35v102H38Z"/><path d="M137 16v36h34M58 68h70M58 91h47"/><rect x="126" y="88" width="67" height="55" rx="12"/><path d="m141 115 13 12 24-27"/></g>
+                </svg>
+              </div>
+              <div class="sub-content">
+                <ul class="check-list">
+                  <li><strong>资源权属材料</strong><span>证明主体与资源关系</span></li>
+                  <li><strong>设备配置材料</strong><span>型号、规模与网络条件</span></li>
+                  <li><strong>可用性材料</strong><span>交付时间与服务范围</span></li>
+                </ul>
+              </div>
+              <div class="sub-action"><button class="primary-button demo-button" type="button">开始准备材料</button></div>
+            </div>
+          </section>
+
+          <section class="drawer-layer" id="pending-drawer" role="dialog" aria-modal="true" aria-labelledby="pending-title" hidden>
+            <div class="drawer-sheet">
+              <div class="drawer-handle" aria-hidden="true"></div>
+              <header class="drawer-head">
+                <h2 id="pending-title">待处理事件</h2>
+                <button class="drawer-close" id="drawer-close" type="button">关闭</button>
+              </header>
+              <div class="drawer-visual" aria-hidden="true">
+                <svg viewBox="0 0 220 160">
+                  <g fill="var(--illustration-fill)"><path d="M26 85h50l14 20h42l14-20h49v52H26Z"/><path d="M54 22h114v74H54Z"/></g>
+                  <g fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M26 85h50l14 20h42l14-20h49v52H26Z"/><path d="M54 85V22h114v63M78 49h67M78 69h43"/><path d="M184 22v22M173 33h22"/></g>
+                </svg>
+              </div>
+              <p>待付款、待交付、待验收与争议处理会按订单归档。当前预览不虚构未读数量，登录后接入真实事件。</p>
+              <button class="primary-button demo-button" type="button">登录后查看事件</button>
+            </div>
+          </section>
+
+          <div class="live-region" id="app-live" aria-live="polite"></div>
+        </article>
+      </div>
+    </section>
+
+    <aside class="design-notes" aria-label="目标态设计说明">
+      <section class="note-panel">
+        <h2>当前选择</h2>
+        <div class="state-list">
+          <div><strong>配色</strong><span id="note-palette">澄空蓝白</span></div>
+          <div><strong>视角</strong><span id="note-role">使用算力</span></div>
+          <div><strong>页面</strong><span id="note-route">首页</span></div>
+          <div><strong>比例</strong><span id="note-layout">均衡型</span></div>
+          <div><strong>字体</strong><span id="note-font">思源清晰</span></div>
+          <div><strong>艺术字</strong><span id="note-hero-type">算力切面</span></div>
+          <div><strong>字号</strong><span id="note-type">32px · 7.8%</span></div>
+        </div>
+          <div><strong>粒子</strong><span id="note-particles">数据包轨道</span></div>
+      </section>
+
+      <section class="note-panel">
+        <h2>比较方法</h2>
+        <ul>
+          <li>先切换四套视频艺术字，比较视频画面上的标题气质。</li>
+          <li>黑夜默认态必须直接可读，不依赖 hover 或 focus 才显现。</li>
+          <li>触摸底栏仅停驻约 90ms，保留反馈但不制造等待感。</li>
+          <li>全局字体与视频艺术字互相独立，便于分别定稿。</li>
+        </ul>
+      </section>
+
+      <section class="note-panel">
+        <h2>动效原则</h2>
+        <p>底栏反馈压缩到约 90ms；粒子只出现在首页视频层，并通过两层透明度交替完成换色。减少动态模式保留少量静态粒子，不持续漂移。</p>
+      </section>
+
+      <section class="note-panel">
+        <h2>数据边界</h2>
+        <p>市场数量、资源健康、待办件数和账户状态均不虚构。三个二级界面只展示结构与字段职责，等待真实业务数据接入。</p>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var phone = document.getElementById("phone-preview");
+      var screenScroll = document.getElementById("screen-scroll");
+      var main = document.getElementById("mobile-main");
+      var bottomNav = document.getElementById("bottom-nav");
+      var live = document.getElementById("app-live");
+      var metaTheme = document.querySelector('meta[name="theme-color"]');
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+      var themeChoice = "system";
+      var currentRoute = "home";
+      var currentSubview = "";
+      var activeTrigger = null;
+      var storedScroll = 0;
+      var splashRunning = false;
+      var splashTimers = [];
+      var userPaused = false;
+      var routePreviewTimers = [];
+      var routePreviewLink = null;
+      var packetLossActive = false;
+      var packetLossTrigger = null;
+      var lossRetryTimer = null;
+
+      var routeNames = {
+        home: "首页",
+        market: "市场",
+        publish: "上架",
+        messages: "消息",
+        profile: "我的",
+        orders: "订单",
+        workspace: "工作台",
+        resources: "资源"
+      };
+
+      var paletteOrder = ["sky", "breeze", "sun", "cotton"];
+      var paletteNames = {
+        sky: "澄空蓝白",
+        breeze: "夏日微风",
+        sun: "日光云海",
+        cotton: "棉花糖云"
+      };
+
+      var fontNames = {
+        source: "思源清晰",
+        deng: "等线轻盈",
+        native: "系统简洁",
+        serif: "宋体人文"
+      };
+
+      var heroTypeNames = {
+        cut: "算力切面",
+        outline: "蓝图描边",
+        serif: "云端宋韵",
+        air: "等线留白"
+      };
+
+      var layoutNames = {
+        info: "信息型",
+        balanced: "均衡型",
+        focus: "聚焦型"
+      };
+
+      var ratioLabels = {
+        home: {
+          info: "视频 36% · 账户 12% · 算力流向 32% · 资源入口 20%",
+          balanced: "视频 42% · 账户 10% · 算力流向 30% · 资源入口 18%",
+          focus: "视频 50% · 账户 10% · 算力流向 26% · 资源入口 14%"
+        },
+        orders: {
+          info: "页头 20% · 订单焦点 44% · 状态与入口 36%",
+          balanced: "页头 18% · 订单焦点 50% · 状态与入口 32%",
+          focus: "页头 16% · 订单焦点 58% · 状态与入口 26%"
+        },
+        workspace: {
+          info: "页头 20% · 下一步行动 44% · 任务入口 36%",
+          balanced: "页头 18% · 下一步行动 52% · 任务入口 30%",
+          focus: "页头 16% · 下一步行动 60% · 任务入口 24%"
+        },
+        resources: {
+          info: "页头 20% · 资源地图 44% · 资源入口 36%",
+          balanced: "页头 18% · 资源地图 52% · 资源入口 30%",
+          focus: "页头 16% · 资源地图 60% · 资源入口 24%"
+        },
+        market: {
+          info: "页头 20% · 轮播 44% · 控制 8% · 二级入口 28%",
+          balanced: "页头 18% · 轮播 52% · 控制 8% · 二级入口 22%",
+          focus: "页头 16% · 轮播 60% · 控制 8% · 二级入口 16%"
+        },
+        publish: {
+          info: "页头 20% · 核验流程 44% · 主行动 12% · 二级入口 24%",
+          balanced: "页头 18% · 核验流程 54% · 主行动 11% · 二级入口 17%",
+          focus: "页头 16% · 核验流程 62% · 主行动 10% · 二级入口 12%"
+        },
+        messages: {
+          info: "页头 20% · 订单票据 42% · 待处理入口 22% · 行动 16%",
+          balanced: "页头 18% · 订单票据 50% · 待处理入口 18% · 行动 14%",
+          focus: "页头 16% · 订单票据 58% · 待处理入口 14% · 行动 12%"
+        },
+        profile: {
+          info: "页头 20% · 买卖选择 40% · 账户设置 40%",
+          balanced: "页头 18% · 买卖选择 48% · 账户设置 34%",
+          focus: "页头 16% · 买卖选择 56% · 账户设置 28%"
+        }
+      };
+
+      var typeRatios = {
+        "30": "7.3",
+        "32": "7.8",
+        "34": "8.3",
+        "36": "8.8"
+      };
+
+      function params() {
+        return new URL(location.href).searchParams;
+      }
+
+      function replaceUrl(values) {
+        var url = new URL(location.href);
+        Object.keys(values).forEach(function (key) {
+          var value = values[key];
+          if (value === "" || value === null || value === undefined) {
+            url.searchParams.delete(key);
+          } else {
+            url.searchParams.set(key, value);
+          }
+        });
+        history.replaceState(history.state, "", url);
+      }
+
+      function resolvedTheme() {
+        return themeChoice === "system" ? (systemDark.matches ? "dark" : "light") : themeChoice;
+      }
+
+      function applyTheme(choice, updateUrl) {
+        themeChoice = ["system", "light", "dark"].includes(choice) ? choice : "system";
+        if (themeChoice === "system") {
+          root.removeAttribute("data-theme");
+        } else {
+          root.setAttribute("data-theme", themeChoice);
+        }
+        document.querySelectorAll(".theme-button").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.themeChoice === themeChoice));
+        });
+        var resolved = resolvedTheme();
+        document.getElementById("theme-label").textContent = "主题 · " + (themeChoice === "system" ? "系统 " + (resolved === "dark" ? "黑夜" : "白昼") : (resolved === "dark" ? "黑夜" : "白昼"));
+        metaTheme.setAttribute("content", resolved === "dark" ? "#071523" : "#eaf3f9");
+        if (updateUrl) replaceUrl({ theme: themeChoice });
+      }
+
+      function applyPalette(palette, updateUrl) {
+        var selected = paletteOrder.includes(palette) ? palette : "sky";
+        root.dataset.palette = selected;
+        var name = paletteNames[selected];
+        var button = document.getElementById("palette-cycle");
+        button.textContent = name + " · 换一组";
+        button.setAttribute("aria-label", "切换配色，当前为" + name);
+        document.getElementById("note-palette").textContent = name;
+        if (updateUrl) replaceUrl({ palette: selected });
+      }
+
+      function applySize(size, updateUrl) {
+        var selected = ["411", "393", "360"].includes(size) ? size : "411";
+        phone.dataset.size = selected;
+        document.querySelectorAll(".size-button").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.sizeChoice === selected));
+        });
+        if (updateUrl) replaceUrl({ size: selected });
+        window.setTimeout(updateReadouts, 210);
+      }
+
+      function applyFont(font, updateUrl) {
+        var selected = Object.prototype.hasOwnProperty.call(fontNames, font) ? font : "source";
+        root.dataset.font = selected;
+        document.getElementById("font-select").value = selected;
+        document.getElementById("note-font").textContent = fontNames[selected];
+        if (updateUrl) replaceUrl({ font: selected });
+        requestAnimationFrame(updateReadouts);
+      }
+
+      function applyHeroType(type, updateUrl) {
+        var selected = Object.prototype.hasOwnProperty.call(heroTypeNames, type) ? type : "cut";
+        root.dataset.heroType = selected;
+        document.getElementById("hero-type-select").value = selected;
+        document.getElementById("note-hero-type").textContent = heroTypeNames[selected];
+        document.getElementById("hero-type-readout").innerHTML = "<strong>视频艺术字</strong> · " + heroTypeNames[selected];
+        if (updateUrl) replaceUrl({ hero: selected });
+      }
+
+      function updateParticleControl() {
+        var enabled = root.dataset.particles === "on";
+        var suspended = enabled && reduceMotion.matches;
+        var label = enabled ? (suspended ? "已开 · 静态" : "已开 · 自动换色") : "关闭";
+        var button = document.getElementById("particle-toggle");
+        button.textContent = enabled ? (suspended ? "粒子 · 已开（静态）" : "粒子 · 已开") : "粒子 · 关闭";
+        button.setAttribute("aria-pressed", String(enabled));
+        button.setAttribute("aria-label", enabled ? "关闭算力粒子，当前" + label : "打开算力粒子");
+        document.getElementById("note-particles").textContent = label;
+        document.getElementById("particle-readout").innerHTML = "<strong>算力粒子</strong> · " + label;
+      }
+
+      function applyParticles(state, updateUrl) {
+        var selected = state === "on" ? "on" : "off";
+        root.dataset.particles = selected;
+        updateParticleControl();
+        if (updateUrl) replaceUrl({ particles: selected === "on" ? "on" : null });
+      }
+
+      function layoutFor(route) {
+        return document.querySelector('[data-route="' + route + '"].app-view').dataset.layout;
+      }
+
+      function applyLayout(route, layout, updateUrl) {
+        var selected = ["info", "balanced", "focus"].includes(layout) ? layout : "balanced";
+        var view = document.querySelector('[data-route="' + route + '"].app-view');
+        view.dataset.layout = selected;
+        if (route === currentRoute) {
+          document.getElementById("layout-select").value = selected;
+        }
+        if (updateUrl) {
+          var value = {};
+          value["layout_" + route] = selected;
+          replaceUrl(value);
+        }
+        updateReadouts();
+      }
+
+      function applyTypeScale(scale, updateUrl) {
+        var selected = ["30", "32", "34", "36"].includes(scale) ? scale : "32";
+        root.dataset.typeScale = selected;
+        document.getElementById("type-select").value = selected;
+        document.getElementById("note-type").textContent = selected + "px · " + typeRatios[selected] + "%";
+        if (updateUrl) replaceUrl({ type: selected });
+        requestAnimationFrame(updateReadouts);
+      }
+
+      function updateReadouts() {
+        var view = document.querySelector('[data-route="' + currentRoute + '"].app-view');
+        if (!view) return;
+        var layout = view.dataset.layout;
+        document.getElementById("layout-select").value = layout;
+        document.getElementById("layout-readout").innerHTML = "<strong>" + routeNames[currentRoute] + " · " + layoutNames[layout] + "</strong>：" + ratioLabels[currentRoute][layout];
+        document.getElementById("note-route").textContent = routeNames[currentRoute];
+        document.getElementById("note-layout").textContent = layoutNames[layout];
+
+        var heading = view.querySelector("h2");
+        if (heading && getComputedStyle(view).display !== "none") {
+          var style = getComputedStyle(heading);
+          var actual = parseFloat(style.fontSize);
+          var width = phone.clientWidth;
+          var ratio = actual / width * 100;
+          var lineHeight = parseFloat(style.lineHeight);
+          var lines = Math.max(1, Math.round(heading.getBoundingClientRect().height / lineHeight));
+          document.getElementById("type-readout").innerHTML = "<strong>" + fontNames[root.dataset.font] + "</strong> · 标题 " + actual.toFixed(1) + "px · 屏宽 " + ratio.toFixed(1) + "% · " + lines + " 行";
+        }
+      }
+
+      document.querySelectorAll(".theme-button").forEach(function (button) {
+        button.addEventListener("click", function () {
+          applyTheme(button.dataset.themeChoice, true);
+        });
+      });
+
+      if (typeof systemDark.addEventListener === "function") {
+        systemDark.addEventListener("change", function () {
+          if (themeChoice === "system") applyTheme("system", false);
+        });
+      }
+
+      document.querySelectorAll(".size-button").forEach(function (button) {
+        button.addEventListener("click", function () {
+          applySize(button.dataset.sizeChoice, true);
+        });
+      });
+
+
+      document.getElementById("palette-cycle").addEventListener("click", function () {
+        var current = root.dataset.palette;
+        var next = paletteOrder[(paletteOrder.indexOf(current) + 1) % paletteOrder.length];
+        applyPalette(next, true);
+      });
+
+      document.getElementById("layout-select").addEventListener("change", function (event) {
+        applyLayout(currentRoute, event.target.value, true);
+      });
+
+
+      document.getElementById("font-select").addEventListener("change", function (event) {
+        applyFont(event.target.value, true);
+      });
+      document.getElementById("type-select").addEventListener("change", function (event) {
+        applyTypeScale(event.target.value, true);
+      });
+
+      document.getElementById("hero-type-select").addEventListener("change", function (event) {
+        applyHeroType(event.target.value, true);
+      });
+
+      var video = document.getElementById("hero-video");
+      var mediaToggle = document.getElementById("media-toggle");
+      var pauseIcon = mediaToggle.querySelector(".pause-icon");
+      var playIcon = mediaToggle.querySelector(".play-icon");
+      video.controls = false;
+
+      function updateMediaButton(paused) {
+        mediaToggle.setAttribute("aria-pressed", String(paused));
+        mediaToggle.setAttribute("aria-label", paused ? "播放背景视频" : "暂停背景视频");
+        pauseIcon.hidden = paused;
+        playIcon.hidden = !paused;
+      }
+
+      var packetLossState = document.getElementById("packet-loss-state");
+      var packetLossDemo = document.getElementById("packet-loss-demo");
+      var lossRetry = document.getElementById("loss-retry");
+      var lossStatus = document.getElementById("loss-status");
+
+      function showPacketLoss(show, updateUrl, focusState) {
+        window.clearTimeout(lossRetryTimer);
+        packetLossActive = Boolean(show);
+        packetLossState.hidden = !packetLossActive;
+        packetLossState.classList.remove("is-retrying");
+        lossRetry.removeAttribute("aria-busy");
+        lossRetry.textContent = "重新连接";
+        lossStatus.textContent = "蒜粒正在捡回数据包";
+        packetLossDemo.setAttribute("aria-pressed", String(packetLossActive));
+        packetLossDemo.textContent = packetLossActive ? "关闭丢包画面" : "预览丢包画面";
+        phone.toggleAttribute("data-network-loss", packetLossActive);
+
+        if (packetLossActive) {
+          if (splashRunning) finishSplash();
+          main.setAttribute("inert", "");
+          bottomNav.setAttribute("inert", "");
+          live.textContent = "网络丢包预览：算力还在，连接走丢了";
+          if (focusState) {
+            requestAnimationFrame(function () {
+              document.getElementById("packet-loss-title").focus({ preventScroll: true });
+            });
+          }
+        } else {
+          if (!currentSubview && !splashRunning) {
+            main.removeAttribute("inert");
+            bottomNav.removeAttribute("inert");
+          }
+          if (focusState && packetLossTrigger) packetLossTrigger.focus({ preventScroll: true });
+        }
+
+        syncVideo();
+        if (updateUrl) replaceUrl({ network: packetLossActive ? "loss" : null });
+      }
+
+      document.getElementById("particle-toggle").addEventListener("click", function () {
+        applyParticles(root.dataset.particles === "on" ? "off" : "on", true);
+        live.textContent = root.dataset.particles === "on" ? "算力粒子已打开，将自动交替颜色" : "算力粒子已关闭";
+      });
+
+      packetLossDemo.addEventListener("click", function (event) {
+        packetLossTrigger = event.currentTarget;
+        showPacketLoss(!packetLossActive, true, event.detail === 0);
+      });
+
+      document.getElementById("loss-close").addEventListener("click", function () {
+        showPacketLoss(false, true, true);
+      });
+
+      document.getElementById("loss-home").addEventListener("click", function () {
+        showPacketLoss(false, true, false);
+        activateRoute("home", { updateUrl: true, focusHeading: false });
+      });
+
+      lossRetry.addEventListener("click", function () {
+        if (packetLossState.classList.contains("is-retrying")) return;
+        packetLossState.classList.add("is-retrying");
+        lossRetry.setAttribute("aria-busy", "true");
+        lossRetry.textContent = "正在连接…";
+        lossStatus.textContent = "蒜粒正在重新排列数据包";
+        live.textContent = "正在重新连接…";
+        lossRetryTimer = window.setTimeout(function () {
+          lossStatus.textContent = "演示连接已恢复";
+          live.textContent = "丢包恢复演示完成";
+          showPacketLoss(false, true, true);
+        }, reduceMotion.matches ? 120 : 760);
+      });
+      function syncVideo() {
+        var shouldPause = currentRoute !== "home" || currentSubview !== "" || splashRunning || packetLossActive || userPaused || reduceMotion.matches;
+        if (shouldPause) {
+          video.pause();
+        } else {
+          var playAttempt = video.play();
+          if (playAttempt && typeof playAttempt.catch === "function") {
+            playAttempt.catch(function () {
+              userPaused = true;
+              updateMediaButton(true);
+            });
+          }
+        }
+        updateMediaButton(shouldPause);
+      }
+
+      mediaToggle.addEventListener("click", function () {
+        userPaused = !video.paused;
+        if (video.paused && currentRoute === "home" && !reduceMotion.matches) userPaused = false;
+        syncVideo();
+      });
+
+      if (typeof reduceMotion.addEventListener === "function") {
+        reduceMotion.addEventListener("change", function () {
+          syncVideo();
+          updateParticleControl();
+          if (reduceMotion.matches && routePreviewLink) {
+            var targetRoute = routePreviewLink.dataset.navRoute;
+            clearRoutePreview();
+            activateRoute(targetRoute, { updateUrl: true, focusHeading: false });
+          }
+        });
+      }
+
+      function routeFromHash() {
+        var route = location.hash.replace("#app-", "");
+        return Object.prototype.hasOwnProperty.call(routeNames, route) ? route : "home";
+      }
+
+      function activateRoute(route, options) {
+        var settings = options || {};
+        currentRoute = routeNames[route] ? route : "home";
+        clearRoutePreview();
+        document.querySelectorAll(".app-view").forEach(function (view) {
+          view.classList.toggle("is-active", view.dataset.route === currentRoute);
+        });
+        document.querySelectorAll("[data-nav-route]").forEach(function (link) {
+          if (link.dataset.navRoute === currentRoute) link.setAttribute("aria-current", "page");
+          else link.removeAttribute("aria-current");
+        });
+        phone.dataset.route = currentRoute;
+        screenScroll.scrollTop = 0;
+        syncVideo();
+        updateReadouts();
+        live.textContent = "已切换到" + routeNames[currentRoute];
+        if (settings.updateUrl) {
+          var url = new URL(location.href);
+          url.hash = "app-" + currentRoute;
+          url.searchParams.delete("subview");
+          history.pushState({ route: currentRoute }, "", url);
+        }
+        if (settings.focusHeading) {
+          var heading = document.querySelector('[data-route="' + currentRoute + '"] h2');
+          if (heading) heading.focus({ preventScroll: true });
+        }
+      }
+
+
+      function clearRoutePreview() {
+        routePreviewTimers.forEach(function (timer) { window.clearTimeout(timer); });
+        routePreviewTimers = [];
+        if (routePreviewLink) routePreviewLink.classList.remove("is-tap-preview");
+        routePreviewLink = null;
+        phone.classList.remove("is-route-leaving");
+        bottomNav.classList.remove("is-previewing");
+        bottomNav.removeAttribute("aria-busy");
+      }
+
+      function scheduleRouteActivation(link, event) {
+        var route = link.dataset.navRoute;
+        var keyboardActivation = event.detail === 0;
+        clearRoutePreview();
+
+        if (reduceMotion.matches || keyboardActivation) {
+          if (currentSubview) hideSubview(false);
+          activateRoute(route, { updateUrl: true, focusHeading: keyboardActivation });
+          return;
+        }
+
+        routePreviewLink = link;
+        link.classList.add("is-tap-preview");
+        bottomNav.classList.add("is-previewing");
+        bottomNav.setAttribute("aria-busy", "true");
+        live.textContent = "即将进入" + routeNames[route];
+
+        routePreviewTimers.push(window.setTimeout(function () {
+          if (routePreviewLink === link) phone.classList.add("is-route-leaving");
+        }, 70));
+
+        routePreviewTimers.push(window.setTimeout(function () {
+          var targetRoute = route;
+          var routeChanged = targetRoute !== currentRoute;
+          clearRoutePreview();
+          if (currentSubview) hideSubview(false);
+          if (routeChanged) {
+            activateRoute(targetRoute, { updateUrl: true, focusHeading: false });
+          } else {
+            live.textContent = "当前已在" + routeNames[targetRoute];
+          }
+        }, 90));
+      }
+      document.querySelectorAll("[data-nav-route]").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          scheduleRouteActivation(link, event);
+        });
+      });
+
+      document.querySelectorAll('.home-view a[href^="#app-"], .message-action-zone a[href^="#app-"]').forEach(function (link) {
+        link.addEventListener("click", function (event) {
+          var route = link.getAttribute("href").replace("#app-", "");
+          if (!routeNames[route]) return;
+          event.preventDefault();
+          activateRoute(route, { updateUrl: true, focusHeading: event.detail === 0 });
+        });
+      });
+
+      var slides = Array.from(document.querySelectorAll(".market-slide"));
+      var dots = Array.from(document.querySelectorAll(".carousel-dot"));
+      var slideIndex = Number(params().get("slide")) || 0;
+
+      function showSlide(index, updateUrl) {
+        slideIndex = (index + slides.length) % slides.length;
+        slides.forEach(function (slide, candidate) {
+          slide.classList.toggle("is-current", candidate === slideIndex);
+          slide.setAttribute("aria-hidden", String(candidate !== slideIndex));
+        });
+        dots.forEach(function (dot, candidate) {
+          dot.setAttribute("aria-pressed", String(candidate === slideIndex));
+        });
+        live.textContent = "市场轮播第 " + (slideIndex + 1) + " 张，共 " + slides.length + " 张";
+        if (updateUrl) replaceUrl({ slide: String(slideIndex) });
+      }
+
+      document.getElementById("slide-prev").addEventListener("click", function () { showSlide(slideIndex - 1, true); });
+      document.getElementById("slide-next").addEventListener("click", function () { showSlide(slideIndex + 1, true); });
+      dots.forEach(function (dot) {
+        dot.addEventListener("click", function () { showSlide(Number(dot.dataset.slideTo), true); });
+      });
+
+      function subviewRoute(id) {
+        if (id === "market") return "market";
+        if (id === "verification") return "publish";
+        if (id === "order-detail") return "orders";
+        if (id === "wallet" || id === "assets") return currentRoute;
+        if (id === "pending") return "messages";
+        return currentRoute;
+      }
+
+      function setBackgroundInert(inert) {
+        if (inert) {
+          main.setAttribute("inert", "");
+          bottomNav.setAttribute("inert", "");
+        } else {
+          main.removeAttribute("inert");
+          bottomNav.removeAttribute("inert");
+        }
+      }
+
+      function showSubview(id, trigger, updateUrl) {
+        if (!["market", "verification", "pending", "order-detail", "wallet", "assets"].includes(id)) return;
+        activeTrigger = trigger || activeTrigger;
+        storedScroll = screenScroll.scrollTop;
+        currentSubview = id;
+        phone.dataset.subview = id;
+        setBackgroundInert(true);
+        document.querySelectorAll(".subview").forEach(function (view) {
+          view.hidden = view.dataset.subviewId !== id;
+        });
+        document.getElementById("pending-drawer").hidden = id !== "pending";
+        syncVideo();
+        if (updateUrl) {
+          var url = new URL(location.href);
+          url.searchParams.set("subview", id);
+          url.hash = "app-" + subviewRoute(id);
+          history.pushState({ subview: id }, "", url);
+        }
+        if (id === "pending") {
+          document.getElementById("drawer-close").focus({ preventScroll: true });
+        } else {
+          var target = document.querySelector('#sub-' + id + ' [data-close-subview]');
+          if (target) target.focus({ preventScroll: true });
+        }
+        live.textContent = "已打开" + (id === "market" ? "实时市场明细" : id === "verification" ? "核验材料清单" : "待处理事件");
+      }
+
+      function hideSubview(restoreFocus) {
+        currentSubview = "";
+        phone.removeAttribute("data-subview");
+        document.querySelectorAll(".subview").forEach(function (view) { view.hidden = true; });
+        document.getElementById("pending-drawer").hidden = true;
+        setBackgroundInert(false);
+        screenScroll.scrollTop = storedScroll;
+        syncVideo();
+        if (restoreFocus && activeTrigger && document.contains(activeTrigger)) {
+          var triggerToRestore = activeTrigger;
+          requestAnimationFrame(function () {
+            triggerToRestore.focus({ preventScroll: true });
+          });
+        }
+      }
+
+      function closeSubviewByHistory() {
+        if (params().get("subview")) history.back();
+        else hideSubview(true);
+      }
+
+      document.querySelectorAll("[data-open-subview]").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          showSubview(link.dataset.openSubview, link, true);
+        });
+      });
+
+      document.querySelector("[data-open-drawer]").addEventListener("click", function (event) {
+        showSubview(event.currentTarget.dataset.openDrawer, event.currentTarget, true);
+      });
+
+      document.querySelectorAll("[data-close-subview]").forEach(function (button) {
+        button.addEventListener("click", closeSubviewByHistory);
+      });
+      document.getElementById("drawer-close").addEventListener("click", closeSubviewByHistory);
+
+      document.getElementById("pending-drawer").addEventListener("click", function (event) {
+        if (event.target.id === "pending-drawer") closeSubviewByHistory();
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && packetLossActive) {
+          event.preventDefault();
+          showPacketLoss(false, true, true);
+          return;
+        }
+        if (event.key === "Escape" && currentSubview) {
+          event.preventDefault();
+          closeSubviewByHistory();
+          return;
+        }
+        if (event.key === "Tab" && currentSubview === "pending") {
+          var drawer = document.getElementById("pending-drawer");
+          var focusable = Array.from(drawer.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')).filter(function (element) {
+            return !element.hidden;
+          });
+          if (!focusable.length) return;
+          var first = focusable[0];
+          var last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      function syncUrlState() {
+        var urlParams = params();
+        var route = routeFromHash();
+        var subview = urlParams.get("subview") || "";
+        if (subview) route = subviewRoute(subview);
+        activateRoute(route, { updateUrl: false, focusHeading: false });
+        if (urlParams.get("network") === "loss") showPacketLoss(true, false, false);
+        else if (packetLossActive) showPacketLoss(false, false, false);
+        if (subview) showSubview(subview, activeTrigger, false);
+        else if (currentSubview) hideSubview(true);
+      }
+
+      window.addEventListener("popstate", syncUrlState);
+      window.addEventListener("hashchange", function () {
+        if (!params().get("subview")) activateRoute(routeFromHash(), { updateUrl: false, focusHeading: false });
+      });
+
+      document.querySelectorAll(".demo-button, .demo-link").forEach(function (element) {
+        element.addEventListener("click", function (event) {
+          event.preventDefault();
+          live.textContent = "这是结构预览，真实功能将在产品实现阶段接入";
+        });
+      });
+
+      var splash = document.getElementById("splash");
+      var splashSkip = document.getElementById("splash-skip");
+
+      function clearSplashTimers() {
+        splashTimers.forEach(function (timer) { window.clearTimeout(timer); });
+        splashTimers = [];
+      }
+
+      function finishSplash() {
+        clearSplashTimers();
+        splash.hidden = true;
+        splash.classList.remove("is-running", "is-leaving");
+        splashRunning = false;
+        if (!currentSubview) {
+          main.removeAttribute("inert");
+          bottomNav.removeAttribute("inert");
+        }
+        syncVideo();
+      }
+
+      function runSplash() {
+        clearSplashTimers();
+        splash.hidden = false;
+        splash.classList.remove("is-running", "is-leaving");
+        void splash.offsetWidth;
+        splash.classList.add("is-running");
+        splashRunning = true;
+        main.setAttribute("inert", "");
+        bottomNav.setAttribute("inert", "");
+        syncVideo();
+        if (reduceMotion.matches) {
+          splashTimers.push(window.setTimeout(finishSplash, 600));
+        } else {
+          splashTimers.push(window.setTimeout(function () { splash.classList.add("is-leaving"); }, 2160));
+          splashTimers.push(window.setTimeout(finishSplash, 2400));
+        }
+      }
+
+      splashSkip.addEventListener("click", finishSplash);
+      document.getElementById("replay-splash").addEventListener("click", runSplash);
+
+      var initial = params();
+      applyTheme(initial.get("theme") || "system", false);
+      applyPalette(initial.get("palette") || "sky", false);
+      applySize(initial.get("size") || "411", false);
+      applyFont(initial.get("font") || "source", false);
+      applyHeroType(initial.get("hero") || "cut", false);
+      applyParticles(initial.get("particles") === "off" ? "off" : "on", false);
+      ["home", "market", "publish", "messages", "profile"].forEach(function (route) {
+        applyLayout(route, initial.get("layout_" + route) || "balanced", false);
+      });
+      applyTypeScale(initial.get("type") || "32", false);
+      slideIndex = Math.max(0, Math.min(slides.length - 1, slideIndex));
+      showSlide(slideIndex, false);
+      syncUrlState();
+      if (initial.get("network") === "loss") finishSplash();
+      else runSplash();
+    }());
+  </script>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var phone = document.getElementById("phone-preview");
+      var main = document.getElementById("mobile-main");
+      var nav = document.getElementById("bottom-nav");
+      var live = document.getElementById("app-live");
+      var networkPanel = document.getElementById("packet-loss-state");
+      var networkButtonOld = document.getElementById("packet-loss-demo");
+      var particleButtonOld = document.getElementById("particle-toggle");
+      var networkButton = networkButtonOld.cloneNode(true);
+      var particleButton = particleButtonOld.cloneNode(true);
+      networkButtonOld.replaceWith(networkButton);
+      particleButtonOld.replaceWith(particleButton);
+
+      var particleOrder = ["off", "routes", "mist", "nodes", "streams"];
+      var particleNames = {
+        off: "关闭",
+        routes: "数据包轨道",
+        mist: "云雾光点",
+        nodes: "节点脉冲",
+        streams: "资源流星"
+      };
+      var networkOrder = ["restored", "loss", "reconnecting", "failed"];
+      var networkLabels = {
+        loss: "数据包走丢",
+        reconnecting: "正在重连",
+        restored: "连接正常",
+        failed: "连接失败"
+      };
+      var networkCopy = {
+        garlic: {
+          loss: ["有几颗数据包走丢了", "检测到网络丢包，当前操作结果尚未确认。", "蒜粒正在捡回数据包"],
+          reconnecting: ["蒜粒正在把线路接回来", "先别重复操作，连接正在重新建立。", "蒜粒正在把数据包送回节点"],
+          restored: ["接好了，继续使用", "网络已经恢复，请先查看刚才操作的最新状态。", "线路已经重新连通"],
+          failed: ["线路还没回来，请再试一次", "连接仍未恢复。你可以重试，或先回到首页。", "蒜粒还没有接回最后一段"]
+        },
+        kai: {
+          loss: ["K、A、I 没接上", "断链发生在传输途中，刚才的操作结果还没确认。", "K、A、I 正在检查断点"],
+          reconnecting: ["KAI 正在重新串起线路", "先别重复操作，连接正在重新建立。", "数据正在依次通过 K、A、I"],
+          restored: ["KAI 接好了", "连接恢复，请先查看刚才操作的最新状态。", "线路已经重新连通"],
+          failed: ["KAI 还差一段连接", "可以再试一次，或先回首页。", "KAI 还没有把最后一段接上"]
+        }
+      };
+      var mascotDescriptions = {
+        garlic: {
+          loss: "整头蒜吉祥物蒜粒发现掉落的数据包，露出担心的表情。",
+          reconnecting: "蒜粒抱住两端线路，把数据包送回连接节点。",
+          restored: "蒜粒开心地站在重新点亮的线路旁。",
+          failed: "蒜粒的线路仍然断开，露出眩晕和无奈的表情。"
+        },
+        kai: {
+          loss: "蓝色K、橙色A和黄色I依次列队，字母组成KAI，但角色之间的数据线出现断点。",
+          reconnecting: "K、A、I从左到右重新串起线路，数据包依次通过三个角色。",
+          restored: "K、A、I完成连接并共同亮起，胸前字母组成KAI。",
+          failed: "K警觉、A难过、I眩晕，两段线路仍未接通。"
+        }
+      };
+      var mascotRender = document.getElementById("mascot-render");
+      var activeMascotFamily = "";
+
+      function mascotPreference() {
+        var value = new URL(location.href).searchParams.get("mascot") || "random";
+        return value === "kai" || value === "garlic" ? value : "random";
+      }
+
+      function secureRandomUnit() {
+        if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+          var value = new Uint32Array(1);
+          window.crypto.getRandomValues(value);
+          return value[0] / 4294967296;
+        }
+        return Math.random();
+      }
+
+      function pickMascotFamily(randomValue, preference) {
+        if (preference === "kai" || preference === "garlic") return preference;
+        return randomValue < 0.8 ? "kai" : "garlic";
+      }
+
+      function renderMascot(family) {
+        var template = document.getElementById("mascot-" + family + "-template");
+        if (!template) return;
+        mascotRender.replaceChildren(template.content.cloneNode(true));
+        activeMascotFamily = family;
+        root.dataset.mascotFamily = family;
+      }
+
+      function updateMascotA11y(family, state, titleText) {
+        var title = mascotRender.querySelector("title");
+        var description = mascotRender.querySelector("desc");
+        if (title) title.textContent = titleText;
+        if (description) description.textContent = mascotDescriptions[family][state];
+      }
+
+      function clearMascot() {
+        mascotRender.replaceChildren();
+        activeMascotFamily = "";
+        delete root.dataset.mascotFamily;
+      }
+      function urlSet(values, push) {
+        var url = new URL(location.href);
+        Object.keys(values).forEach(function (key) {
+          var value = values[key];
+          if (value === null || value === "") url.searchParams.delete(key);
+          else url.searchParams.set(key, value);
+        });
+        history[push ? "pushState" : "replaceState"](history.state, "", url);
+      }
+
+      function setRole(role, navigate) {
+        role = role === "provider" ? "provider" : "buyer";
+        root.dataset.role = role;
+        document.querySelectorAll("[data-role-choice]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.roleChoice === role));
+        });
+        document.getElementById("note-role").textContent = role === "buyer" ? "使用算力 · 目标态" : "提供算力 · 目标态";
+        urlSet({ role: role }, false);
+        if (navigate) {
+          var target = role === "provider" ? "workspace" : "home";
+          var link = document.querySelector('[data-role-nav="' + role + '"] [data-nav-route="' + target + '"]');
+          if (link) link.click();
+        }
+      }
+
+      document.querySelectorAll("[data-role-choice]").forEach(function (button) {
+        button.addEventListener("click", function () { setRole(button.dataset.roleChoice, true); });
+      });
+      document.querySelectorAll("[data-set-role]").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          setRole(link.dataset.setRole, true);
+        });
+      });
+
+      function setParticles(mode, update) {
+        mode = particleOrder.includes(mode) ? mode : "routes";
+        root.dataset.particles = mode;
+        var staticMode = matchMedia("(prefers-reduced-motion: reduce)").matches && mode !== "off";
+        var label = particleNames[mode] + (staticMode ? " · 静态" : "");
+        particleButton.textContent = "粒子 · " + label;
+        particleButton.setAttribute("aria-pressed", String(mode !== "off"));
+        particleButton.setAttribute("aria-label", "切换粒子模式，当前为" + label);
+        document.getElementById("note-particles").textContent = label;
+        document.getElementById("particle-readout").innerHTML = "<strong>算力粒子</strong> · " + label;
+        if (update) urlSet({ particles: mode }, false);
+      }
+
+      particleButton.addEventListener("click", function () {
+        var current = particleOrder.indexOf(root.dataset.particles);
+        setParticles(particleOrder[(current + 1) % particleOrder.length], true);
+        live.textContent = "粒子模式已切换为" + particleNames[root.dataset.particles];
+      });
+
+      function setNetwork(state, show, update) {
+        state = networkOrder.includes(state) ? state : "restored";
+        if (show && !activeMascotFamily) {
+          renderMascot(pickMascotFamily(secureRandomUnit(), mascotPreference()));
+        }
+
+        root.dataset.networkState = state;
+        networkPanel.dataset.state = state;
+        var family = activeMascotFamily || "garlic";
+        var copy = networkCopy[family][state];
+        document.getElementById("packet-loss-title").textContent = copy[0];
+        networkPanel.querySelector(".loss-copy > p").textContent = copy[1];
+        document.getElementById("loss-status").textContent = copy[2];
+        updateMascotA11y(family, state, copy[0]);
+
+        networkButton.textContent = "状态 · " + networkLabels[state];
+        networkButton.setAttribute("aria-pressed", String(show));
+        networkPanel.hidden = !show;
+        phone.toggleAttribute("data-network-loss", show);
+        if (show) {
+          main.setAttribute("inert", "");
+          nav.setAttribute("inert", "");
+          requestAnimationFrame(function () {
+            document.getElementById("packet-loss-title").focus({ preventScroll: true });
+          });
+        } else {
+          main.removeAttribute("inert");
+          nav.removeAttribute("inert");
+          clearMascot();
+        }
+        if (update) urlSet({ network: show ? state : null }, false);
+      }
+      networkButton.addEventListener("click", function () {
+        var current = networkOrder.indexOf(root.dataset.networkState);
+        var next = networkOrder[(current + 1) % networkOrder.length];
+        setNetwork(next, true, true);
+      });
+
+      ["loss-close", "loss-home"].forEach(function (id) {
+        var old = document.getElementById(id);
+        var fresh = old.cloneNode(true);
+        old.replaceWith(fresh);
+        fresh.addEventListener("click", function () {
+          setNetwork("restored", false, true);
+          if (id === "loss-home") {
+            var home = document.querySelector('[data-role-nav="buyer"] [data-nav-route="home"]');
+            setRole("buyer", false);
+            if (home) home.click();
+          } else {
+            networkButton.focus({ preventScroll: true });
+          }
+        });
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !networkPanel.hidden) {
+          event.preventDefault();
+          setNetwork("restored", false, true);
+          networkButton.focus({ preventScroll: true });
+        }
+      });
+      var retryOld = document.getElementById("loss-retry");
+      var retry = retryOld.cloneNode(true);
+      retryOld.replaceWith(retry);
+      retry.addEventListener("click", function () {
+        setNetwork("reconnecting", true, true);
+        retry.disabled = true;
+        window.setTimeout(function () {
+          retry.disabled = false;
+          setNetwork("restored", true, true);
+        }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 520);
+      });
+
+      document.querySelectorAll("[data-market-mode]").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          var index = Number(tab.dataset.marketMode);
+          document.querySelectorAll("[data-market-mode]").forEach(function (candidate) {
+            candidate.setAttribute("aria-selected", String(candidate === tab));
+          });
+          var dot = document.querySelector('[data-slide-to="' + index + '"]');
+          if (dot) dot.click();
+        });
+      });
+
+      document.querySelectorAll(".state-pill").forEach(function (pill) {
+        pill.addEventListener("click", function () {
+          pill.parentElement.querySelectorAll(".state-pill").forEach(function (item) { item.classList.remove("is-active"); });
+          pill.classList.add("is-active");
+        });
+      });
+      document.querySelectorAll(".asset-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          tab.parentElement.querySelectorAll(".asset-tab").forEach(function (item) { item.setAttribute("aria-selected", String(item === tab)); });
+        });
+      });
+
+      document.addEventListener("visibilitychange", function () {
+        root.classList.toggle("is-page-hidden", document.hidden);
+      });
+
+      var initial = new URL(location.href).searchParams;
+      setRole(initial.get("role") || "buyer", false);
+      setParticles(initial.get("particles") || "routes", false);
+      var initialNetwork = initial.get("network");
+      setNetwork(initialNetwork || "restored", Boolean(initialNetwork), false);
+    }());
+  </script>
+<script id="particle-v4-controller">
+(function(){
+  var root=document.documentElement,panel=document.getElementById('packet-loss-state'),render=document.getElementById('mascot-render'),main=document.getElementById('mobile-main'),nav=document.getElementById('bottom-nav'),scroll=document.getElementById('screen-scroll'),title=document.getElementById('packet-loss-title'),desc=panel.querySelector('.loss-copy>p'),status=document.getElementById('loss-status'),actions=panel.querySelector('.loss-actions'),networkButton,particleButton;
+  var family='',state='restored',route='home',savedFocus=null,savedScroll=0,networkPushed=false,retryTimer=0;
+  var modes=['auto','off','routes','mist','nodes','streams'],names={auto:'跟随页面',off:'关闭',routes:'数据包轨道',mist:'云雾光点',nodes:'节点脉冲',streams:'资源流星'},recommend={home:'routes',market:'nodes',orders:'nodes',resources:'nodes',workspace:'streams',publish:'routes',messages:'off',profile:'off'};
+  var kai={loss:['连接中断了','当前网络不稳定，稍后可以重新尝试。','连接已断开'],reconnecting:['KAI 正在重新连接','正在确认刚才的操作结果，请稍等。','连接正在恢复'],restored:['连接恢复了','刚才的操作结果已经更新，确认后再继续。','网络连接正常'],failed:['KAI 还差一段连接','可以再试一次，或稍后继续。','线路未连通']};
+  var garlic={loss:['蒜粒捡到了断开的数据','当前网络不稳定，稍后可以重新尝试。','连接已断开'],reconnecting:['蒜粒正在重新连接','正在确认刚才的操作结果，请稍等。','连接正在恢复'],restored:['蒜粒接好了线路','刚才的操作结果已经更新，确认后再继续。','网络连接正常'],failed:['蒜粒还差一段连接','可以再试一次，或稍后继续。','线路未连通']};
+  function param(k){return new URL(location.href).searchParams.get(k)}
+  function replace(v){var u=new URL(location.href);Object.keys(v).forEach(function(k){v[k]==null?u.searchParams.delete(k):u.searchParams.set(k,v[k])});history.replaceState(history.state,'',u)}
+  function routeFromHash(){var x=location.hash.replace('#app-','');return Object.prototype.hasOwnProperty.call(recommend,x)?x:'home'}
+  function pick(){var forced=param('mascot');if(forced==='kai'||forced==='garlic')return forced;return (window.__kaiRandomUnit?window.__kaiRandomUnit():Math.random())<.8?'kai':'garlic'}
+  window.__pickMascotFamily=function(x){return x<.8?'kai':'garlic'};
+  function images(s){return {loss:['k-angry-v2.png','a-sad-v2.png','i-sad-v2.png'],reconnecting:['k-angry-v2.png','a-angry-v2.png','i-angry-v2.png'],restored:['k-joyful-v2.png','a-joyful-v2.png','i-joyful-v2.png'],failed:['k-sad-v2.png','a-sad-v2.png','i-sad-v2.png']}[s]}
+  function setParticle(choice,write){choice=modes.indexOf(choice)>-1?choice:'auto';root.dataset.particleSelection=choice;root.dataset.particles=root.dataset.networkOpen==='true'?'off':choice==='auto'?recommend[route]:choice; if(particleButton){particleButton.textContent='粒子 · '+names[choice];particleButton.setAttribute('aria-label','切换粒子模式，当前为'+names[choice]);particleButton.setAttribute('aria-pressed',String(choice!=='off'))}document.getElementById('note-particles').textContent=names[choice];document.getElementById('particle-readout').innerHTML='<strong>算力粒子</strong> · '+names[choice];if(write)replace({particles:choice})}
+  function paintMascot(s){if(!family){family=pick();render.replaceChildren(document.getElementById('mascot-'+family+'-template').content.cloneNode(true));var first=render.firstElementChild;if(!matchMedia('(prefers-reduced-motion: reduce)').matches)first.classList.add('enter')}if(family==='kai'){var stage=render.firstElementChild;stage.dataset.state=s;stage.setAttribute('aria-label','K、A、I：'+kai[s][2]);stage.querySelectorAll('img').forEach(function(img,i){img.alt='';img.src='assets/kai-mascots/'+images(s)[i];img.onerror=function(){img.parentElement.classList.add('bad')}})}else{render.firstElementChild.setAttribute('aria-label','蒜粒：'+garlic[s][2])}}
+  function copy(s){var c=family==='kai'?kai[s]:garlic[s];title.textContent=c[0];desc.textContent=c[1];status.textContent=c[2];return c}
+  function arrange(s){var retry=document.getElementById('loss-retry'),home=document.getElementById('loss-home');retry.hidden=s==='reconnecting';home.hidden=s==='reconnecting'||s==='restored';retry.textContent=s==='restored'?'查看操作结果':s==='failed'?'再试一次':'重新连接';actions.toggleAttribute('data-v4-single',s==='restored')}
+  function open(s,push){var was=panel.hidden;if(was){savedFocus=document.activeElement;savedScroll=scroll.scrollTop;if(push){history.pushState({kaiNetwork:true},'',location.href);networkPushed=true}}state=s;root.dataset.networkOpen='true';root.dataset.networkState=s;panel.hidden=false;panel.dataset.state=s;paintMascot(s);copy(s);arrange(s);setParticle(root.dataset.particleSelection||'auto');main.inert=true;nav.inert=true;requestAnimationFrame(function(){title.focus({preventScroll:true})})}
+  function close(restore){clearTimeout(retryTimer);panel.hidden=true;root.dataset.networkOpen='false';setParticle(root.dataset.particleSelection||'auto');main.inert=false;nav.inert=false;render.replaceChildren();family='';if(restore){scroll.scrollTop=savedScroll;if(savedFocus&&savedFocus.focus)savedFocus.focus({preventScroll:true})}replace({network:null})}
+  function internal(s){state=s;root.dataset.networkState=s;panel.dataset.state=s;paintMascot(s);copy(s);arrange(s);replace({network:s})}
+  function clone(id,fn){var old=document.getElementById(id),fresh=old.cloneNode(true);old.replaceWith(fresh);fresh.addEventListener('click',fn);return fresh}
+  particleButton=clone('particle-toggle',function(){var i=modes.indexOf(root.dataset.particleSelection||'auto');setParticle(modes[(i+1)%modes.length],true)});
+  networkButton=clone('packet-loss-demo',function(){var next={restored:'loss',loss:'reconnecting',reconnecting:'failed',failed:'restored'}[state];open(next,true);replace({network:next})});
+  clone('loss-close',function(){close(true)});clone('loss-home',function(){close(true);var home=document.querySelector('[data-nav-route="home"]');if(home)home.click()});clone('loss-retry',function(){if(state==='restored'){close(true);return}var btn=this;btn.style.transform='scale(.98)';setTimeout(function(){btn.style.transform='';internal('reconnecting');retryTimer=setTimeout(function(){internal('restored')},matchMedia('(prefers-reduced-motion: reduce)').matches?120:520)},90)});
+  var statusNode=document.getElementById('loss-status');if(statusNode&&statusNode.parentElement.classList.contains('loss-copy'))panel.insertBefore(statusNode,actions);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!panel.hidden){e.preventDefault();close(true)}});
+  document.addEventListener('click',function(e){var a=e.target.closest('[data-nav-route]');if(a){route=a.dataset.navRoute;setTimeout(function(){route=routeFromHash();setParticle(root.dataset.particleSelection||'auto')},110)}});
+  window.addEventListener('hashchange',function(){route=routeFromHash();setParticle(root.dataset.particleSelection||'auto')});
+  window.addEventListener('popstate',function(){if(!panel.hidden){close(true);networkPushed=false}route=routeFromHash();setParticle(root.dataset.particleSelection||'auto')});
+  document.addEventListener('visibilitychange',function(){root.classList.toggle('is-page-hidden',document.hidden)});
+  route=routeFromHash();setParticle(param('particles')||'auto');if(param('network'))open(param('network'),false);
+}());
+</script></body>
+</html>
