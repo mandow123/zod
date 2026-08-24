@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { CloudPaySnapshot } from '../api';
+import { distributionPolicy } from '../distribution';
 import { creditAmount } from '../format';
 import { colors } from '../theme';
 
@@ -21,13 +22,14 @@ const payoutLabels = {
 export function CreditScreen({ snapshot, refreshing, onRefresh, onLogin, onOpenWallet, onOpenPayout }: Props) {
   const balance = snapshot.creditBalance;
   const supplierQualified = snapshot.payoutProfile?.status === 'active';
+  const quicklineAvailable = snapshot.qixiangTopupCapability !== null || distributionPolicy.stagingDemo;
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
     <View style={styles.heading}><View><Text style={styles.title}>KAI 卡时</Text><Text style={styles.subtitle}>充值到账后，以卡时购买算力和设备</Text></View></View>
 
-    {!snapshot.authenticated ? <View style={styles.empty}><View style={styles.emptyIcon}><Ionicons name="wallet-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>登录后查看卡时账户</Text><Text style={styles.emptyText}>余额、订单预留、供应收益和兑付记录都按交易主体隔离。</Text><Pressable onPress={onLogin} style={styles.primary}><Text style={styles.primaryText}>安全登录</Text></Pressable></View> : <>
+    {!snapshot.authenticated ? <View style={styles.empty}><View style={styles.emptyIcon}><Ionicons name="wallet-outline" size={28} color={colors.primary} /></View><Text style={styles.emptyTitle}>登录后查看卡时账户</Text><Text style={styles.emptyText}>余额、订单预留、供应收益和兑付记录都按当前主体隔离。</Text><Pressable onPress={onLogin} style={styles.primary}><Text style={styles.primaryText}>安全登录</Text></Pressable></View> : <>
       {snapshot.commerceError ? <View style={styles.warning}><Ionicons name="cloud-offline-outline" size={18} color={colors.amber} /><View style={styles.warningCopy}><Text style={styles.warningTitle}>部分账户数据暂未同步</Text><Text style={styles.warningText}>页面不会把其他主体的旧数据当作当前余额，请下拉重试。</Text></View></View> : null}
-      <View style={styles.balanceCard}><Text style={styles.balanceLabel}>当前可用</Text><Text style={styles.balanceValue}>{balance ? creditAmount(balance.available, true) : '—'}</Text><Text style={styles.balanceUnit}>KAI 卡时</Text><View style={styles.actions}><Pressable onPress={onOpenWallet} style={styles.primary}><Text style={styles.primaryText}>充值卡时</Text></Pressable>{snapshot.payoutProfile?.status === 'active' ? <Pressable onPress={onOpenPayout} style={styles.secondary}><Text style={styles.secondaryText}>供应收益兑付</Text></Pressable> : null}</View></View>
+      <View style={styles.balanceCard}><Text style={styles.balanceLabel}>当前可用</Text><Text style={styles.balanceValue}>{balance ? creditAmount(balance.available, true) : '—'}</Text><Text style={styles.balanceUnit}>KAI 卡时</Text>{quicklineAvailable || snapshot.payoutProfile?.status === 'active' ? <View style={styles.actions}>{quicklineAvailable ? <Pressable onPress={onOpenWallet} style={styles.primary}><Text style={styles.primaryText}>快线支付</Text></Pressable> : null}{snapshot.payoutProfile?.status === 'active' ? <Pressable onPress={onOpenPayout} style={styles.secondary}><Text style={styles.secondaryText}>供应收益兑付</Text></Pressable> : null}</View> : null}</View>
 
       <Text style={styles.sectionTitle}>账户分布</Text>
       <View style={styles.grid}>

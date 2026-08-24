@@ -1,0 +1,38 @@
+[Unit]
+Description=Refresh KAI paired production evidence without environment or command-line tokens
+After=network-online.target cloudpay-mobile-backend.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai-cloudpay-probe
+Group=kai-cloudpay-probe
+WorkingDirectory=/opt/kai-cloudpay/current
+RuntimeDirectory=kai-cloudpay-probe
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+LoadCredentialEncrypted=kai-refresh-state:/etc/credstore.encrypted/kai-cloudpay-inquiry-refresh-state
+LoadCredentialEncrypted=kai-probe-database-url:/etc/credstore.encrypted/kai-cloudpay-inquiry-probe-database-url
+LoadCredentialEncrypted=kai-probe-audit-pepper:/etc/credstore.encrypted/kai-cloudpay-inquiry-probe-audit-pepper
+ExecStartPre=+/usr/bin/node scripts/persist-kai-probe-refresh.mjs --recover
+ExecStartPre=/usr/bin/node scripts/rotate-kai-probe-credential.mjs
+ExecStartPre=+/usr/bin/node scripts/persist-kai-probe-refresh.mjs --commit
+ExecStart=/usr/bin/node scripts/run-inquiry-readiness-systemd.mjs
+TimeoutStartSec=180
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/run/kai-cloudpay-probe /etc/credstore.encrypted
+ProtectHome=yes
+ProtectHostname=yes
+ProtectClock=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

@@ -28,6 +28,7 @@ import { SubjectService } from '../src/subjects/service.js';
 import { PostgresSubjectStore } from '../src/subjects/store.js';
 import { CreditLedgerService } from '../src/credits/service.js';
 import { PostgresCreditLedgerStore } from '../src/credits/store.js';
+import { PostgresCreditBalanceSnapshotReader } from '../src/credits/lot-allocator.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../src/credits/types.js';
 import { CreditOrderService } from '../src/credit-orders/service.js';
 import { PostgresCreditOrderStore } from '../src/credit-orders/store.js';
@@ -205,7 +206,7 @@ const pglite = new PGlite();
 for (const migration of await migrationManifest()) await pglite.exec(migration.sql);
 const database = adapter(pglite);
 const config = loadConfig({
-  NODE_ENV: 'test', PUBLIC_ORIGIN: `http://127.0.0.1:${apiPort}`,
+  NODE_ENV: 'test', LOCAL_E2E: 'true', PUBLIC_ORIGIN: `http://127.0.0.1:${apiPort}`,
   ACCESS_TOKEN_SECRET: 'e2e-access-'.padEnd(64, 'a'), REFRESH_TOKEN_PEPPER: 'e2e-refresh-'.padEnd(32, 'b'),
   OTP_PEPPER: 'e2e-otp-'.padEnd(32, 'c'), AUDIT_PEPPER: 'e2e-audit-'.padEnd(32, 'd'),
   CURSOR_SECRET: 'e2e-cursor-'.padEnd(32, 'e'), PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
@@ -230,7 +231,8 @@ const notificationService = new NotificationService(new PostgresNotificationStor
 const objects = new LocalObjects();
 const evidenceService = new ResourceEvidenceService(new ResourceEvidenceStore(database), accounts, subjects, objects, config);
 const creditLedgerStore = new PostgresCreditLedgerStore(database);
-const creditLedgerService = new CreditLedgerService(creditLedgerStore, subjects);
+const creditLedgerService = new CreditLedgerService(creditLedgerStore, subjects,
+  new PostgresCreditBalanceSnapshotReader(database));
 const creditOrderStore = new PostgresCreditOrderStore(database);
 const fulfillmentStore = new PostgresFulfillmentStore(database);
 const computeProvider = new LocalComputeProvider();

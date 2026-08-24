@@ -1,0 +1,26 @@
+[Unit]
+Description=Always restore CloudPay Nginx after a bounded technical acceptance window
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/kai-cloudpay/cutover.env
+WorkingDirectory=/opt/kai-cloudpay-origin
+ExecStart=/usr/bin/node /opt/kai-cloudpay-origin/cutover-watchdog.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=15min
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=false
+ProtectSystem=full
+ReadWritePaths=/home/ubuntu/kai-transaction-v1/nginx-kai.conf /var/lib/kai-cloudpay-deploy /run/docker.sock
+# The active bind source is intentionally owned by the legacy ubuntu account and
+# mode 0644. The root watchdog needs only DAC override to restore that exact file;
+# Docker access is through the explicitly writable Unix socket and needs no extra
+# Linux capability.
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+AmbientCapabilities=CAP_DAC_OVERRIDE
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

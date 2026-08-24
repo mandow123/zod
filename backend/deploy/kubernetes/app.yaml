@@ -19,6 +19,7 @@ metadata:
   namespace: cloudpay
 data:
   NODE_ENV: production
+  MOBILE_API_PROFILE: inquiry_only
   HOST: 0.0.0.0
   PORT: "4100"
   PUBLIC_ORIGIN: https://cloudpay.kai.com
@@ -38,6 +39,7 @@ data:
   ADMIN_SESSION_ROTATION_SECONDS: "900"
   ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: "30"
   ADMIN_REAUTH_FRESHNESS_SECONDS: "300"
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT: opaque
   SMS_PROVIDER: aliyun
   PUSH_PROVIDER: expo
   OBJECT_STORAGE_PROVIDER: s3
@@ -48,6 +50,10 @@ data:
   COMPUTE_ALLOCATED_ACCELERATOR_COUNT: "1"
   COMPUTE_NODE_ACCELERATOR_COUNT: "8"
   NODE_SUPPORTED_AGENT_VERSIONS: 1.0.0
+  LEGACY_CREATOR_COMMISSION_MODE: off
+  STREAMER_REWARDS_MODE: off
+  INVITE_REWARDS_MODE: off
+  HONGHUAN_SUPPLIER_CATALOG_MODE: inquiry
   BACKUP_LOCAL_DIRECTORY: /var/lib/cloudpay-backup
   BACKUP_S3_FORCE_PATH_STYLE: "false"
   BACKUP_RETENTION_DAYS: "35"
@@ -232,6 +238,13 @@ spec:
                 port:
                   name: http
           - path: /terms
+            pathType: Exact
+            backend:
+              service:
+                name: cloudpay-backend
+                port:
+                  name: http
+          - path: /inquiry-terms
             pathType: Exact
             backend:
               service:

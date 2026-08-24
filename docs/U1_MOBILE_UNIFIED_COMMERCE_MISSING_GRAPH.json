@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-08-21",
+  "objective": "one Node/PostgreSQL commercial writer for mobile resource discovery, payment-funded card hours, fulfillment, refund and settlement",
+  "sourceEvidence": {
+    "u0CompatibilityMap": "docs/U0_WEB_NODE_COMPATIBILITY_MAP.json",
+    "u0DomainMapping": "artifacts/unified-commerce-u0/domain-mapping.json",
+    "legacyRuntime": [
+      "server.py:create_order/create_payment/qixiang_payment_callback/query_and_confirm_qixiang_payment",
+      "server.py:activate_platform_inventory_order/accept_order/create_refund/admin_mark_settlement_paid",
+      "qixiangpay.py:create_checkout/query_order/refund_order"
+    ]
+  },
+  "singleWriter": {
+    "target": "node_postgresql",
+    "legacyPythonWritesDuringCutover": "forbidden",
+    "dualCallback": "forbidden",
+    "dualLedger": "forbidden",
+    "legacyDataPolicy": "quarantine_then_verified_import",
+    "identityPolicy": "verified_kai_identity_subject_only"
+  },
+  "releaseBlockers": [
+    "QIXIANG_LOT_ACCOUNTING",
+    "LEGACY_IDENTITY_CONFLICTS_PRESENT",
+    "LEGACY_PAYMENT_ACTIVE_QUERY_REQUIRED",
+    "LEGACY_ALLOCATION_NO_LOT",
+    "LEGACY_SETTLEMENT_HOLDING_REVIEW_REQUIRED"
+  ],
+  "nodes": [
+    {
+      "id": "resource_catalog",
+      "mobileSurface": [
+        "GET /mobile/v1/supplier-inquiry-catalog",
+        "GET /mobile/v1/supplier-inquiry-catalog/:resourceId"
+      ],
+      "nodeAuthority": "supplier_inquiry_catalog_items",
+      "currentState": "read_only_inquiry_catalog_complete",
+      "missing": [
+        "audited promotion from formal inquiry catalog item to a purchasable credit-market listing",
+        "supplier-subject binding and capacity evidence before order creation"
+      ],
+      "legacyRelation": "GET /api/catalog is migrate-only; its listings cannot be promoted from U0 staging without evidence"
+    },
+    {
+      "id": "inquiry_to_order",
+      "mobileSurface": [
+        "POST /mobile/v1/resource-inquiries",
+        "POST /mobile/v1/orders"
+      ],
+      "nodeAuthority": "resource_inquiries + kai_credit_orders",
+      "currentState": "domains_exist_but_no_formal_catalog_to_order_bridge",
+      "missing": [
+        "capacity-confirmed inquiry to audited offer/listing conversion",
+        "immutable quote, service-end coverage and buyer/supplier subject binding",
+        "single transaction order plus card-hour reservation using the shared lot allocator"
+      ],
+      "legacyRelation": "POST /api/orders is migrate-only and must not remain a second writer"
+    },
+    {
+      "id": "qixiang_topup_create",
+      "mobileSurface": [
+        "POST /mobile/v1/credits/topups/qixiang",
+        "GET /mobile/v1/credits/topups/qixiang",
+        "GET /mobile/v1/credits/topups/qixiang/:topupId",
+        "POST /mobile/v1/credits/topups/qixiang/:topupId/recheck"
+      ],
+      "nodeAuthority": "kai_credit_topups",
+      "currentState": "constructed_in_full_commerce_and_evidence_gated",
+      "missing": [
+        "production evidence and credential gates"
+      ],
+      "legacyRelation": "POST /api/payments/create is retired; it cannot be mapped to a Node topup"
+    },
+    {
+      "id": "qixiang_confirmation",
+      "mobileSurface": [
+        "GET /mobile/v1/credits/topups/qixiang/notify",
+        "POST /mobile/v1/credits/topups/qixiang/:topupId/recheck"
+      ],
+      "nodeAuthority": "qixiang_payment_receipts + query outbox",
+      "currentState": "callback_enqueue_and_active_query_worker_constructed_in_full_commerce",
+      "missing": [
+        "single callback endpoint cutover with legacy callback disabled",
+        "production reconciliation evidence"
+      ],
+      "legacyRelation": "GET /api/payments/callback/qixiang is quarantined; callback-only success is forbidden"
+    },
+    {
+      "id": "card_hour_grant",
+      "mobileSurface": [
+        "GET /mobile/v1/credits/balance"
+      ],
+      "nodeAuthority": "kai_credit_transactions + kai_credit_lots + kai_credit_lot_movements",
+      "currentState": "active_query_success_closure_and_364_day_grant_implemented",
+      "missing": [
+        "complete production reservation, consume, release and restore callers",
+        "lot-accounting acceptance evidence before capability release"
+      ],
+      "legacyRelation": "U0 legacy payment rows remain active-query-unconfirmed and grantAllowed=false"
+    },
+    {
+      "id": "funding_lifecycle",
+      "mobileSurface": [
+        "POST /mobile/v1/orders",
+        "POST /mobile/v1/vast/orders",
+        "POST /mobile/v1/orders/:orderId/accept"
+      ],
+      "nodeAuthority": "CreditLotAllocator + credit-order/fulfillment/Vast stores",
+      "currentState": "shared_allocator_not_yet_connected_to_all_production_stores",
+      "missing": [
+        "authoritative reservation-transaction binding",
+        "FEFO reservation with immutable service-end coverage",
+        "capture actual use and release unused or expired card hours",
+        "post-accept refund restoration to original funding lots",
+        "known-scope unrestricted ledger closure and concurrency evidence"
+      ],
+      "legacyRelation": "legacy allocation has no credit lot and is quarantined"
+    },
+    {
+      "id": "manual_fulfillment",
+      "mobileSurface": [
+        "POST /mobile/v1/provider/orders/:orderId/delivery/ready",
+        "POST /mobile/v1/provider/orders/:orderId/fulfillment/provision",
+        "POST /mobile/v1/orders/:orderId/fulfillment/accept"
+      ],
+      "nodeAuthority": "kai_credit_orders + compute_fulfillments",
+      "currentState": "workflow_exists_with_legacy_direct_ledger_paths",
+      "missing": [
+        "lot-aware provision-failure release",
+        "lot-aware metered capture and issue decision",
+        "coverage-end enforcement before provider side effects"
+      ],
+      "legacyRelation": "demo delivery is retired; no fabricated fulfillment may bridge the systems"
+    },
+    {
+      "id": "refunds",
+      "mobileSurface": [
+        "POST /mobile/v1/orders/:orderId/aftercare/refund",
+        "POST /mobile/v1/operator/aftercare-refunds/:orderId/decision"
+      ],
+      "nodeAuthority": "credit-order refund state + original lot restoration",
+      "currentState": "service_refund_workflow_exists_but_lot_restore_not_connected",
+      "missing": [
+        "cumulative refund amount derived from original capture and posted history",
+        "expired restored lot value routed to platform issuance",
+        "separate Qixiang cash-refund dual-approval runtime batch"
+      ],
+      "legacyRelation": "legacy refunds and provider calls remain quarantined and cannot alter Node balances"
+    },
+    {
+      "id": "supplier_settlement",
+      "mobileSurface": [
+        "POST /mobile/v1/provider/orders/:orderId/settle",
+        "GET /mobile/v1/orders/:orderId/settlement"
+      ],
+      "nodeAuthority": "kai_credit_supplier_settlements + compute_fulfillment_supplier_settlements",
+      "currentState": "node_settlement_domains_exist",
+      "missing": [
+        "proof that every upstream capture/refund preserves buyer lot and supplier receivable conservation",
+        "verified import or explicit retirement of the U0 holding settlement"
+      ],
+      "legacyRelation": "POST /api/admin/settlements/:id/mark-paid is migrate-only and cannot dual-write"
+    }
+  ],
+  "edges": [
+    { "from": "resource_catalog", "to": "inquiry_to_order", "gate": "audited_listing_and_supplier_subject" },
+    { "from": "qixiang_topup_create", "to": "qixiang_confirmation", "gate": "exact_provider_snapshot_and_active_query" },
+    { "from": "qixiang_confirmation", "to": "card_hour_grant", "gate": "single_transaction_success_closure" },
+    { "from": "card_hour_grant", "to": "funding_lifecycle", "gate": "lot_accounting_acceptance" },
+    { "from": "inquiry_to_order", "to": "funding_lifecycle", "gate": "immutable_service_end_and_atomic_reservation" },
+    { "from": "funding_lifecycle", "to": "manual_fulfillment", "gate": "coverage_safe_before_provider_side_effect" },
+    { "from": "manual_fulfillment", "to": "refunds", "gate": "captured_funding_provenance" },
+    { "from": "manual_fulfillment", "to": "supplier_settlement", "gate": "accepted_net_consumption" },
+    { "from": "refunds", "to": "supplier_settlement", "gate": "refund_and_receivable_conservation" }
+  ]
+}

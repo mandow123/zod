@@ -23,7 +23,7 @@ function adapter(pglite:PGlite):Database{return{health:async()=>true,schemaReadi
   close:()=>pglite.close()}as unknown as Database;}
 
 const file=input(process.argv.slice(2)),port=Number(process.env.INQUIRY_ACCEPTANCE_PORT??4156),origin=`http://127.0.0.1:${port}`;
-const config=loadConfig({NODE_ENV:'test',PUBLIC_ORIGIN:origin,ACCESS_TOKEN_SECRET:'a'.repeat(64),REFRESH_TOKEN_PEPPER:'b'.repeat(32),
+const config=loadConfig({NODE_ENV:'test',LOCAL_E2E:'true',PUBLIC_ORIGIN:origin,ACCESS_TOKEN_SECRET:'a'.repeat(64),REFRESH_TOKEN_PEPPER:'b'.repeat(32),
   OTP_PEPPER:'c'.repeat(32),AUDIT_PEPPER:'d'.repeat(32),CURSOR_SECRET:'e'.repeat(32),PII_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),
   DATABASE_URL:'postgresql://acceptance/local',SMS_PROVIDER:'aliyun',SMS_ACCESS_KEY_ID:'local',SMS_ACCESS_KEY_SECRET:'local',
   SMS_SIGN_NAME:'KAI',SMS_TEMPLATE_CODE:'SMS_LOCAL',PUSH_PROVIDER:'expo',PUSH_CREDENTIALS_JSON:`{"accessToken":"${'p'.repeat(40)}"}`,
@@ -33,7 +33,10 @@ const config=loadConfig({NODE_ENV:'test',PUBLIC_ORIGIN:origin,ACCESS_TOKEN_SECRE
   BACKUP_KEY_ID:'acceptance-backup',BACKUP_LOCAL_DIRECTORY:'/tmp/zod-acceptance-backup',BACKUP_S3_ENDPOINT:'http://127.0.0.1:9001',
   BACKUP_S3_REGION:'local',BACKUP_S3_BUCKET:'acceptance-backup',BACKUP_S3_ACCESS_KEY:'local',BACKUP_S3_SECRET_KEY:'local',
   LEGAL_ENTITY_NAME:'KAI Local Acceptance',UNIFIED_SOCIAL_CREDIT_CODE:'913000000000000000',SUPPORT_EMAIL:'support@example.test',
-  SUPPORT_PHONE:'4000000000',ICP_FILING:'LOCAL-TEST',APP_FILING:'LOCAL-TEST',
+  SUPPORT_PHONE:'4000000000',ICP_FILING:'LOCAL-TEST',ICP_FILING_STATUS:'issued',ICP_FILING_EVIDENCE_REF:'evidence://local/icp',
+  APP_FILING:'LOCAL-TEST',APP_FILING_STATUS:'issued',APP_FILING_EVIDENCE_REF:'evidence://local/app',
+  INTERNET_SERVICE_CLASSIFICATION_STATUS:'approved_with_legal_evidence',
+  INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF:'evidence://local/classification',
   TERMS_URL:`${origin}/terms`,PRIVACY_POLICY_URL:`${origin}/privacy`,INQUIRY_TERMS_URL:`${origin}/inquiry-terms`});
 const pglite=new PGlite(),database=adapter(pglite);for(const name of ['0001_cloudpay_ledger.sql','0016_trading_subjects.sql','0058_resource_inquiries.sql','0059_resource_inquiry_operations.sql'])
   await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`,import.meta.url)),'utf8'));

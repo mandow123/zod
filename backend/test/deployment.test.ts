@@ -35,6 +35,7 @@ describe('production deployment baseline', () => {
     expect(app).toContain('path: /account/delete');
     expect(app).toContain('path: /privacy');
     expect(app).toContain('path: /terms');
+    expect(app).toContain('path: /inquiry-terms');
     expect(app).not.toContain('path: /internal/metrics');
     expect(migration).toContain('command: ["node", "dist/migrate.js"]');
     expect(migration).toContain('activeDeadlineSeconds: 900');

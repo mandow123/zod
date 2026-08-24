@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260824-002",
+  "reviewer": "App product manager",
+  "reviewerRole": "App product manager",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "reviewedAt": "2026-08-24T03:12:27Z",
+  "auditedAt": "2026-08-24T03:12:27Z",
+  "baseCommit": "a251c17cc2395ff98828b5f24e9641866c677a9e",
+  "stagedDiffSha256": "760669dc70e4c40b6af5063db5a710ee555d27e33a4e6ef4c6c8784f36d168aa",
+  "summary": "已独立审阅基于 github/main a251c17 的完整 staged squash 集成：共445个暂存路径，其中440个为非审计产品文件，功能来源提交为006d0be。索引无未解决冲突、无冲突标记且工作区与索引一致。合并结果同时保留管理员后台加固与移动端生产登录、法务同意、100家供应商询价目录、CloudPay K线、七相充值及双机部署门禁；管理员认证默认关闭、凭据外置，移动生产入口保持inquiry_only。生产登录继续采用OIDC公有客户端、PKCE/state/nonce、原生loopback、加密恢复及严格平台会话和法务同意解码。100家目录全部为inquiry_required、未知数量、不可直接购买；31个Logo由官方HTTPS来源、本地哈希与视觉批准绑定，其余使用文字缩写，K线不赋予交易能力。七相topup/recovery默认关闭，仓库trust policy为空；短时签名票据、phase/canary进程锁、数据库/发布/凭据绑定、worker健康、回调查单、364天批次账本与退款门禁均保持失败关闭，ICP备案、App备案及服务分类未满足时不会误开生产支付。迁移目录包含66份canonical SQL，两个0060以完整文件名独立记账，最新为0065；bundle明确校验该序列。暂存内容未包含APK、数据库、私有表格、明文密钥、令牌、签名私钥或运行时生产证据。独立复核通过移动端271项、跳过2项及typecheck；后台关键285项、跳过2项及typecheck；另有后台全量728项、跳过2项证据；移动后台契约184/160、部署47/47、Logo证据31项、发布bundle与diff-check均通过。最终提交必须先退出merge元数据并保持当前index不变，以a251c17为唯一父提交；任何索引变化均使本批准失效。"
+}

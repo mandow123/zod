@@ -1,0 +1,37 @@
+import type { ImageSourcePropType } from 'react-native';
+
+// Only files retrieved from, or referenced by, the supplier's official HTTPS
+// page are bundled here. Suppliers without a verifiable asset keep initials.
+export const supplierLogoAssets: Readonly<Record<string, ImageSourcePropType>> = {
+  'supplier-quote-20260817-002': require('../assets/suppliers/verified/supplier-quote-20260817-002.png'),
+  'supplier-quote-20260817-003': require('../assets/suppliers/verified/supplier-quote-20260817-003.png'),
+  'supplier-quote-20260817-004': require('../assets/suppliers/verified/supplier-quote-20260817-004.png'),
+  'supplier-quote-20260817-009': require('../assets/suppliers/verified/supplier-quote-20260817-009.png'),
+  'supplier-quote-20260817-018': require('../assets/suppliers/verified/supplier-quote-20260817-018.png'),
+  'supplier-quote-20260817-066': require('../assets/suppliers/verified/supplier-quote-20260817-066.png'),
+  'supplier-quote-20260817-067': require('../assets/suppliers/verified/supplier-quote-20260817-067.png'),
+  'supplier-quote-20260817-070': require('../assets/suppliers/verified/supplier-quote-20260817-070.png'),
+  'supplier-quote-20260817-071': require('../assets/suppliers/verified/supplier-quote-20260817-071.png'),
+  'supplier-quote-20260817-072': require('../assets/suppliers/verified/supplier-quote-20260817-072.png'),
+  'supplier-quote-20260817-073': require('../assets/suppliers/verified/supplier-quote-20260817-073.png'),
+  'supplier-quote-20260817-074': require('../assets/suppliers/verified/supplier-quote-20260817-074.png'),
+  'supplier-quote-20260817-075': require('../assets/suppliers/verified/supplier-quote-20260817-075.png'),
+  'supplier-quote-20260817-076': require('../assets/suppliers/verified/supplier-quote-20260817-076.png'),
+  'supplier-quote-20260817-077': require('../assets/suppliers/verified/supplier-quote-20260817-077.png'),
+  'supplier-quote-20260817-078': require('../assets/suppliers/verified/supplier-quote-20260817-078.png'),
+  'supplier-quote-20260817-079': require('../assets/suppliers/verified/supplier-quote-20260817-079.png'),
+  'supplier-quote-20260817-080': require('../assets/suppliers/verified/supplier-quote-20260817-080.png'),
+  'supplier-quote-20260817-081': require('../assets/suppliers/verified/supplier-quote-20260817-081.png'),
+  'supplier-quote-20260817-083': require('../assets/suppliers/verified/supplier-quote-20260817-083.png'),
+  'supplier-quote-20260817-084': require('../assets/suppliers/verified/supplier-quote-20260817-084.png'),
+  'supplier-quote-20260817-085': require('../assets/suppliers/verified/supplier-quote-20260817-085.png'),
+  'supplier-quote-20260817-086': require('../assets/suppliers/verified/supplier-quote-20260817-086.png'),
+  'supplier-quote-20260817-087': require('../assets/suppliers/verified/supplier-quote-20260817-087.png'),
+  'supplier-quote-20260817-088': require('../assets/suppliers/verified/supplier-quote-20260817-088.png'),
+  'supplier-quote-20260817-090': require('../assets/suppliers/verified/supplier-quote-20260817-090.png'),
+  'supplier-quote-20260817-092': require('../assets/suppliers/verified/supplier-quote-20260817-092.png'),
+  'supplier-quote-20260817-096': require('../assets/suppliers/verified/supplier-quote-20260817-096.png'),
+  'supplier-quote-20260817-097': require('../assets/suppliers/verified/supplier-quote-20260817-097.png'),
+  'supplier-quote-20260817-098': require('../assets/suppliers/verified/supplier-quote-20260817-098.png'),
+  'supplier-quote-20260817-100': require('../assets/suppliers/verified/supplier-quote-20260817-100.png'),
+};

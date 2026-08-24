@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-003",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-20T07:58:36Z",
+  "baseCommit": "eb9b488bfcea6805effc82d795f5526570208f33",
+  "stagedDiffSha256": "0148487fe78b3dd74e41bc274d34bc5197aaf1c786c4501619a329b47f81b7cb",
+  "summary": "已逐项审阅本批41个暂存文件，范围仅包含已批准的 auth.kai.com 手机登录恢复、双返佣 B0/B1 核心、三项 KAI Logo 资源，以及审计工具的二进制差异读取缓冲修复。审计工具仍对完整 git --binary 暂存差异计算 SHA-256 并失败关闭，仅将 Node 子进程 maxBuffer 从默认值提高到64MiB；没有过滤、截断、跳过二进制文件或放宽审计记录校验。登录链路采用原生 IPv4 loopback、PKCE/state/nonce、AndroidKeyStore AES-GCM 回调持久化与延迟确认；断网或强杀后保留待处理授权，孤儿令牌按远端撤销或加密队列处置，verified_pending 不冒充业务登录，正式包与测试包保持物理隔离。真实账号完成 token、userinfo、平台资料、协议同意并形成业务会话的全链，以及目标华为设备成功链仍属于上线前外部验收边界，不影响本批代码批准但不得对外宣称已验证。双返佣将主播返佣与邀请返佣分域建模，保留旧0057数据，具备最终净消耗事件、双录账本、幂等、审计与 outbox、退款修订与 recovery 冻结；shadow/on 模式在原子商业事件接线完成前均通过 readiness/release blocker 失败关闭，worker 未在生产启动，成熟任务按域独立配额避免相互饥饿。三项 Logo 分别为1024x1024 RGB雾蓝灰底图标、512x512 RGBA安全边距自适应前景和64x64 RGBA favicon，视觉与格式符合要求。复核通过 root typecheck、前端212/212、移动端与后端契约175/153、后端 typecheck/build、后端343/343、部署15/15及暂存差异检查；暂存内容未包含APK、截图、私有表格、密钥、令牌、签名材料、.qa或未跟踪白皮书生成文件。"
+}

@@ -8,8 +8,8 @@
     "icon": "./assets/icon.png",
     "scheme": "kaicloudpay",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F4F8FE",
-    "primaryColor": "#1769E0",
+    "backgroundColor": "#F2F5F8",
+    "primaryColor": "#1677FF",
     "plugins": [
       "expo-system-ui",
       [
@@ -20,11 +20,12 @@
       ],
       "expo-font",
       "expo-secure-store",
+      "expo-web-browser",
       "./plugins/with-android-release-signing",
       [
         "expo-notifications",
         {
-          "color": "#1769E0",
+          "color": "#1677FF",
           "defaultChannel": "cloudpay-activity"
         }
       ]
@@ -61,7 +62,7 @@
         "me.everything.badger.permission.BADGE_COUNT_WRITE"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#F4F8FE",
+        "backgroundColor": "#F2F5F8",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
@@ -71,6 +72,8 @@
     },
     "extra": {
       "cloudPayBaseUrl": "https://cloudpay.kai.com",
+      "kaiOidcIssuer": "https://auth.kai.com/api/auth",
+      "kaiOidcClientId": "xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K",
       "accountDeletionUrl": "https://cloudpay.kai.com/account/delete",
       "distributionChannel": "direct-cn",
       "nativeTopupsEnabled": true,

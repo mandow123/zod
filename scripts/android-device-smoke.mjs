@@ -78,7 +78,7 @@ const embeddedExtra = embeddedConfig?.extra ?? {};
 const requiredFrontendMarkers = [
   'KAI_CLOUD_UNIFIED_ASSETS_V2',
   'UnifiedAssetsScreen',
-  'ProviderHomeScreen',
+  'ProviderWorkspaceScreen',
   'PublishScreen',
 ];
 const commerceWorkflowMarkers = [
@@ -91,7 +91,19 @@ const providerWorkflowMarkers = [
   '/delivery/start', '/delivery/ready', '/refund/approve',
 ];
 const unifiedIdentityMarkers = [
-  '/mobile/v1/auth/kai/start', '/mobile/v1/auth/kai/exchange', 'kaicloudpay://auth/kai/callback',
+  'https://auth.kai.com/api/auth',
+  'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
+  'http://127.0.0.1:',
+  '/oauth2redirect/kai',
+];
+const productionIdentityMarkers = [
+  'X-KAI-ID-Token', '/mobile/v1/auth/kai/consents', 'kai.zod.auth.pending-revocations.v1',
+];
+const retiredIdentityMarkers = [
+  '/mobile/v1/auth/refresh', '/mobile/v1/auth/logout', '/mobile/v1/auth/sessions',
+  'kaicloudpay://auth/kai/callback',
+  'com.kaicloud.marketplace:/oauth2redirect/kai',
+  'https://cloud.kai.com/zod/oauth2redirect/kai',
 ];
 const missingFrontendMarkers = requiredFrontendMarkers.filter(
   (marker) => !embeddedBundle.includes(Buffer.from(marker)),
@@ -125,7 +137,19 @@ check(
   `${embeddedExtra.cloudPayBaseUrl ?? 'missing'} (${localE2e ? 'local-e2e' : 'production'})`,
 );
 check('unified_identity_protocol_embedded', missingUnifiedIdentityMarkers.length === 0,
-  missingUnifiedIdentityMarkers.length ? `missing: ${missingUnifiedIdentityMarkers.join(', ')}` : 'broker start, exchange and exact App callback');
+  missingUnifiedIdentityMarkers.length ? `missing: ${missingUnifiedIdentityMarkers.join(', ')}` : 'direct public PKCE client and exact HTTPS App Link');
+if (!localE2e) {
+  const missingProductionIdentity = productionIdentityMarkers.filter(
+    (marker) => !embeddedBundle.includes(Buffer.from(marker)),
+  );
+  const foundRetiredIdentity = retiredIdentityMarkers.filter(
+    (marker) => embeddedBundle.includes(Buffer.from(marker)),
+  );
+  check('production_paired_identity_and_consent', missingProductionIdentity.length === 0,
+    missingProductionIdentity.length ? `missing: ${missingProductionIdentity.join(', ')}` : 'paired access/id, legal consent and revocation retry');
+  check('retired_local_session_protocol_absent', foundRetiredIdentity.length === 0,
+    foundRetiredIdentity.length ? `found: ${foundRetiredIdentity.join(', ')}` : 'old refresh/logout/sessions and callback absent');
+}
 check('unified_asset_commerce_embedded', missingCommerceWorkflowMarkers.length === 0,
   missingCommerceWorkflowMarkers.length ? `missing: ${missingCommerceWorkflowMarkers.join(', ')}` : 'device purchase, assets and supplier payout APIs');
 if (requireStoreChannel) {
@@ -225,16 +249,16 @@ if (requireProviderMode && !providerMode) {
 check('requested_workspace', !requireProviderMode || providerMode, requireProviderMode ? '提供算力' : (providerMode ? '提供算力' : '使用算力'));
 const tabs = providerMode ? [
   { id: 'home', markers: ['上架资源', '登录后管理供给'], forbidden: ['上架数据没能载入'], settle: ['正在同步上架数据'] },
-  { id: 'market', markers: ['算力市场'] },
+  { id: 'market', markers: ['资源市场'] },
   { id: 'assets', markers: ['我的资产'] },
   { id: 'messages', markers: ['消息'] },
   { id: 'profile', markers: ['当前视角'] },
 ] : [
   { id: 'home', markers: ['找到正在可用的算力'] },
-  { id: 'market', markers: ['算力市场'] },
-  { id: 'assets', markers: ['我的资产'] },
+  { id: 'market', markers: ['资源市场'] },
+  { id: 'publish', markers: ['先完成资源方入驻'] },
   { id: 'messages', markers: ['消息'] },
-  { id: 'profile', markers: ['当前视角'] },
+  { id: 'profile', markers: ['我的资产'] },
 ];
 
 for (const [index, tab] of tabs.entries()) {

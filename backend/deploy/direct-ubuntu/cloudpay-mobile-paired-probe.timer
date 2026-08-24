@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh KAI paired production evidence every 15 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00,15,30,45:00
+Persistent=yes
+AccuracySec=30s
+RandomizedDelaySec=30
+Unit=cloudpay-mobile-paired-probe.service
+
+[Install]
+WantedBy=timers.target

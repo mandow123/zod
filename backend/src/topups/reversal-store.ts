@@ -34,7 +34,8 @@ function map(row: Row): TopupReversalRecord {
 
 export type CreateTopupReversalResult =
   | { status: 'created' | 'replayed'; reversal: TopupReversalRecord }
-  | { status: 'conflict' | 'topup_not_found' | 'topup_not_settled' | 'amount_exceeds_remaining' };
+  | { status: 'conflict' | 'topup_not_found' | 'topup_not_settled' | 'amount_exceeds_remaining'
+    | 'qixiang_refund_workflow_required' };
 export type RecoverTopupReversalResult =
   | { status: 'updated' | 'replayed'; reversal: TopupReversalRecord }
   | { status: 'not_found' | 'invalid_state' | 'same_operator' | 'insufficient_credits' };
@@ -46,17 +47,18 @@ export class PostgresTopupReversalStore {
     amountCents: number; providerEventReference: string; evidenceDigest: string; clientRequestId: string;
     payloadDigest: string; now: Date }>): Promise<CreateTopupReversalResult> {
     return this.database.transaction(async (client) => {
-      const replay = await client.query<Row & { payload_digest: string }>(`SELECT ${columns},payload_digest
-        FROM kai_credit_topup_reversals WHERE requested_by_operator_id=$1 AND client_request_id=$2 FOR UPDATE`,
-      [input.operatorId, input.clientRequestId]);
-      if (replay.rows[0]) return replay.rows[0].payload_digest === input.payloadDigest
-        ? { status: 'replayed', reversal: map(replay.rows[0]) } : { status: 'conflict' };
-      const topup = await client.query<{ subject_id: string; provider: 'alipay' | 'wechat'; status: string;
+      const topup = await client.query<{ subject_id: string; provider: 'alipay' | 'wechat' | 'qixiang'; status: string;
         amount_cents: string; credit_micros: string; reversed_amount_cents: string; reversed_credit_micros: string }>(
         `SELECT subject_id,provider,status,amount_cents::text,credit_micros::text,reversed_amount_cents::text,
           reversed_credit_micros::text FROM kai_credit_topups WHERE id=$1 FOR UPDATE`, [input.topupId]);
       const current = topup.rows[0];
       if (!current) return { status: 'topup_not_found' };
+      if (current.provider === 'qixiang') return { status: 'qixiang_refund_workflow_required' };
+      const replay = await client.query<Row & { payload_digest: string }>(`SELECT ${columns},payload_digest
+        FROM kai_credit_topup_reversals WHERE requested_by_operator_id=$1 AND client_request_id=$2 FOR UPDATE`,
+      [input.operatorId, input.clientRequestId]);
+      if (replay.rows[0]) return replay.rows[0].payload_digest === input.payloadDigest
+        ? { status: 'replayed', reversal: map(replay.rows[0]) } : { status: 'conflict' };
       if (current.status !== 'succeeded') return { status: 'topup_not_settled' };
       const pending = await client.query<{ cents: string; credits: string }>(`SELECT
         COALESCE(sum(amount_cents),0)::text cents,COALESCE(sum(credit_micros),0)::text credits

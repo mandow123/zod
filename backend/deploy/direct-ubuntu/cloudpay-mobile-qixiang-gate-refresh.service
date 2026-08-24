@@ -1,0 +1,23 @@
+[Unit]
+Description=Refresh CloudPay signed Qixiang production gate
+After=network-online.target postgresql.service
+Wants=network-online.target
+ConditionPathExists=/etc/kai-cloudpay/backend.env
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/kai-cloudpay/current
+EnvironmentFile=/etc/kai-cloudpay/backend.env
+UMask=0022
+StateDirectory=kai-cloudpay-public-gates
+StateDirectoryMode=0755
+ExecStart=/usr/bin/node deploy/direct-ubuntu/verify-qixiang-production-evidence.mjs --report /var/lib/kai-cloudpay-public-gates/qixiang-production-gate.json
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/credstore.encrypted /var/lib/kai-cloudpay-evidence /etc/kai-cloudpay/backend.env
+RestrictSUIDSGID=true
+LockPersonality=true

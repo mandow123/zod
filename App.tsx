@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AuthSheet } from './src/AuthSheet';
 import {
@@ -41,11 +41,26 @@ import { PublishScreen } from './src/screens/PublishScreen';
 import { colors } from './src/theme';
 import { getSupplierOffer } from './src/publishing';
 import { distributionPolicy } from './src/distribution';
-import { refreshAfterPendingAuthentication } from './src/auth-refresh';
+import {
+  promoteStoredAuthentication,
+  publishStoredAuthentication,
+  refreshAfterPendingAuthentication,
+} from './src/auth-refresh';
 import {
   providerNextNavigation, providerOfferMessageDestination, type ProviderPublishIntent,
 } from './src/provider-next-navigation';
-import { completeKaiAuth, isKaiAuthCallback, startKaiAuth } from './src/kai-auth';
+import {
+  acceptVerifiedKaiConsents,
+  cancelVerifiedKaiAuth,
+  completeKaiAuth,
+  isKaiAuthCallback,
+  kaiAuthProgressMessage,
+  loadKaiAuthProgress,
+  resumeVerifiedKaiAuth,
+  startKaiAuth,
+  KaiLegalDocumentsChangedError,
+  type KaiAuthProgress,
+} from './src/kai-auth';
 import { SparkProductDetailSheet } from './src/SparkProductDetailSheet';
 import { DeviceOrderSheet } from './src/DeviceOrderSheet';
 import { DeviceOrderDetailSheet } from './src/DeviceOrderDetailSheet';
@@ -62,6 +77,10 @@ import {
 import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
+import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
+import { loadSession, reconcileCommittedKaiOidcSession, type StoredSession } from './src/session';
+import { StagingDemoShell } from './src/StagingDemoShell';
+import { StagingEnvironmentBanner } from './src/StagingEnvironmentBanner';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 
@@ -73,6 +92,8 @@ function CloudPayApp() {
   const [authVisible, setAuthVisible] = useState(false);
   const [kaiAuthBusy, setKaiAuthBusy] = useState(false);
   const [kaiAuthError, setKaiAuthError] = useState<string | null>(null);
+  const [kaiAuthProgress, setKaiAuthProgress] = useState<KaiAuthProgress | null>(null);
+  const [kaiAuthRestoring, setKaiAuthRestoring] = useState(false);
   const [demandComposerVisible, setDemandComposerVisible] = useState(false);
   const [resourceToOpenId, setResourceToOpenId] = useState<string | null>(null);
   const [offerWizard, setOfferWizard] = useState<null | Readonly<{
@@ -85,6 +106,7 @@ function CloudPayApp() {
   const [publishListingToManage, setPublishListingToManage] = useState<string | null>(null);
   const [publishIntentToOpen, setPublishIntentToOpen] = useState<ProviderPublishIntent | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CloudPayOrder | null>(null);
+  const [selectedOrderSource, setSelectedOrderSource] = useState<'formal' | 'staging'>('formal');
   const [selectedListing, setSelectedListing] = useState<MarketCreditListing | null>(null);
   const [selectedSparkProduct, setSelectedSparkProduct] = useState<DeviceProduct | null>(null);
   const [selectedDeviceProduct, setSelectedDeviceProduct] = useState<DeviceProduct | null>(null);
@@ -125,6 +147,44 @@ function CloudPayApp() {
     await refreshAfterPendingAuthentication(refreshInFlight.current, refresh);
   }, [refresh]);
 
+  const publishKaiSession = useCallback(async (session: StoredSession) => {
+    await publishStoredAuthentication(
+      refreshInFlight.current,
+      session,
+      (stored) => setSnapshot((current) => promoteStoredAuthentication(current, stored.user)),
+      () => refresh(true),
+    );
+  }, [refresh]);
+
+  const restoreKaiAuthStatus = useCallback(async () => {
+    try {
+      if (await loadSession()) {
+        setKaiAuthProgress(null);
+        return;
+      }
+      const progress = await loadKaiAuthProgress();
+      setKaiAuthProgress(progress);
+    } catch (reason) {
+      setKaiAuthError(reason instanceof Error ? reason.message : '账号验证状态无法安全读取。');
+    }
+  }, []);
+
+  useEffect(() => { void restoreKaiAuthStatus(); }, [restoreKaiAuthStatus]);
+
+  const restoreStoredKaiSession = useCallback(async () => {
+    try {
+      const stored = await loadSession();
+      if (!stored) return;
+      const session = await reconcileCommittedKaiOidcSession(stored);
+      await publishKaiSession(session);
+      setKaiAuthProgress(null);
+    } catch (reason) {
+      setKaiAuthError(reason instanceof Error ? reason.message : '登录状态无法安全读取。');
+    }
+  }, [publishKaiSession]);
+
+  useEffect(() => { void restoreStoredKaiSession(); }, [restoreStoredKaiSession]);
+
   useEffect(() => {
     let active = true;
     const handled = new Set<string>();
@@ -142,10 +202,8 @@ function CloudPayApp() {
       setKaiAuthBusy(true);
       setKaiAuthError(null);
       try {
-        if (await completeKaiAuth(url)) {
-          await refreshAfterAuthentication();
-          if (active) setAuthVisible(false);
-        }
+        const progress = await completeKaiAuth(url);
+        if (active && progress) setKaiAuthProgress(progress);
       } catch (reason) {
         if (active) setKaiAuthError(reason instanceof Error ? reason.message : '统一身份登录失败，请重试。');
       } finally {
@@ -156,6 +214,18 @@ function CloudPayApp() {
     const subscription = Linking.addEventListener('url', ({ url }) => { void handleUrl(url); });
     return () => { active = false; subscription.remove(); };
   }, [refreshAfterAuthentication]);
+
+  useEffect(() => {
+    if (!authVisible || kaiAuthBusy) return;
+    let active = true;
+    setKaiAuthRestoring(true);
+    void resumeVerifiedKaiAuth().then((progress) => {
+      if (active && progress) setKaiAuthProgress(progress);
+    }).catch((reason) => {
+      if (active) setKaiAuthError(reason instanceof Error ? reason.message : '账号验证状态无法恢复。');
+    }).finally(() => { if (active) setKaiAuthRestoring(false); });
+    return () => { active = false; };
+  }, [authVisible, kaiAuthBusy]);
 
   useEffect(() => {
     if (!pendingReferralToken) return;
@@ -174,12 +244,20 @@ function CloudPayApp() {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => startKaiOidcRevocationRetry((message) => {
+    Alert.alert('登录安全提醒', message);
+  }), []);
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refresh();
+      if (state === 'active') {
+        void refresh();
+        void restoreStoredKaiSession();
+        void restoreKaiAuthStatus();
+      }
     });
     return () => subscription.remove();
-  }, [refresh]);
+  }, [refresh, restoreKaiAuthStatus, restoreStoredKaiSession]);
 
   useEffect(() => {
     if (activeTab !== 'messages' || !snapshot.authenticated) return;
@@ -229,6 +307,7 @@ function CloudPayApp() {
     navigate(destination.tab);
     if (destination.orderId) {
       try {
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(destination.orderId));
       } catch (caught) {
         Alert.alert('没能打开订单', caught instanceof Error ? caught.message : '请稍后重试。');
@@ -322,11 +401,13 @@ function CloudPayApp() {
       }
       if (message.data.route === 'provider_order' && typeof message.data.orderId === 'string') {
         setActiveTab('messages');
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
       if (message.data.route === 'buyer_order' && typeof message.data.orderId === 'string') {
         setActiveTab('orders');
+        setSelectedOrderSource('formal');
         setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
         return;
       }
@@ -393,7 +474,7 @@ function CloudPayApp() {
           }} />;
       case 'assets':
         return <UnifiedAssetsScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
-          onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then(setSelectedOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
+          onLogin={() => setAuthVisible(true)} onOpenCredits={() => navigate('credits')} onOpenOrder={(orderId) => void loadCloudPayOrder(orderId).then((order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenDeviceOrder={(orderId) => void loadDeviceOrder(orderId).then(setSelectedDeviceOrder).catch((reason) => Alert.alert('没能打开订单', reason instanceof Error ? reason.message : '请稍后重试。'))}
           onOpenMarket={() => navigate('market')} onOpenProviderAssets={(resourceId) => { setResourceToOpenId(resourceId ?? null); navigate('resources'); }} onOpenPublish={() => navigate('publish')}
           onOpenPayout={() => setPayoutVisible(true)} />;
@@ -403,7 +484,9 @@ function CloudPayApp() {
           onOpenPayout={() => setPayoutVisible(true)} />;
       case 'orders':
         return <OrdersScreen snapshot={snapshot} side={orderSide} refreshing={refreshing} onRefresh={refresh}
-          onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)} onOpenOrder={setSelectedOrder}
+          onMarket={() => navigate(orderSide === 'provider' ? 'workspace' : 'market')} onLogin={() => setAuthVisible(true)}
+          onOpenOrder={(order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }}
+          onOpenStagingOrder={(order) => { setSelectedOrderSource('staging'); setSelectedOrder(order); }}
           onOpenReview={setSelectedReview} />;
       case 'workspace':
         return <ProviderWorkspaceScreen
@@ -412,7 +495,7 @@ function CloudPayApp() {
           onRefresh={refresh}
           onNext={openProviderNextAction}
           onLogin={() => setAuthVisible(true)}
-          onOpenOrder={setSelectedOrder}
+          onOpenOrder={(order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }}
           onOpenDeviceOrder={setSelectedDeviceOrder}
           onAllOrders={() => { setOrderSide('provider'); navigate('orders'); }}
         />;
@@ -449,7 +532,7 @@ function CloudPayApp() {
         return <CreatorCollaborationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)}
           onTransferred={(event) => { setCreatorReward(event); void refresh(); }} />;
       case 'profile':
-        return <ProfileScreen snapshot={snapshot}
+        return <ProfileScreen snapshot={snapshot} kaiAuthProgress={snapshot.authenticated ? null : kaiAuthProgress}
           onSelectSubject={(subjectId) => void chooseSubject(subjectId)} onSessionChanged={refresh} onLogin={() => setAuthVisible(true)}
           onOpenQualification={() => { setPublishIntentToOpen('supplier'); navigate('publish'); }} onOpenCredits={() => navigate('credits')}
           onOpenOrders={() => { setOrderSide('buyer'); navigate('orders'); }} onOpenAssets={() => navigate('assets')}
@@ -474,23 +557,72 @@ function CloudPayApp() {
   return (
     <SafeAreaView nativeID={FRONTEND_IDENTITY} style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
+      <StagingEnvironmentBanner />
       <View style={styles.page}>{page}</View>
+      {!snapshot.authenticated && kaiAuthProgress ? <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="继续完成账号连接"
+        onPress={() => setAuthVisible(true)}
+        style={styles.authStatusBar}
+      >
+        <View style={styles.authStatusDot} />
+        <Text numberOfLines={2} style={styles.authStatusText}>{kaiAuthProgressMessage(kaiAuthProgress)}</Text>
+        <Text style={styles.authStatusAction}>继续</Text>
+      </Pressable> : null}
       <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}
         onSignedIn={refreshAfterAuthentication}
-        kaiAuthBusy={kaiAuthBusy}
+        kaiAuthBusy={kaiAuthBusy || kaiAuthRestoring}
         kaiAuthError={kaiAuthError}
-        onKaiAuthStart={async (documents) => {
+        kaiAuthProgress={kaiAuthProgress}
+        onKaiAuthStart={async () => {
           setKaiAuthError(null);
-          try { await startKaiAuth({
-            termsVersion: documents.terms.version,
-            privacyVersion: documents.privacy.version,
-          }); }
+          setKaiAuthBusy(true);
+          try {
+            const progress = await startKaiAuth();
+            if (progress) setKaiAuthProgress(progress);
+          }
           catch (reason) {
             setKaiAuthError(reason instanceof Error ? reason.message : '无法打开统一身份登录。');
+            await restoreKaiAuthStatus();
+          } finally {
+            setKaiAuthBusy(false);
           }
+        }}
+        onKaiPlatformRetry={async () => {
+          setKaiAuthError(null);
+          setKaiAuthBusy(true);
+          try {
+            const progress = await resumeVerifiedKaiAuth();
+            if (!progress) throw new Error('KAI 账号验证已过期，请重新登录。');
+            setKaiAuthProgress(progress);
+          } finally {
+            setKaiAuthBusy(false);
+          }
+        }}
+        onKaiConsent={async (documents) => {
+          setKaiAuthError(null);
+          try {
+            const session = await acceptVerifiedKaiConsents(documents);
+            await publishKaiSession(session);
+            setKaiAuthProgress(null);
+            setAuthVisible(false);
+          } catch (reason) {
+            if (reason instanceof KaiLegalDocumentsChangedError) {
+              setKaiAuthProgress({
+                kind: 'consent_required', reason: 'legal_consent_required',
+                lastAttemptAt: new Date().toISOString(), documents: reason.documents,
+              });
+            } else await restoreKaiAuthStatus();
+            throw reason;
+          }
+        }}
+        onKaiAuthCancel={async () => {
+          setKaiAuthError(null);
+          await cancelVerifiedKaiAuth();
+          setKaiAuthProgress(null);
         }}
       />
       <PublishFlowSheet
@@ -536,14 +668,21 @@ function CloudPayApp() {
         onLogin={() => { setSelectedListing(null); setAuthVisible(true); }}
         onNeedCredits={() => { setSelectedListing(null); setCreditWalletVisible(true); }}
         onCreated={(order) => {
+          setSelectedOrderSource('formal');
           setSelectedOrder(order);
           void refresh().catch(() => undefined);
         }}
       />
-      <CreditWalletSheet visible={creditWalletVisible} balance={snapshot.creditBalance}
+      {snapshot.qixiangTopupCapability !== null || distributionPolicy.stagingDemo ? <CreditWalletSheet
+        visible={creditWalletVisible}
+        balance={snapshot.creditBalance}
+        qixiangCapability={snapshot.qixiangTopupCapability}
+        userId={snapshot.user?.id ?? null}
+        subjectId={snapshot.currentSubjectId}
         onClose={() => setCreditWalletVisible(false)} onChanged={refresh}
-        onOpenSupport={() => { setCreditWalletVisible(false); navigate('messages'); }} />
-      <OrderDetailSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
+        onOpenSupport={() => { setCreditWalletVisible(false); navigate('messages'); }}
+      /> : null}
+      <OrderDetailSheet order={selectedOrder} source={selectedOrderSource} onClose={() => setSelectedOrder(null)} onChanged={refresh} />
       <AftercareReviewSheet review={selectedReview} onClose={() => setSelectedReview(null)} onChanged={refresh} />
       <SparkProductDetailSheet product={selectedSparkProduct} visible={selectedSparkProduct !== null}
         purchaseAllowed={selectedSparkAvailability.allowed} blockedReason={selectedSparkAvailability.reason}
@@ -574,7 +713,7 @@ function CloudPayApp() {
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <CloudPayApp />
+      <StagingDemoShell><CloudPayApp /></StagingDemoShell>
     </SafeAreaProvider>
   );
 }
@@ -582,4 +721,8 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   page: { flex: 1 },
+  authStatusBar: { minHeight: 48, marginHorizontal: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 13, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#C9DDF7' },
+  authStatusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  authStatusText: { flex: 1, color: colors.primaryDark, fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  authStatusAction: { color: colors.primary, fontSize: 10, fontWeight: '900' },
 });

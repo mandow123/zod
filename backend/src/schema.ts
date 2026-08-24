@@ -5,19 +5,26 @@ import { fileURLToPath } from 'node:url';
 import type { QueryResultRow } from 'pg';
 
 export type MigrationDefinition = Readonly<{ version: string; checksum: string; sql: string }>;
+export const migrationFileNamePattern = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*\.sql$/u;
 
 let cachedManifest: Promise<MigrationDefinition[]> | null = null;
 
+export async function readMigrationManifest(directory: string) {
+  const entries = await readdir(directory);
+  const forbidden = entries.filter((file) => file.startsWith('._')
+    || (file.endsWith('.sql') && !migrationFileNamePattern.test(file))).sort();
+  if (forbidden.length > 0) throw new Error(`MIGRATION_DIRECTORY_FORBIDDEN_ENTRY:${forbidden.join(',')}`);
+  const files = entries.filter((file) => migrationFileNamePattern.test(file)).sort();
+  if (!files.length) throw new Error('MIGRATION_MANIFEST_EMPTY');
+  return Promise.all(files.map(async (version) => {
+    const sql = await readFile(join(directory, version), 'utf8');
+    return { version, sql, checksum: createHash('sha256').update(sql).digest('hex') };
+  }));
+}
+
 export function migrationManifest() {
-  cachedManifest ??= (async () => {
-    const directory = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
-    const files = (await readdir(directory)).filter((file) => file.endsWith('.sql')).sort();
-    if (!files.length) throw new Error('MIGRATION_MANIFEST_EMPTY');
-    return Promise.all(files.map(async (version) => {
-      const sql = await readFile(join(directory, version), 'utf8');
-      return { version, sql, checksum: createHash('sha256').update(sql).digest('hex') };
-    }));
-  })();
+  const directory = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+  cachedManifest ??= readMigrationManifest(directory);
   return cachedManifest;
 }
 

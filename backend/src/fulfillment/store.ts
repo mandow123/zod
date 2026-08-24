@@ -1,8 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { Database } from '../database.js';
 import { PostgresSettlementFeeStore } from '../settlement-fees/store.js';
 import { KAI_CREDIT_CENT_MICROS, isCreditCentAligned } from '../credits/precision.js';
+import { CreditLotAllocator } from '../credits/lot-allocator.js';
 import type { FulfillmentAttestation, FulfillmentRecord, SafeConnectionDescriptor } from './types.js';
 
 type FulfillmentRow = {
@@ -21,6 +22,8 @@ const columns = `id, order_id, buyer_subject_id, supplier_subject_id, resource_i
   provider_lease_id, status, connection, attestation_digest, failure_code, failure_retryable, created_at,
   provisioning_at, ready_at, running_at, stopping_at, hard_expires_at, stopped_at, failed_at, updated_at,
   allocated_accelerator_count, resource_slot_limit, provisioning_deadline_at`;
+const lotDigest = (value: string) => /^(?:[0-9a-f]{64}|[0-9a-f]{128})$/u.test(value)
+  ? value : createHash('sha256').update(value).digest('hex');
 
 type IssueRow = {
   id: string; order_id: string; fulfillment_id: string; buyer_subject_id: string; kind: 'access' | 'metering';
@@ -163,7 +166,7 @@ export interface FulfillmentStore {
 }
 
 export class PostgresFulfillmentStore implements FulfillmentStore {
-  constructor(private readonly database: Database) {}
+  constructor(private readonly database: Database, private readonly lots = new CreditLotAllocator()) {}
 
   async getForSubject(subjectId: string, orderId: string) {
     const order = await this.database.query<{ id: string }>(`SELECT id FROM kai_credit_orders
@@ -375,22 +378,23 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
     retryable: boolean, now: Date) {
       const reservation = await client.query<{
         id: string; listing_id: string; quantity: string; credit_micros: string; status: string;
-      }>(`SELECT id, listing_id, quantity::text, credit_micros::text, status FROM kai_credit_order_reservations
+        reservation_transaction_id: string;
+      }>(`SELECT id, listing_id, quantity::text, credit_micros::text, status, reservation_transaction_id::text
+        FROM kai_credit_order_reservations
         WHERE order_id = $1 FOR UPDATE`, [current.orderId]);
       const held = reservation.rows[0];
       if (!held || held.status !== 'secured') throw new Error('FULFILLMENT_SECURED_RESERVATION_REQUIRED');
-      const accounts = await this.buyerAccounts(client, current.buyerSubjectId);
       const transactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
-          payload_digest, reference_type, reference_id, description, status)
-        VALUES ($1, $2, 'COMPUTE_PROVISION_FAILURE_RELEASE', $3, $4, 'order_release', $5, '算力开通失败退回卡时', 'pending')`,
-      [transactionId, `subject:${current.buyerSubjectId}`, `compute-failure:${current.id}`,
-        `compute-failure:${current.id}:${code}`, current.orderId]);
-      await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo) VALUES
-        ($1, $2, $3, $4, '算力开通失败退回'), ($5, $2, $6, $7, '算力开通失败解冻')`,
-      [randomUUID(), transactionId, accounts.available, held.credit_micros, randomUUID(), accounts.reserved,
-        (-BigInt(held.credit_micros)).toString()]);
-      await client.query(`UPDATE kai_credit_transactions SET status = 'posted', posted_at = $2 WHERE id = $1`, [transactionId, now]);
+      const payloadDigest = createHash('sha256').update(`compute-failure:${current.id}:${code}`).digest('hex');
+      const released = await this.lots.resolveReservation(client, {
+        subjectId: current.buyerSubjectId, referenceType: 'credit_order', referenceId: current.orderId,
+        reservationTransactionId: held.reservation_transaction_id,
+        totalReservedMicros: BigInt(held.credit_micros), capturedMicros: 0n, now, transactionId,
+        scope: 'COMPUTE_PROVISION_FAILURE_RELEASE', ledgerReferenceType: 'order_release',
+        idempotencyOwner: `subject:${current.buyerSubjectId}`, idempotencyKey: `compute-failure:${current.id}`,
+        payloadDigest, counterpartEntries: [],
+      });
+      if (released.status === 'conflict') throw new Error('FULFILLMENT_LOT_RELEASE_CONFLICT');
       await client.query(`UPDATE kai_credit_order_reservations SET status = 'released', resolved_at = $2,
         resolution_transaction_id = $3, resolution_reason = 'compute_provision_failed' WHERE id = $1`,
       [held.id, now, transactionId]);
@@ -510,8 +514,10 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const metering = await client.query<{ id: string; consumed_capacity_micros: string }>(
         `SELECT id, consumed_capacity_micros::text FROM compute_fulfillment_metering WHERE fulfillment_id = $1 FOR UPDATE`, [row.id],
       );
-      const reservation = await client.query<{ id: string; status: string; listing_id: string; quantity: string }>(
-        `SELECT id, status, listing_id, quantity::text FROM kai_credit_order_reservations WHERE order_id = $1 FOR UPDATE`, [row.order_id],
+      const reservation = await client.query<{ id: string; status: string; listing_id: string; quantity: string;
+        reservation_transaction_id: string }>(
+        `SELECT id, status, listing_id, quantity::text, reservation_transaction_id::text
+         FROM kai_credit_order_reservations WHERE order_id = $1 FOR UPDATE`, [row.order_id],
       );
       if (order.rows[0]?.status !== 'acceptance_pending' || reservation.rows[0]?.status !== 'secured' || !metering.rows[0]) return null;
       const consumed = BigInt(metering.rows[0].consumed_capacity_micros);
@@ -520,7 +526,6 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const total = BigInt(order.rows[0].total_credit_micros);
       const captured = meteredCreditToCent(consumed, BigInt(order.rows[0].unit_credit_micros));
       const refund = total - captured;
-      const buyer = await this.buyerAccounts(client, row.buyer_subject_id);
       await client.query(`INSERT INTO kai_credit_accounts(id, owner_kind, subject_id, code, account_kind, allow_negative)
         VALUES ($1, 'subject', $2, $3, 'supplier_receivable', false)
         ON CONFLICT (subject_id, account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
@@ -528,21 +533,17 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const supplier = await client.query<{ id: string }>(`SELECT id FROM kai_credit_accounts
         WHERE subject_id = $1 AND account_kind = 'supplier_receivable' FOR UPDATE`, [row.supplier_subject_id]);
       const transactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id, idempotency_owner, scope, idempotency_key,
-          payload_digest, reference_type, reference_id, description, status)
-        VALUES ($1, $2, 'COMPUTE_METERED_CAPTURE', $3, $4, 'order_capture', $5, '算力实耗结算', 'pending')`,
-      [transactionId, `subject:${row.buyer_subject_id}`, `compute-accept:${row.id}`,
-        `compute-accept:${row.id}:${consumed}`, row.order_id]);
-      await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo)
-        VALUES ($1, $2, $3, $4, '算力订单冻结卡时结算')`,
-      [randomUUID(), transactionId, buyer.reserved, (-total).toString()]);
-      if (captured > 0n) await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo)
-        VALUES ($1, $2, $3, $4, '提供方实耗待结算')`,
-      [randomUUID(), transactionId, supplier.rows[0]!.id, captured.toString()]);
-      if (refund > 0n) await client.query(`INSERT INTO kai_credit_entries(id, transaction_id, account_id, amount_micros, memo)
-        VALUES ($1, $2, $3, $4, '未使用卡时退回')`,
-      [randomUUID(), transactionId, buyer.available, refund.toString()]);
-      await client.query(`UPDATE kai_credit_transactions SET status = 'posted', posted_at = $2 WHERE id = $1`, [transactionId, input.now]);
+      const payloadDigest = createHash('sha256').update(`compute-accept:${row.id}:${consumed}`).digest('hex');
+      const lotResolution = await this.lots.resolveReservation(client, {
+        subjectId: row.buyer_subject_id, referenceType: 'credit_order', referenceId: row.order_id,
+        reservationTransactionId: reservation.rows[0]!.reservation_transaction_id,
+        totalReservedMicros: total, capturedMicros: captured, now: input.now, transactionId,
+        scope: 'COMPUTE_METERED_CAPTURE', ledgerReferenceType: 'order_capture',
+        idempotencyOwner: `subject:${row.buyer_subject_id}`, idempotencyKey: `compute-accept:${row.id}`,
+        payloadDigest, counterpartEntries: captured > 0n ? [{ accountId: supplier.rows[0]!.id,
+          amountMicros: captured, memo: '提供方实耗待结算' }] : [],
+      });
+      if (lotResolution.status === 'conflict') throw new Error('FULFILLMENT_LOT_CAPTURE_CONFLICT');
       await client.query(`UPDATE kai_credit_order_reservations SET status = 'captured', resolved_at = $2,
         resolution_transaction_id = $3, resolution_reason = 'compute_metered_buyer_acceptance' WHERE id = $1`,
       [reservation.rows[0].id, input.now, transactionId]);
@@ -774,8 +775,9 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
         supplier_subject_id FROM kai_credit_orders WHERE id=$1 FOR UPDATE`, [input.orderId]);
       const meter = await client.query<{ id: string; consumed_capacity_micros: string }>(`SELECT id,
         consumed_capacity_micros::text FROM compute_fulfillment_metering WHERE fulfillment_id=$1 FOR UPDATE`, [issue.fulfillment_id]);
-      const held = await client.query<{ id: string; status: string; listing_id: string; quantity: string }>(`SELECT id,
-        status,listing_id,quantity::text FROM kai_credit_order_reservations WHERE order_id=$1 FOR UPDATE`, [input.orderId]);
+      const held = await client.query<{ id: string; status: string; listing_id: string; quantity: string;
+        reservation_transaction_id: string }>(`SELECT id,status,listing_id,quantity::text,reservation_transaction_id::text
+        FROM kai_credit_order_reservations WHERE order_id=$1 FOR UPDATE`, [input.orderId]);
       if (issue.status !== 'open' || fulfillment.rows[0]?.status !== 'stopped' || order.rows[0]?.status !== 'disputed'
         || held.rows[0]?.status !== 'secured' || !meter.rows[0]) return { status: 'invalid_state' as const };
       const meteredCredit = meteredCreditToCent(
@@ -790,7 +792,6 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const providerCredit = meteredCredit - remedy;
       const total = BigInt(order.rows[0].total_credit_micros);
       const buyerRefund = total - providerCredit;
-      const buyer = await this.buyerAccounts(client, issue.buyer_subject_id);
       await client.query(`INSERT INTO kai_credit_accounts(id,owner_kind,subject_id,code,account_kind,allow_negative)
         VALUES ($1,'subject',$2,$3,'supplier_receivable',false)
         ON CONFLICT (subject_id,account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,
@@ -798,20 +799,17 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       const supplier = await client.query<{ id: string }>(`SELECT id FROM kai_credit_accounts
         WHERE subject_id=$1 AND account_kind='supplier_receivable' FOR UPDATE`, [order.rows[0].supplier_subject_id]);
       const transactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,payload_digest,
-        reference_type,reference_id,description,status) VALUES
-        ($1,$2,'COMPUTE_ISSUE_DECISION',$3,$4,$5,$6,'算力异议裁定结算','pending')`,
-      [transactionId, `subject:${issue.buyer_subject_id}`, `compute-issue:${issue.id}`, input.payloadDigest,
-        providerCredit === 0n ? 'refund' : 'order_capture', input.orderId]);
-      await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo)
-        VALUES ($1,$2,$3,$4,'算力异议冻结卡时结算')`, [randomUUID(), transactionId, buyer.reserved, (-total).toString()]);
-      if (providerCredit > 0n) await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo)
-        VALUES ($1,$2,$3,$4,'裁定后提供方待结算')`,
-      [randomUUID(), transactionId, supplier.rows[0]!.id, providerCredit.toString()]);
-      if (buyerRefund > 0n) await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo)
-        VALUES ($1,$2,$3,$4,'裁定退款及未使用卡时退回')`,
-      [randomUUID(), transactionId, buyer.available, buyerRefund.toString()]);
-      await client.query(`UPDATE kai_credit_transactions SET status='posted',posted_at=$2 WHERE id=$1`, [transactionId, input.now]);
+      const lotResolution = await this.lots.resolveReservation(client, {
+        subjectId: issue.buyer_subject_id, referenceType: 'credit_order', referenceId: input.orderId,
+        reservationTransactionId: held.rows[0].reservation_transaction_id, totalReservedMicros: total,
+        capturedMicros: providerCredit, now: input.now, transactionId, scope: 'COMPUTE_ISSUE_DECISION',
+        ledgerReferenceType: providerCredit === 0n ? 'refund' : 'order_capture',
+        idempotencyOwner: `subject:${issue.buyer_subject_id}`, idempotencyKey: `compute-issue:${issue.id}`,
+        payloadDigest: lotDigest(input.payloadDigest), counterpartEntries: providerCredit > 0n ? [{
+          accountId: supplier.rows[0]!.id, amountMicros: providerCredit, memo: '裁定后提供方待结算',
+        }] : [],
+      });
+      if (lotResolution.status === 'conflict') throw new Error('FULFILLMENT_LOT_ISSUE_DECISION_CONFLICT');
       await client.query(`UPDATE kai_credit_order_reservations SET status=$2,resolved_at=$3,
         resolution_transaction_id=$4,resolution_reason='compute_issue_adjudicated' WHERE id=$1`,
       [held.rows[0].id, providerCredit === 0n ? 'released' : 'captured', input.now, transactionId]);

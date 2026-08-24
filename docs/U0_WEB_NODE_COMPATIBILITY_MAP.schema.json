@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "U0_WEB_NODE_COMPATIBILITY_MAP.schema.json",
+  "title": "U0 Web to Node compatibility route map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "frozenAt",
+    "scope",
+    "productionStateClaim",
+    "routeCount",
+    "deploymentRoles",
+    "sources",
+    "webApiPrefixEvidence",
+    "canonicalReadinessPolicy",
+    "routeBlockers",
+    "statusDefinitions",
+    "globalProhibitions",
+    "routes"
+  ],
+  "properties": {
+    "$schema": {"const": "./U0_WEB_NODE_COMPATIBILITY_MAP.schema.json"},
+    "schemaVersion": {"const": 2},
+    "frozenAt": {"type": "string", "format": "date"},
+    "scope": {"type": "string", "minLength": 1},
+    "productionStateClaim": {"const": "design_only_not_deployed"},
+    "routeCount": {"const": 87},
+    "deploymentRoles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commerceWriter", "identityWriter", "legacyRuntime"],
+      "properties": {
+        "commerceWriter": {"$ref": "#/$defs/commerceWriter"},
+        "identityWriter": {"$ref": "#/$defs/identityWriter"},
+        "legacyRuntime": {"$ref": "#/$defs/legacyRuntime"}
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {"$ref": "#/$defs/legacyPythonSource"},
+        {"$ref": "#/$defs/legacyWebSource"},
+        {"$ref": "#/$defs/nodeCorpusSource"}
+      ],
+      "items": false
+    },
+    "webApiPrefixEvidence": {
+      "type": "array",
+      "minItems": 23,
+      "maxItems": 23,
+      "items": {"$ref": "#/$defs/webApiPrefix"}
+    },
+    "canonicalReadinessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mergeMode", "compatibilityLayerMayRemoveBlockers", "u0ApprovalImpliesReleaseReady", "requiredAdditiveBlockers"],
+      "properties": {
+        "mergeMode": {"const": "set_union_only"},
+        "compatibilityLayerMayRemoveBlockers": {"const": false},
+        "u0ApprovalImpliesReleaseReady": {"const": false},
+        "requiredAdditiveBlockers": {
+          "const": ["ICP_FILING_NOT_APPROVED","APP_FILING_NOT_APPROVED","INTERNET_SERVICE_CLASSIFICATION_REQUIRED","QIXIANG_CREDENTIAL_ROTATION_UNPROVEN","QIXIANG_OLD_CREDENTIAL_REVOCATION_UNPROVEN","QIXIANG_SERVICE_CONSTRUCTION_UNPROVEN","QIXIANG_SCHEMA_0063_DEPLOYMENT_UNPROVEN","QIXIANG_RUNTIME_INTEGRATION_PENDING","QIXIANG_LOT_ACCOUNTING_UNPROVEN","QIXIANG_EVIDENCE_DUAL_REVIEW_UNPROVEN","QIXIANG_UNIQUE_CALLBACK_OWNER_UNPROVEN","LEGACY_PAYMENT_PROVIDER_ID_RECONCILIATION_INCOMPLETE","LEGACY_PAYMENT_TOPUP_ID_MAPPING_UNPROVEN","LEGACY_DATA_RECONCILIATION_INCOMPLETE"]
+        }
+      }
+    },
+    "routeBlockers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["GET /api/payments/callback/qixiang", "GET /api/payments/status"],
+      "properties": {
+        "GET /api/payments/callback/qixiang": {"$ref": "#/$defs/blockerList"},
+        "GET /api/payments/status": {"$ref": "#/$defs/blockerList"}
+      }
+    },
+    "statusDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reuse", "adapter", "migrate", "quarantine", "retire"],
+      "properties": {
+        "reuse": {"type": "string", "minLength": 1},
+        "adapter": {"type": "string", "minLength": 1},
+        "migrate": {"type": "string", "minLength": 1},
+        "quarantine": {"type": "string", "minLength": 1},
+        "retire": {"type": "string", "minLength": 1}
+      }
+    },
+    "globalProhibitions": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 87,
+      "maxItems": 87,
+      "items": {"$ref": "#/$defs/route"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "commerceWriter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roleId", "deploymentLabel", "sourceId", "writes", "identityJoinKey", "contractDigest"],
+      "properties": {
+        "roleId": {"const": "commerce-node-postgres-writer-v1"},
+        "deploymentLabel": {"const": "43-commerce-node"},
+        "sourceId": {"const": "node-api-route-corpus"},
+        "writes": {"const": ["auth_sub_mapping", "trading_subject", "business_legal_consent", "commerce"]},
+        "identityJoinKey": {"const": "kai_sub_immutable"},
+        "contractDigest": {"const": "sha256:afc1d3d5a458d72d30ac68aea7fa719320f7b89086ee20aa71c4a24af10ff6b6"}
+      }
+    },
+    "identityWriter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roleId", "deploymentLabel", "sourceId", "writes", "subjectKey", "contractDigest"],
+      "properties": {
+        "roleId": {"const": "identity-auth-node-postgres-writer-v1"},
+        "deploymentLabel": {"const": "18-identity-node"},
+        "sourceId": {"const": "external-identity-authority-contract"},
+        "writes": {"const": ["credential", "oidc_user", "identity_session"]},
+        "subjectKey": {"const": "kai_sub_immutable"},
+        "contractDigest": {"const": "sha256:535cf6554cdc3eb324ccbd4612ab5c56f29e12ec5aa5b402b4f5b726f84ee2df"}
+      }
+    },
+    "legacyRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roleId", "deploymentLabel", "sourceId", "writes", "reads", "contractDigest"],
+      "properties": {
+        "roleId": {"const": "legacy-python-sqlite-query-only-v1"},
+        "deploymentLabel": {"const": "18-legacy-python"},
+        "sourceId": {"const": "legacy-python-production-audit"},
+        "writes": {"const": []},
+        "reads": {"const": ["approved_audit_query_only"]},
+        "contractDigest": {"const": "sha256:91fda94f50c49a3b979872914394c18db73be234a9e1d8dda779908074547ebd"}
+      }
+    },
+    "legacyPythonSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id","role","locator","selection","hashMode","sha256Digest","bytes","lineCount","fileCount","observedAt","extractorVersion","normalizedEvidencePointer","normalizedCount","normalizedDigest"],
+      "properties": {
+        "id":{"const":"legacy-python-production-audit"},"role":{"const":"legacy_dispatch"},"locator":{"const":"/tmp/cloudpay18-audit.BKba9P/server.py"},"selection":{"const":"exact_file"},"hashMode":{"const":"sha256_file_bytes"},"sha256Digest":{"const":"sha256:197abbfa0941ccc591104e3cdc0e6fef8c709f5dce55ced4556139cb5a1f5450"},"bytes":{"const":400445},"lineCount":{"const":6576},"fileCount":{"const":1},"observedAt":{"const":"2026-08-21T20:18:21+08:00"},"extractorVersion":{"const":"u0-python-dispatch-v1"},"normalizedEvidencePointer":{"const":"#/routes"},"normalizedCount":{"const":87},"normalizedDigest":{"const":"sha256:0a78b4f3992a6576b01de380dcab7700fbe7d58bf5b5b8ef6bc30eaa8338711a"}
+      }
+    },
+    "legacyWebSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id","role","locator","selection","hashMode","sha256Digest","bytes","lineCount","fileCount","observedAt","extractorVersion","normalizedEvidencePointer","normalizedCount","normalizedDigest"],
+      "properties": {
+        "id":{"const":"legacy-web-production-audit"},"role":{"const":"legacy_web_callsites"},"locator":{"const":"/tmp/cloudpay18-audit.BKba9P/output-production.js"},"selection":{"const":"exact_file"},"hashMode":{"const":"sha256_file_bytes"},"sha256Digest":{"const":"sha256:1079aef9465b135933842698016488bed36ecc1e60708f23e57ddcb3d0d96de3"},"bytes":{"const":73055},"lineCount":{"const":1231},"fileCount":{"const":1},"observedAt":{"const":"2026-08-21T20:18:21+08:00"},"extractorVersion":{"const":"u0-web-api-prefix-v1"},"normalizedEvidencePointer":{"const":"#/webApiPrefixEvidence"},"normalizedCount":{"const":23},"normalizedDigest":{"const":"sha256:63e21a56705fc85643175c5aa3e0c5f589225705f5da5ed9a34551c6145c3e9d"}
+      }
+    },
+    "nodeCorpusSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id","role","locator","selection","hashMode","sha256Digest","bytes","lineCount","fileCount","observedAt","extractorVersion","normalizedEvidencePointer","normalizedCount","normalizedDigest"],
+      "properties": {
+        "id":{"const":"node-api-route-corpus"},"role":{"const":"canonical_node_routes"},"locator":{"const":"backend/src"},"selection":{"const":"sorted_recursive_typescript_files"},"hashMode":{"const":"sorted_relative_path_sha256_bytes_lines_v1"},"sha256Digest":{"const":"sha256:89827f7cd4535006bca4359387fc5bed0f3c435d3c36bc375cfa854d9e31c657"},"bytes":{"const":1853041},"lineCount":{"const":30494},"fileCount":{"const":168},"observedAt":{"const":"2026-08-21T20:18:21+08:00"},"extractorVersion":{"const":"u0-node-target-evidence-v1"},"normalizedEvidencePointer":{"const":"#/routes/*/nodeRoutes"},"normalizedCount":{"const":71},"normalizedDigest":{"const":"sha256:7bb480b30ffb1c61891c1668c14516494242e2d5d976a0ca492454c5d7ac9a51"}
+      }
+    },
+    "webApiPrefix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prefix", "lineNumbers"],
+      "properties": {
+        "prefix": {"type": "string", "pattern": "^/api/"},
+        "lineNumbers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 1231}}
+      }
+    },
+    "blockerList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z0-9_]+$"}},
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {"if":{"properties":{"io":{"enum":["write","callback"]}},"required":["io"]},"then":{"properties":{"shadow":{"const":"forbidden"}}}},
+        {"if":{"properties":{"status":{"enum":["reuse","adapter"]}},"required":["status"]},"then":{"properties":{"nodeRoutes":{"minItems":1}}}},
+        {"if":{"properties":{"status":{"const":"retire"}},"required":["status"]},"then":{"properties":{"nodeRoutes":{"maxItems":0}}}}
+      ],
+      "required": [
+        "method",
+        "legacyPath",
+        "auth",
+        "io",
+        "payment",
+        "webUsage",
+        "nodeRoutes",
+        "domain",
+        "status",
+        "shadow",
+        "cutoverTarget",
+        "forbidden"
+      ],
+      "properties": {
+        "method": {"enum": ["GET", "POST"]},
+        "legacyPath": {"type": "string", "pattern": "^/api/"},
+        "auth": {"enum": ["public", "web_session", "provider_signature", "operator", "provider"]},
+        "io": {"enum": ["read", "write", "callback"]},
+        "payment": {"type": "boolean"},
+        "webUsage": {"enum": ["direct", "dynamic", "direct_link", "identity_callback", "provider_callback", "provider_return", "not_referenced"]},
+        "nodeRoutes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "domain": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "status": {"enum": ["reuse", "adapter", "migrate", "quarantine", "retire"]},
+        "shadow": {"enum": ["allowed", "allowed_sanitized", "forbidden"]},
+        "cutoverTarget": {"enum": ["node-api", "node-api_to_identity-authority", "none"]},
+        "forbidden": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9_-]+$"}
+        }
+      }
+    }
+  }
+}

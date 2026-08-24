@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { NodeEnrollmentService } from './service.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 const uuid = z.string().uuid(); const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/u);
 const inventoryItem = z.object({ uuid: z.string().min(12).max(84), model: z.string().min(2).max(120),
@@ -32,7 +33,7 @@ export async function registerNodeEnrollmentRoutes(
 ) {
   app.post('/mobile/v1/provider/assets/:assetId/node-claims', async (request, reply) => {
     noStore(reply); parse(z.undefined(), request.body);
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const { assetId } = parse(z.object({ assetId: uuid }).strict(), request.params);
     const result = await service.issueClaim(principal, assetId, idempotencyKey(request), context(request));
     return noStore(reply).status(result.replayed ? 200 : 201).send({ ok: true, claim: {
@@ -41,7 +42,7 @@ export async function registerNodeEnrollmentRoutes(
   });
   app.delete('/mobile/v1/provider/assets/:assetId/node-enrollments/:deploymentId', async (request, reply) => {
     noStore(reply); parse(z.undefined(), request.body);
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const { assetId, deploymentId } = parse(z.object({ assetId: uuid, deploymentId: uuid }).strict(), request.params);
     return noStore(reply).send({ ok: true,
       ...(await service.revoke(principal, assetId, deploymentId, context(request))) });

@@ -149,6 +149,7 @@ class MemoryAccountStore implements AccountStore {
 }
 
 const config = loadConfig({
+  LOCAL_E2E: 'true',
   NODE_ENV: 'test',
   PUBLIC_ORIGIN: 'https://api.cloudpay.kai.com',
   DATABASE_URL: 'postgresql://test/cloudpay',

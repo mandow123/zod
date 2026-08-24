@@ -14,12 +14,23 @@ import { AdminProcessMetrics } from '../src/admin/metrics.js';
 import { PostgresAdminRbacStore } from '../src/admin/rbac-store.js';
 import type { AdminAuthRuntimeSettings } from '../src/admin/runtime.js';
 import { PostgresAdminSessionStore } from '../src/admin/session-store.js';
+import { databaseFingerprint } from '../src/backups/postgres.js';
 import { loadConfig } from '../src/config.js';
 import type { Database } from '../src/database.js';
 import { AppError } from '../src/errors.js';
 import { KAI_OIDC_ISSUER } from '../src/identity/kai-oidc-constants.js';
 import { OperationsService } from '../src/operations/service.js';
 import { PostgresOperationsStore } from '../src/operations/store.js';
+import { probeEvidenceDigest } from '../src/operations/probe-evidence.js';
+
+const restoreInvariants = Object.fromEntries([
+  'listing_capacity_invalid', 'order_amount_invalid', 'duplicate_success_payment', 'refund_amount_invalid',
+  'kai_credit_transaction_unbalanced', 'kai_credit_account_negative', 'kai_credit_order_invalid',
+  'kai_credit_reservation_invalid', 'kai_credit_listing_capacity_invalid', 'kai_credit_delivery_invalid',
+  'kai_credit_acceptance_invalid', 'kai_credit_delivery_issue_invalid', 'kai_credit_mutual_refund_invalid',
+  'kai_credit_supplier_settlement_invalid', 'kai_credit_dispute_adjudication_invalid',
+  'kai_credit_post_acceptance_refund_invalid', 'kai_credit_post_acceptance_adjudication_invalid',
+].map((key) => [key, '0']));
 
 const adminSettings: AdminAuthRuntimeSettings = Object.freeze({
   webOrigin: 'https://admin.example.test',
@@ -234,14 +245,90 @@ describe('protected operational monitoring', () => {
     );
 
     const token = 'metrics-token-'.padEnd(48, 'x');
-    const config = loadConfig({ NODE_ENV: 'test', METRICS_BEARER_TOKEN: token });
+    const auditPepper = 'operations-readiness-audit-pepper-2026';
+    const databaseUrl = 'postgresql://prod/prod-inquiry';
+    const config = loadConfig({ NODE_ENV: 'test', METRICS_BEARER_TOKEN: token, DATABASE_URL: databaseUrl,
+      AUDIT_PEPPER: auditPepper, PUBLIC_ORIGIN:'https://cloudpay.kai.com' });
     const adminMetrics = new AdminProcessMetrics();
     adminMetrics.recordAuditAppendFailure();
     adminMetrics.recordAuditAppendFailure();
     adminMetrics.recordHttp5xx();
     const service = new OperationsService(
-      new PostgresOperationsStore(database), config, () => capturedAt, adminMetrics,
+      new PostgresOperationsStore(database), config, () => capturedAt, adminMetrics, async()=>true,
     );
+    expect(await service.inquiryReleaseReadiness()).toEqual({
+      ready: false, backup: { ready: false }, restore: { ready: false }, kaiPaired: { ready: false },appSession:{ready:false},
+      durability:{mode:'local_only',offsiteBackup:false,highAvailability:false,disasterRecovery:false,riskAccepted:true},blockers: [
+        'LOCAL_BACKUP_ARTIFACT_24H', 'RESTORE_DRILL_SUCCESS_90D','KAI_PAIRED_PROBE_30M','APP_STORED_SESSION_PROBE_24H',
+      ],
+    });
+    // Empty success shells must not satisfy production readiness.
+    await database.query(`INSERT INTO backup_runs(id,status,artifact_name,started_at,completed_at)
+      VALUES($1,'succeeded','inquiry-backup.enc',$2,$2)`, [randomUUID(), new Date(capturedAt.getTime() - 60_000)]);
+    await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,started_at,completed_at)
+      VALUES($1,'inquiry-backup.enc','isolated-restore','succeeded',$2,$2)`,
+    [randomUUID(), new Date(capturedAt.getTime() - 120_000)]);
+    expect((await service.inquiryReleaseReadiness()).ready).toBe(false);
+    const completedAt = new Date(capturedAt.getTime() - 60_000);
+    await database.query(`INSERT INTO backup_runs(id,status,artifact_name,object_key,encrypted_size_bytes,
+      encrypted_sha256_digest,schema_version,started_at,completed_at)
+      VALUES($1,'succeeded','cloudpay-postgres-invalid-target.kcpb','local://cloudpay-postgres-invalid-target.kcpb',2048,$2,
+      '0065_credit_order_transition_closure.sql',$3,$3)`, [randomUUID(), `sha256:${'e'.repeat(64)}`, completedAt]);
+    await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
+      verified_invariants,started_at,completed_at) VALUES($1,'cloudpay-postgres-invalid-target.kcpb',$2,'succeeded',
+      '0065_credit_order_transition_closure.sql',$3::jsonb,$4,$4)`,
+    [randomUUID(), databaseFingerprint(databaseUrl), JSON.stringify(restoreInvariants), completedAt]);
+    expect((await service.inquiryReleaseReadiness()).restore.ready).toBe(false);
+    const missingInvariant = { ...restoreInvariants };
+    delete missingInvariant.kai_credit_transaction_unbalanced;
+    await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
+      verified_invariants,started_at,completed_at) VALUES($1,'cloudpay-postgres-invalid-target.kcpb','isolated-missing-invariant','succeeded',
+      '0065_credit_order_transition_closure.sql',$2::jsonb,$3,$3)`,
+    [randomUUID(), JSON.stringify(missingInvariant), completedAt]);
+    expect((await service.inquiryReleaseReadiness()).restore.ready).toBe(false);
+    const validBackupId=randomUUID(),validArtifact='cloudpay-postgres-20260821T020000Z-valid000.kcpb',validDigest=`sha256:${'b'.repeat(64)}`;
+    await database.query(`INSERT INTO backup_runs(id,status,artifact_name,object_key,encrypted_size_bytes,
+      encrypted_sha256_digest,schema_version,started_at,completed_at)
+      VALUES($1,'succeeded',$2,$3,2048,$4,'0065_credit_order_transition_closure.sql',$5,$5)`,
+    [validBackupId,validArtifact,`local://${validArtifact}`,validDigest,completedAt]);
+    await database.query(`INSERT INTO audit_events(id,actor_id,actor_kind,action,entity_type,entity_id,payload_digest,metadata,created_at)
+      VALUES($1,NULL,'system','DATABASE_BACKUP_COMPLETED','BACKUP_RUN',$2,$3,$4::jsonb,$5)`,[randomUUID(),validBackupId,
+      validDigest.slice(7),JSON.stringify({artifactName:validArtifact,objectKey:`local://${validArtifact}`,sizeBytes:2048,
+        schemaVersion:'0065_credit_order_transition_closure.sql',databaseFingerprint:databaseFingerprint(databaseUrl),
+        durability:'local_only',offsite:false}),completedAt]);
+    await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
+      verified_invariants,started_at,completed_at) VALUES($1,$2,$3,'succeeded',
+      '0065_credit_order_transition_closure.sql',$4::jsonb,$5,$5)`,
+    [randomUUID(),validArtifact, `${databaseFingerprint(databaseUrl)}-isolated`, JSON.stringify(restoreInvariants), completedAt]);
+    const common = { profile: 'inquiry_only', probeVersion: 1,
+      schemaVersion: '0065_credit_order_transition_closure.sql', databaseFingerprint: databaseFingerprint(databaseUrl) };
+    const kaiMetadata = { ...common,producer:'record-inquiry-readiness.mjs@2',publicOrigin: 'https://cloudpay.kai.com',
+      probeSubjectSha256:'f'.repeat(64),
+        probeOrigin: 'https://cloudpay.kai.com', commerceStateDigest: `sha256:${'d'.repeat(64)}`, me: true,
+        legal: true, consent: true, subjects: true, subjectSelection: true, formalInquiry: true, cancel: true,
+        commerceUnchanged: true };
+    const appMetadata={...common,producer:'record-inquiry-app-session.mjs@1',publicOrigin:'https://cloudpay.kai.com',
+      packageName:'com.kaicloud.marketplace',appVersion:'1.0.0',apkSha256Digest:`sha256:${'e'.repeat(64)}`,
+      reportSha256Digest:`sha256:${'f'.repeat(64)}`,auth:true,me:true,legalConsent:true,storedSession:true,
+      forceStopRestart:true,recoveredSession:true};
+    await database.query(`INSERT INTO audit_events(id,actor_id,actor_kind,action,entity_type,entity_id,payload_digest,metadata,created_at)
+      VALUES($1,NULL,'system','INQUIRY_ONLY_KAI_PAIRED_PROBE_PASSED','PRODUCTION_READINESS_PROBE',$2,'forged',$3::jsonb,$4),
+      ($5,NULL,'system','INQUIRY_ONLY_APP_SESSION_PROBE_PASSED','PRODUCTION_READINESS_PROBE',$2,'forged',$6::jsonb,$4)`, [
+      randomUUID(), randomUUID(), JSON.stringify(kaiMetadata), new Date(completedAt.getTime()-60_000),
+      randomUUID(), JSON.stringify(appMetadata),
+    ]);
+    const forged = await service.inquiryReleaseReadiness();
+    expect(forged.kaiPaired.ready).toBe(false);
+    expect(forged.appSession.ready).toBe(false);
+    await database.query(`INSERT INTO audit_events(id,actor_id,actor_kind,action,entity_type,entity_id,payload_digest,metadata,created_at)
+      VALUES($1,NULL,'system','INQUIRY_ONLY_KAI_PAIRED_PROBE_PASSED','PRODUCTION_READINESS_PROBE',$2,$3,$4::jsonb,$5),
+      ($6,NULL,'system','INQUIRY_ONLY_APP_SESSION_PROBE_PASSED','PRODUCTION_READINESS_PROBE',$2,$7,$8::jsonb,$5)`, [
+      randomUUID(), randomUUID(), probeEvidenceDigest(kaiMetadata,auditPepper), JSON.stringify(kaiMetadata),
+      completedAt, randomUUID(), probeEvidenceDigest(appMetadata,auditPepper), JSON.stringify(appMetadata),
+    ]);
+    expect(await service.inquiryReleaseReadiness()).toEqual({ ready: true, backup: { ready: true },
+      restore: { ready: true }, kaiPaired: { ready: true },appSession:{ready:true},
+      durability:{mode:'local_only',offsiteBackup:false,highAvailability:false,disasterRecovery:false,riskAccepted:true},blockers: [] });
     const operator: AccountPrincipal = { userId: randomUUID(), sessionId: randomUUID(), role: 'operator' };
     const summary = await service.summary(operator);
     expect(summary).toMatchObject({
@@ -249,7 +336,7 @@ describe('protected operational monitoring', () => {
         paymentPending: 1, paymentOverdue: 1, paymentDeadLetters: 1,
         refundProviderPendingStale: 1, outboxPending: 1, outboxDeadLetters: 1,
         evidenceScanFailed: 1, disputesReadyForReview: 1, deliveryStale: 1,
-        reservationOverdue: 1, invoiceProcessingStale: 1, auditEvents24h: 1,
+        reservationOverdue: 1, invoiceProcessingStale: 1, auditEvents24h: 6,
         adminLoginSucceeded24h: 1, adminLoginDenied24h: 1, adminLoginFailed24h: 1,
         adminSecurityDenials24h: 1, adminOperationFailures24h: 2,
         adminActiveSessions: 1, adminRevokedSessions24h: 1,

@@ -32,3 +32,15 @@ test('buyer home stays compact and its resource rows do not promise a hidden det
   assert.match(home, /\.slice\(0, 3\)/u);
   assert.doesNotMatch(home, /resourceRow[\s\S]{0,300}chevron-forward/u);
 });
+
+test('home fills all-resources preview from the live catalog or the bundled 100-supplier fallback', async () => {
+  const home = await readFile(new URL('../src/screens/HomeScreen.tsx', import.meta.url), 'utf8');
+  assert.match(home, /loadSupplierInquiryCatalog/u);
+  assert.match(home, /loadSupplierQuoteDirectory/u);
+  assert.match(home, /全部资源/u);
+  assert.match(home, /查看 \$\{supplierDirectory\.length\} 家/u);
+  assert.match(home, /询价确认/u);
+  assert.match(home, /supplierCatalogReferenceCredit/u);
+  assert.match(home, /supplierQuoteReference/u);
+  assert.doesNotMatch(home, /实时可售|现货充足/u);
+});

@@ -1,11 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
 import { ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { CloudPaySnapshot, DeviceProduct } from '../api';
 import type { TabKey } from '../components';
 import { creditAmount } from '../format';
 import { brand, colors } from '../theme';
 import { isSparkCampaignListing, isSparkCampaignProduct } from '../campaign';
+import {
+  loadSupplierInquiryCatalog,
+  supplierCatalogReferenceCredit,
+  type SupplierInquiryCatalogItem,
+} from '../honghuan-inquiry-catalog';
+import {
+  loadSupplierQuoteDirectory, supplierQuoteForBilling, supplierQuoteReference,
+  type SupplierQuoteDirectoryItem,
+} from '../supplier-quote-directory';
 
 const sparkArtwork = require('../../assets/baige-spark-campaign-v1.jpg');
 
@@ -29,8 +39,30 @@ const shortcuts = [
 export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpenDemand, onOpenCredits, onOpenSparkDetail }: Props) {
   const spark = snapshot.deviceProducts.find(isSparkCampaignProduct) ?? null;
   const resources = snapshot.listings.filter((item) => !isSparkCampaignListing(item)).slice(0, 3);
+  const [inquiryResources, setInquiryResources] = useState<readonly SupplierInquiryCatalogItem[]>([]);
+  const [supplierDirectory, setSupplierDirectory] = useState<readonly SupplierQuoteDirectoryItem[]>([]);
   const pending = snapshot.orders.filter((order) => order.side === 'buyer' && order.requiresAttention).length;
   const available = snapshot.creditBalance ? creditAmount(snapshot.creditBalance.available) : snapshot.authenticated ? '余额暂未更新' : '登录后查看';
+  useEffect(() => {
+    let active = true;
+    void loadSupplierInquiryCatalog().then((result) => {
+      if (active) setInquiryResources(result.items);
+    }).catch(() => {
+      if (active) setInquiryResources([]);
+    });
+    return () => { active = false; };
+  }, [refreshing]);
+  const inquiryPreview = inquiryResources.slice(0, Math.max(0, 3 - resources.length));
+  useEffect(() => {
+    let active = true;
+    void loadSupplierQuoteDirectory().then((result) => {
+      if (active) setSupplierDirectory(result.items);
+    }).catch(() => {
+      if (active) setSupplierDirectory([]);
+    });
+    return () => { active = false; };
+  }, [refreshing]);
+  const directoryPreview = supplierDirectory.slice(0, Math.max(0, 3 - resources.length - inquiryPreview.length));
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
@@ -51,8 +83,10 @@ export function HomeScreen({ snapshot, refreshing, onRefresh, onNavigate, onOpen
         <View style={styles.sparkScrim} /><View style={styles.sparkCopy}><Text style={styles.sparkSupplier}>{spark.supplier.displayName}·上海特供</Text><Text style={styles.sparkTitle}>{spark.title}</Text><Text style={styles.sparkMeta}>{spark.inventory.total} 台 · {spark.pricing.discountPercent === 20 ? '8 折' : `优惠 ${spark.pricing.discountPercent}%`} · {spark.expectedDelivery.label}</Text><Pressable onPress={() => onOpenSparkDetail(spark)} style={styles.sparkAction}><Text style={styles.sparkActionText}>查看商品</Text><Ionicons name="arrow-forward" size={16} color={colors.surface} /></Pressable></View>
     </ImageBackground> : null}
 
-    <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>当前可用</Text><Pressable onPress={() => onNavigate('market')}><Text style={styles.textAction}>全部市场</Text></Pressable></View>
+    <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>全部资源</Text><Pressable onPress={() => onNavigate('market')}><Text style={styles.textAction}>{supplierDirectory.length ? `查看 ${supplierDirectory.length} 家` : '全部市场'}</Text></Pressable></View>
     <View style={styles.resourceList}>{resources.map((listing) => <Pressable key={listing.id} onPress={() => onNavigate('market')} style={styles.resourceRow}><View style={styles.resourceIcon}><Ionicons name="hardware-chip-outline" size={20} color={colors.ink} /></View><View style={styles.resourceCopy}><Text numberOfLines={1} style={styles.resourceTitle}>{listing.title}</Text><Text style={styles.resourceMeta}>{listing.productCode} · {listing.region}</Text></View><View style={styles.resourcePrice}><Text style={styles.resourceValue}>{creditAmount(listing.unitCredits)}</Text><Text style={styles.resourceUnit}>卡时/{listing.capacityUnit}</Text></View></Pressable>)}</View>
+    <View style={styles.resourceList}>{inquiryPreview.map((item) => <Pressable key={item.resourceId} onPress={() => onNavigate('market')} style={styles.resourceRow}><View style={styles.resourceIcon}><Ionicons name="calendar-outline" size={20} color={colors.ink} /></View><View style={styles.resourceCopy}><Text numberOfLines={1} style={styles.resourceTitle}>{item.title}</Text><Text style={styles.resourceMeta}>{item.supplier.displayName} · 全国 · 询价确认</Text></View><View style={styles.resourcePrice}><Text style={styles.resourceValue}>{supplierCatalogReferenceCredit(item)}</Text><Text style={styles.resourceUnit}>{item.catalogKind === 'contract_monthly' ? '参考/月' : '参考/GPU时'}</Text></View></Pressable>)}</View>
+    <View style={styles.resourceList}>{directoryPreview.map((item) => { const quote = supplierQuoteForBilling(item); return <Pressable key={item.supplierId} onPress={() => onNavigate('market')} style={styles.resourceRow}><View style={styles.resourceIcon}><Ionicons name="hardware-chip-outline" size={20} color={colors.ink} /></View><View style={styles.resourceCopy}><Text numberOfLines={1} style={styles.resourceTitle}>{item.displayName}</Text><Text numberOfLines={1} style={styles.resourceMeta}>{item.gpu.models.join(' / ')} · {item.locations[0] ?? '地域待确认'} · 询价确认</Text></View><View style={styles.resourcePrice}><Text numberOfLines={1} style={styles.resourceValue}>{supplierQuoteReference(item)}</Text><Text style={styles.resourceUnit}>{quote?.model ?? 'GPU'} 参考/GPU时</Text></View></Pressable>; })}</View>
   </ScrollView></View>;
 }
 

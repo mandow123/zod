@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "publicOrigin": "https://cloudpay.kai.com",
+  "legacyOrigin": {
+    "publicIpv4": "18.163.148.84",
+    "privateIpv4": "172.31.33.227",
+    "port": 8081
+  },
+  "mobileSidecar": {
+    "publicIpv4": "43.198.97.0",
+    "privateIpv4": "172.31.31.78",
+    "edgePort": 4154,
+    "loopbackHost": "127.0.0.1",
+    "loopbackPort": 4100
+  },
+  "forwardOnly": [
+    "/mobile/v1",
+    "/mobile/v1/*",
+    "/privacy",
+    "/terms",
+    "/inquiry-terms",
+    "/account/delete"
+  ],
+  "preserveExactly": ["/", "/api/*"],
+  "cloudKaiComChangesAllowed": false
+}

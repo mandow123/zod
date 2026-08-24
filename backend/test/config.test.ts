@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../src/config.js';
 
 const secureEnvironment = {
-  NODE_ENV: 'production', PUBLIC_ORIGIN: 'https://api.cloudpay.kai.com', DATABASE_URL: 'postgresql://db/cloudpay',
+  NODE_ENV: 'production', MOBILE_API_PROFILE: 'full_commerce',
+  PUBLIC_ORIGIN: 'https://api.cloudpay.kai.com', DATABASE_URL: 'postgresql://db/cloudpay',
   ACCESS_TOKEN_SECRET: 'a'.repeat(64), REFRESH_TOKEN_PEPPER: 'b'.repeat(32), OTP_PEPPER: 'c'.repeat(32),
   PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
   AUDIT_PEPPER: 'd'.repeat(32),
@@ -28,7 +29,10 @@ const secureEnvironment = {
   BACKUP_S3_ACCESS_KEY: 'backup-key', BACKUP_S3_SECRET_KEY: 'backup-secret', BACKUP_RETENTION_DAYS: '35',
   SUPPORT_EMAIL: 'support@example.com', SUPPORT_PHONE: '4000000000', PRIVACY_POLICY_URL: 'https://cloudpay.kai.com/privacy',
   TERMS_URL: 'https://cloudpay.kai.com/terms', INQUIRY_TERMS_URL: 'https://cloudpay.kai.com/inquiry-terms',
-  ICP_FILING: 'ICP-TEST', APP_FILING: 'APP-TEST',
+  ICP_FILING: 'ICP-TEST', ICP_FILING_STATUS:'issued', ICP_FILING_EVIDENCE_REF:'evidence://icp/test',
+  APP_FILING: 'APP-TEST', APP_FILING_STATUS:'issued', APP_FILING_EVIDENCE_REF:'evidence://app/test',
+  INTERNET_SERVICE_CLASSIFICATION_STATUS:'approved_with_legal_evidence',
+  INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF:'evidence://legal/classification-test',
   COMPUTE_PROVIDER: 'sidecar-v1', COMPUTE_PROVIDER_URL: 'https://h100-sidecar.internal',
   COMPUTE_PROVIDER_TOKEN: 'q'.repeat(48),
   COMPUTE_ALLOCATED_ACCELERATOR_COUNT: '1',
@@ -43,6 +47,7 @@ const secureEnvironment = {
   KAI_OIDC_SUBJECT_PEPPER: 'i'.repeat(40),
   KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: Buffer.alloc(32, 13).toString('base64'),
   KAI_OIDC_APP_REDIRECT_URIS: 'kaicloudpay://auth/kai/callback',
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'opaque',
 } as const;
 
 const adminEnvironment = {
@@ -76,9 +81,95 @@ describe('runtime configuration', () => {
     expect(config.readiness.releaseReady).toBe(false);
     expect(config.readiness.coreBlockers).toContain('DATABASE_URL');
     expect(config.readiness.coreBlockers).toContain('PUBLIC_ORIGIN(HTTPS)');
-    expect(config.readiness.coreBlockers).toContain('KAI_OIDC_CLIENT_ID');
+    expect(config.readiness.coreBlockers).toContain('KAI_RESOURCE_ACCESS_TOKEN_FORMAT');
+    expect(config.readiness.coreBlockers).toContain('MOBILE_API_PROFILE(required in production)');
     expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
     expect(config.readiness.releaseBlockers).toContain('COMPUTE_PROVIDER_NOT_CONFIGURED');
+  });
+
+  it('fails production startup readiness for a missing or invalid explicit API profile', () => {
+    expect(loadConfig({ ...secureEnvironment, MOBILE_API_PROFILE: undefined }).readiness.coreBlockers)
+      .toContain('MOBILE_API_PROFILE(required in production)');
+    expect(loadConfig({ ...secureEnvironment, MOBILE_API_PROFILE: 'unknown' }).readiness.coreBlockers)
+      .toContain('MOBILE_API_PROFILE(inquiry_only|full_commerce)');
+  });
+
+  it('limits inquiry-only readiness to inquiry dependencies and forces every reward domain off', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      MOBILE_API_PROFILE: 'inquiry_only', HONGHUAN_SUPPLIER_CATALOG_MODE: 'inquiry', TRUST_PROXY_HOPS:'1',
+      SMS_PROVIDER: undefined, SMS_ACCESS_KEY_ID: undefined, SMS_ACCESS_KEY_SECRET: undefined,
+      SMS_SIGN_NAME: undefined, SMS_TEMPLATE_CODE: undefined,
+      PUSH_PROVIDER: undefined, PUSH_CREDENTIALS_JSON: undefined,
+      CLAMAV_HOST: undefined, CLAMAV_PORT: undefined,
+      ALIPAY_APP_ID: undefined, ALIPAY_PRIVATE_KEY: undefined, ALIPAY_PUBLIC_KEY: undefined,
+      ALIPAY_SELLER_ID: undefined, TOPUP_ALIPAY_NOTIFY_URL: undefined,
+      WECHAT_APP_ID: undefined, WECHAT_MCH_ID: undefined, WECHAT_API_V3_KEY: undefined,
+      WECHAT_PRIVATE_KEY: undefined, WECHAT_MERCHANT_CERT_SERIAL: undefined,
+      WECHAT_PLATFORM_CERT_SERIAL: undefined, TOPUP_WECHAT_NOTIFY_URL: undefined,
+      WECHAT_PLATFORM_CERTIFICATE: undefined,
+      COMPUTE_PROVIDER: undefined, COMPUTE_PROVIDER_URL: undefined, COMPUTE_PROVIDER_TOKEN: undefined,
+      COMPUTE_ALLOCATED_ACCELERATOR_COUNT: undefined, COMPUTE_NODE_ACCELERATOR_COUNT: undefined,
+      OBJECT_STORAGE_PROVIDER:undefined,OBJECT_STORAGE_ENDPOINT:undefined,OBJECT_STORAGE_REGION:undefined,
+      OBJECT_STORAGE_BUCKET:undefined,OBJECT_STORAGE_ACCESS_KEY:undefined,OBJECT_STORAGE_SECRET_KEY:undefined,
+      BACKUP_S3_ENDPOINT:undefined,BACKUP_S3_REGION:undefined,BACKUP_S3_BUCKET:undefined,
+      BACKUP_S3_ACCESS_KEY:undefined,BACKUP_S3_SECRET_KEY:undefined,
+      NODE_GPU_FINGERPRINT_PEPPER: undefined, NODE_CLAIM_TOKEN_PEPPER: undefined,
+      NODE_CLAIM_TOKEN_ENCRYPTION_KEY: undefined, NODE_SUPPORTED_AGENT_VERSIONS: undefined,
+      LEGACY_CREATOR_COMMISSION_MODE: 'drain', STREAMER_REWARDS_MODE: 'on', INVITE_REWARDS_MODE: 'shadow',
+    });
+    expect(config.mobileApiProfile).toBe('inquiry_only');
+    expect(config.readiness.serviceReady).toBe(true);
+    expect(config.readiness.releaseReady).toBe(true);
+    expect(config.readiness.serviceBlockers).not.toEqual(expect.arrayContaining(['SMS_PROVIDER', 'PUSH_PROVIDER', 'CLAMAV_HOST']));
+    expect(config.readiness.capabilities.objectStorage.available).toBe(false);
+    expect(config.readiness.capabilities.localBackup.available).toBe(true);
+    expect(config.readiness.capabilities.offsiteBackup.available).toBe(false);
+    expect(config.legacyCreatorCommissionMode).toBe('off');
+    expect(config.streamerRewardsMode).toBe('off');
+    expect(config.inviteRewardsMode).toBe('off');
+  });
+
+  it('fails inquiry-only release closed unless exactly one private socket proxy hop is trusted',()=>{
+    for(const value of ['0','2'])expect(loadConfig({...secureEnvironment,MOBILE_API_PROFILE:'inquiry_only',
+      HONGHUAN_SUPPLIER_CATALOG_MODE:'inquiry',TRUST_PROXY_HOPS:value}).readiness.releaseBlockers)
+      .toContain('TRUST_PROXY_HOPS(exactly 1 for private socket proxy)');
+  });
+
+  it('keeps legal pages ready but blocks public release when filings and service classification are not approved',()=>{
+    const config=loadConfig({...secureEnvironment,MOBILE_API_PROFILE:'inquiry_only',HONGHUAN_SUPPLIER_CATALOG_MODE:'inquiry',
+      TRUST_PROXY_HOPS:'1',ICP_FILING:undefined,ICP_FILING_STATUS:'not_obtained',ICP_FILING_EVIDENCE_REF:undefined,
+      APP_FILING:undefined,APP_FILING_STATUS:'not_obtained',APP_FILING_EVIDENCE_REF:undefined,
+      INTERNET_SERVICE_CLASSIFICATION_STATUS:'not_assessed',INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF:undefined});
+    expect(config.readiness.capabilities.legal.available).toBe(true);
+    expect(config.readiness.serviceReady).toBe(true);
+    expect(config.readiness.startupReady).toBe(true);
+    expect(config.readiness.startupBlockers).toEqual([]);
+    expect(config.readiness.releaseReady).toBe(false);
+    expect(config.readiness.releaseBlockers).toEqual([
+      'ICP_FILING_NOT_APPROVED','APP_FILING_NOT_APPROVED','INTERNET_SERVICE_CLASSIFICATION_REQUIRED',
+    ]);
+    const missingService=loadConfig({...secureEnvironment,MOBILE_API_PROFILE:'inquiry_only',
+      HONGHUAN_SUPPLIER_CATALOG_MODE:'inquiry',TRUST_PROXY_HOPS:'1',METRICS_BEARER_TOKEN:undefined});
+    expect(missingService.readiness.startupReady).toBe(false);
+    expect(missingService.readiness.startupBlockers).toContain('METRICS_BEARER_TOKEN');
+    const fullCommerceMissing=loadConfig({...secureEnvironment,COMPUTE_PROVIDER_TOKEN:undefined});
+    expect(fullCommerceMissing.readiness.startupReady).toBe(false);
+    expect(fullCommerceMissing.readiness.startupBlockers).toContain('COMPUTE_PROVIDER_NOT_CONFIGURED');
+  });
+
+  it('rejects filing status claims that lack their required number or evidence',()=>{
+    const pendingWithoutReceipt=loadConfig({...secureEnvironment,ICP_FILING:undefined,ICP_FILING_STATUS:'pending',
+      ICP_FILING_EVIDENCE_REF:undefined});
+    expect(pendingWithoutReceipt.readiness.capabilities.legal.available).toBe(false);
+    expect(pendingWithoutReceipt.readiness.capabilities.legal.missing)
+      .toContain('ICP_FILING(pending requires empty number and evidenceRef)');
+    const issuedWithoutEvidence=loadConfig({...secureEnvironment,APP_FILING_STATUS:'issued',APP_FILING_EVIDENCE_REF:undefined});
+    expect(issuedWithoutEvidence.readiness.capabilities.legal.missing)
+      .toContain('APP_FILING(issued requires number and evidenceRef)');
+    const fakeNotObtainedNumber=loadConfig({...secureEnvironment,ICP_FILING_STATUS:'not_obtained'});
+    expect(fakeNotObtainedNumber.readiness.capabilities.legal.missing)
+      .toContain('ICP_FILING(not_obtained requires empty number and evidenceRef)');
   });
 
   it('opens KAI credit commerce when every runtime and channel invariant is configured', () => {
@@ -94,6 +185,45 @@ describe('runtime configuration', () => {
     expect(config.readiness.capabilities.nodeEnrollment.available).toBe(true);
     expect(config.readiness.capabilities.computeFulfillment.available).toBe(true);
     expect(config.readiness.capabilities.kaiOidc.available).toBe(true);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+  });
+
+  it('does not require the retired CloudPay broker secret for production resource access', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      KAI_OIDC_CLIENT_ID: undefined,
+      KAI_OIDC_CLIENT_SECRET: undefined,
+      KAI_OIDC_FLOW_PEPPER: undefined,
+      KAI_OIDC_TRANSACTION_ENCRYPTION_KEY: undefined,
+      KAI_OIDC_APP_REDIRECT_URIS: undefined,
+    });
+    expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+    expect(config.readiness.coreReady).toBe(true);
+  });
+
+  it('does not read or require retired local HS256, refresh or OTP secrets in production', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      ACCESS_TOKEN_SECRET: undefined,
+      REFRESH_TOKEN_PEPPER: undefined,
+      OTP_PEPPER: undefined,
+    });
+    expect(config.readiness.capabilities.accountSecurity.available).toBe(true);
+    expect(config.readiness.capabilities.legacyLocalAuth.available).toBe(false);
+    expect(config.readiness.coreReady).toBe(true);
+    expect(config.readiness.coreBlockers).not.toEqual(expect.arrayContaining([
+      expect.stringContaining('ACCESS_TOKEN_SECRET'),
+      expect.stringContaining('REFRESH_TOKEN_PEPPER'),
+      expect.stringContaining('OTP_PEPPER'),
+    ]));
+  });
+
+  it('fails closed if production attempts to enable the isolated legacy local-auth harness', () => {
+    const config = loadConfig({ ...secureEnvironment, LOCAL_E2E: 'true' });
+    expect(config.readiness.coreReady).toBe(false);
+    expect(config.readiness.coreBlockers).toContain('LOCAL_E2E(production forbidden)');
+    expect(config.readiness.capabilities.legacyLocalAuth.available).toBe(false);
   });
 
   it('reports commerce ready when every implementation invariant is present', () => {
@@ -115,7 +245,25 @@ describe('runtime configuration', () => {
       KAI_OIDC_SUBJECT_PEPPER: secureEnvironment.KAI_OIDC_FLOW_PEPPER,
     });
     expect(config.readiness.capabilities.kaiOidc.available).toBe(false);
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(false);
     expect(config.readiness.coreBlockers).toContain('KAI_OIDC_SUBJECT_PEPPER(independent from flow pepper)');
+  });
+
+  it('opens opaque resource access only through the approved at_hash paired-token verifier', () => {
+    const config = loadConfig({
+      ...secureEnvironment,
+      KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'opaque',
+      KAI_RESOURCE_ACCESS_TOKEN_AUDIENCE: undefined,
+    });
+    expect(config.readiness.capabilities.kaiResourceAccess.available).toBe(true);
+    expect(config.readiness.coreBlockers)
+      .not.toContain('KAI_RESOURCE_ACCESS_TOKEN_CLIENT_BINDING(PROVIDER_EVIDENCE_REQUIRED)');
+  });
+
+  it('rejects unobserved access-token formats instead of guessing a JWT resource audience', () => {
+    const unsupported = loadConfig({ ...secureEnvironment, KAI_RESOURCE_ACCESS_TOKEN_FORMAT: 'jwt' });
+    expect(unsupported.readiness.capabilities.kaiResourceAccess.missing)
+      .toContain('KAI_RESOURCE_ACCESS_TOKEN_FORMAT(opaque paired-token contract)');
   });
 
   it('does not open verified topups without one exact public provider callback', () => {

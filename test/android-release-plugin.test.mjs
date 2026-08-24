@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 const require = createRequire(import.meta.url);
-const { insertSigningConfig } = require('../plugins/with-android-release-signing.js');
+const {
+  insertSigningConfig, pinReferralManifest, stagingSourceFiles, writeStagingSourceSet,
+} = require('../plugins/with-android-release-signing.js');
 
 const generatedGradle = `android {
     defaultConfig {
@@ -34,8 +39,34 @@ test('Android prebuild always restores signed direct and store release variants'
   assert.match(once, /flavorDimensions \+= "distribution"/u);
   assert.match(once, /directCn \{/u);
   assert.match(once, /store \{/u);
+  assert.match(once, /staging \{/u);
+  assert.match(once, /applicationIdSuffix "\.staging"/u);
+  assert.match(once, /resValue "string", "app_name", "Zod 测试版"/u);
+  assert.match(once, /cloudPayReferralScheme: "kaicloudpay"/u);
+  assert.match(once, /cloudPayReferralScheme: "zod-staging"/u);
+  assert.doesNotMatch(once, /cloudPayAuth(?:Scheme|Host|Path)/u);
+  assert.doesNotMatch(once, /Zod 演示版/u);
   assert.match(once, /signingConfig signingConfigs\.release/u);
   assert.equal(twice, once);
+});
+
+test('Android prebuild pins only the referral scheme and creates no auth intent entry', () => {
+  const manifest = { manifest: { application: [{ $: { 'android:name': '.MainApplication' }, activity: [{ 'intent-filter': [
+    { data: [{ $: { 'android:scheme': 'kaicloudpay' } }] },
+  ] }] }] } };
+  pinReferralManifest(manifest);
+  const filters = manifest.manifest.application[0].activity[0]['intent-filter'];
+  assert.equal(filters[0].data[0].$['android:scheme'], '${cloudPayReferralScheme}');
+  assert.equal(filters.length, 1);
+});
+
+test('staging prebuild never creates a duplicated staging application ID', () => {
+  const once = insertSigningConfig(generatedGradle.replace(
+    "applicationId 'com.kaicloud.marketplace'", "applicationId 'com.kaicloud.marketplace.staging'",
+  ));
+  assert.match(once, /resValue "string", "app_name", "Zod 测试版"/u);
+  assert.doesNotMatch(once, /applicationIdSuffix "\.staging"/u);
+  assert.doesNotMatch(once, /\.staging\.staging/u);
 });
 
 test('Android manifest allows cleartext only for an explicit local E2E build', () => {
@@ -46,4 +77,28 @@ test('Android manifest allows cleartext only for an explicit local E2E build', (
   assert.match(pluginSource, /CLOUDPAY_LOCAL_E2E_BASE_URL/u);
   assert.match(pluginSource, /android:usesCleartextTraffic/u);
   assert.match(pluginSource, /delete application\.\$\['android:usesCleartextTraffic'\]/u);
+});
+
+test('formal prebuild regenerates an isolated staging source set without orange assets', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'zod-android-plugin-'));
+  try {
+    await writeStagingSourceSet(root);
+    const generated = await Promise.all(Object.keys(stagingSourceFiles).map(async (relativePath) => [
+      relativePath, await readFile(join(root, relativePath), 'utf8'),
+    ]));
+    const files = Object.fromEntries(generated);
+    assert.match(files['app/src/staging/AndroidManifest.xml'],
+      /android:networkSecurityConfig="@xml\/zod_staging_network_security_config"/u);
+    assert.doesNotMatch(files['app/src/staging/AndroidManifest.xml'], /usesCleartextTraffic="true"/u);
+    assert.match(files['app/src/staging/res/xml/zod_staging_network_security_config.xml'],
+      /<domain includeSubdomains="false">10\.0\.2\.2<\/domain>/u);
+    assert.match(files['app/src/staging/res/xml/zod_staging_network_security_config.xml'],
+      /<base-config cleartextTrafficPermitted="false"/u);
+    assert.match(files['app/src/staging/res/drawable/zod_staging_icon_foreground.xml'], /#1677FF/u);
+    assert.match(files['app/src/staging/res/drawable/zod_staging_icon_foreground.xml'], /#16A34A/u);
+    assert.doesNotMatch(Object.values(files).join('\n'),
+      /#(?:E87909|FF6A00|FFF4E5|FFF0E5)|DEMO|演示/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

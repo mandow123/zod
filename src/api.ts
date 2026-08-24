@@ -1,4 +1,8 @@
-import { ApiError, LOCAL_E2E_DEMO_ENABLED, apiRequest } from './api-client';
+import {
+  ApiError,
+  LOCAL_E2E_DEMO_ENABLED,
+  apiRequest,
+} from './api-client';
 import { loadLocalE2EDemoCatalog } from './local-e2e-runtime';
 import * as Crypto from 'expo-crypto';
 import {
@@ -10,6 +14,10 @@ import {
 import { loadProviderReadCache, saveProviderWorkspaceCache } from './provider-read-cache';
 import { mergeLocalDemoListings } from './demo-market';
 import { ensureSparkCampaignProduct } from './campaign';
+import { logoutCurrentSession } from './session-logout';
+import { qixiangTopupGate, type QixiangTopupCapability } from './qixiang-topups.ts';
+import { decodeKaiPlatformLegalBootstrap, type KaiLegalBootstrap } from './kai-platform-session';
+export { SessionLogoutError } from './session-logout';
 import type { DeviceAsset, DeviceOrder, DeviceProduct } from './device-commerce';
 export * from './device-commerce';
 
@@ -63,7 +71,7 @@ export type MarketCreditListing = Readonly<{
   purchasable?: boolean;
   blockedReason?: string | null;
   demo?: Readonly<{
-    mode: 'local_e2e'; label: '演示资源'; payment: 'sandbox_only';
+    mode: 'local_e2e'; label: '测试资源'; payment: 'sandbox_only';
     purchasable: boolean; simulatedAudit: true;
   }>;
   promotion?: null | Readonly<{
@@ -452,6 +460,7 @@ export type CloudPaySnapshot = {
   releaseBlockers: string[];
   creditCommerceReady: boolean;
   commerceBlockers: string[];
+  qixiangTopupCapability: QixiangTopupCapability | null;
   subjects: TradingSubject[];
   currentSubjectId: string | null;
   creditBalance: CreditBalance | null;
@@ -490,6 +499,7 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
   const response = await loadLocalE2EDemoCatalog<LocalE2EDemoCatalogResponse>();
   return { ok: response.ok, listings: response.listings.map((listing) => ({
     ...listing,
+    title: listing.title.replace(/演示/gu, '测试'),
     offerId: listing.resourceId,
     specifications: { source: 'local_e2e_catalog', productCode: listing.productCode },
     sla: { mode: 'sandbox_preview' },
@@ -498,7 +508,7 @@ async function localE2EDemoListings(): Promise<ListingsResponse> {
     audits: { resource: true, price: true },
     ownedByCurrentSubject: false,
     purchasable: listing.demo.simulatedAudit ? false : listing.demo.purchasable,
-    blockedReason: listing.demo.simulatedAudit || !listing.demo.purchasable ? '本地验收资源，不进入真实交易' : null,
+    blockedReason: listing.demo.simulatedAudit || !listing.demo.purchasable ? '测试资源当前仅支持查看' : null,
     demo: { ...listing.demo },
   })) };
 }
@@ -734,6 +744,8 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
   }
   deviceProducts = ensureSparkCampaignProduct(deviceProducts);
   const ready = readiness.status === 'fulfilled' ? readiness.value : null;
+  const qixiangTopupCapability = ready
+    ? qixiangTopupGate({ authenticated: Boolean(user), readiness: ready }) : null;
   const errors = [reasonOf(health), reasonOf(resourceCatalog), reasonOf(listingCatalog), accountError]
     .filter((value): value is string => Boolean(value));
 
@@ -764,6 +776,7 @@ export async function loadCloudPaySnapshot(): Promise<CloudPaySnapshot> {
       || ready?.capabilities.creditCommerce
       || false,
     commerceBlockers: LOCAL_E2E_DEMO_ENABLED ? [] : ready?.commerce?.blockers ?? ready?.release.blockers ?? [],
+    qixiangTopupCapability,
     subjects,
     currentSubjectId,
     creditBalance,
@@ -825,19 +838,17 @@ export async function createOrganizationSubject(displayName: string, requestId: 
   return response.subject;
 }
 
+export async function loadLegalBootstrap(): Promise<KaiLegalBootstrap> {
+  const response = await apiRequest<unknown>('/mobile/v1/legal', { retry: true });
+  return decodeKaiPlatformLegalBootstrap(response);
+}
+
 export async function loadLegalDocuments() {
-  const response = await apiRequest<{ ok: true; documents: LegalDocuments }>('/mobile/v1/legal', { retry: true });
-  return response.documents;
+  return (await loadLegalBootstrap()).documents;
 }
 
 export async function logoutCloudPay() {
-  try {
-    await apiRequest<{ ok: true; revoked: boolean }>('/mobile/v1/auth/logout', {
-      method: 'POST', auth: 'required', retry: false,
-    });
-  } finally {
-    await clearSession();
-  }
+  await logoutCurrentSession();
 }
 
 export async function markNotificationRead(notificationId: string) {

@@ -29,14 +29,15 @@ const deployment = {
   loopbackOnly: config.HOST === '127.0.0.1',
   expectedPort: config.PORT === 4100,
   canonicalOrigin: config.PUBLIC_ORIGIN === 'https://cloudpay.kai.com',
+  inquiryProxyChain: config.mobileApiProfile !== 'inquiry_only' || config.TRUST_PROXY_HOPS === 1,
 };
 const deploymentFailures = Object.entries(deployment)
   .filter(([, pass]) => !pass)
   .map(([name]) => name);
 const blockers = [...new Set([
   ...deploymentFailures,
-  ...config.readiness.releaseBlockers,
-  ...config.readiness.capabilities.computeProvider.missing,
+  ...config.readiness.startupBlockers,
+  ...(config.mobileApiProfile === 'full_commerce' ? config.readiness.capabilities.computeProvider.missing : []),
 ])];
 
 if (blockers.length > 0) {

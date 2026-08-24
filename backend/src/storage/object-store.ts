@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createHash } from 'node:crypto';
 import type { RuntimeConfig } from '../config.js';
 import { AppError } from '../errors.js';
 
@@ -19,6 +20,11 @@ export type StoredObjectMetadata = Readonly<{
   metadataSha256: string | null;
 }>;
 
+export type ObjectStorageReadinessProbeResult = Readonly<{
+  provider: 's3'; endpoint: string; bucket: string; objectKey: string; sha256Digest: string;
+  put: true; head: true; get: true; delete: true; deleteConfirmed: true;
+}>;
+
 export interface PrivateObjectStore {
   createUploadGrant(input: Readonly<{
     objectKey: string; mimeType: string; sizeBytes: number; sha256Hex: string; expiresAt: Date;
@@ -27,6 +33,7 @@ export interface PrivateObjectStore {
   createDownloadUrl(objectKey: string, fileName: string, expiresAt: Date): Promise<string>;
   readBytes(objectKey: string): Promise<Uint8Array>;
   delete(objectKey: string): Promise<void>;
+  readinessProbe?(probeId: string): Promise<ObjectStorageReadinessProbeResult>;
 }
 
 function required(value: string | undefined, name: string) {
@@ -37,12 +44,18 @@ function required(value: string | undefined, name: string) {
 export class S3PrivateObjectStore implements PrivateObjectStore {
   private readonly client: S3Client;
   private readonly bucket: string;
+  private readonly endpoint: string;
 
   constructor(config: RuntimeConfig) {
     if (config.OBJECT_STORAGE_PROVIDER !== 's3') throw new Error('OBJECT_STORAGE_PROVIDER must be s3.');
     this.bucket = required(config.OBJECT_STORAGE_BUCKET, 'OBJECT_STORAGE_BUCKET');
+    const endpoint = new URL(required(config.OBJECT_STORAGE_ENDPOINT, 'OBJECT_STORAGE_ENDPOINT'));
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
+      throw new Error('OBJECT_STORAGE_ENDPOINT must not contain credentials, query parameters, or a fragment.');
+    }
+    this.endpoint = endpoint.toString();
     this.client = new S3Client({
-      endpoint: required(config.OBJECT_STORAGE_ENDPOINT, 'OBJECT_STORAGE_ENDPOINT'),
+      endpoint: this.endpoint,
       region: required(config.OBJECT_STORAGE_REGION, 'OBJECT_STORAGE_REGION'),
       forcePathStyle: config.objectStorageForcePathStyle,
       credentials: {
@@ -105,6 +118,46 @@ export class S3PrivateObjectStore implements PrivateObjectStore {
 
   async delete(objectKey: string) {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+  }
+
+  async readinessProbe(probeId: string): Promise<ObjectStorageReadinessProbeResult> {
+    if (!/^[0-9a-f-]{36}$/u.test(probeId)) throw new Error('OBJECT_STORAGE_PROBE_ID_INVALID');
+    const objectKey = `readiness/inquiry-only/${probeId}.probe`;
+    const body = Buffer.from(`kai-cloudpay-inquiry-only-readiness:${probeId}`, 'utf8');
+    const sha256Hex = createHash('sha256').update(body).digest('hex');
+    const checksum = Buffer.from(sha256Hex, 'hex').toString('base64');
+    let deleted = false;
+    try {
+      await this.client.send(new PutObjectCommand({
+        Bucket: this.bucket, Key: objectKey, Body: body, ContentType: 'application/octet-stream',
+        ContentLength: body.byteLength, ChecksumSHA256: checksum, ServerSideEncryption: 'AES256',
+        Metadata: { sha256: sha256Hex, readinessProbeId: probeId },
+      }));
+      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+      if (head.ContentLength !== body.byteLength || head.Metadata?.sha256 !== sha256Hex
+        || head.Metadata?.readinessprobeid !== probeId) throw new Error('OBJECT_STORAGE_PROBE_HEAD_MISMATCH');
+      const object = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+      if (!object.Body) throw new Error('OBJECT_STORAGE_PROBE_GET_EMPTY');
+      const downloaded = Buffer.from(await object.Body.transformToByteArray());
+      if (!downloaded.equals(body)) throw new Error('OBJECT_STORAGE_PROBE_GET_MISMATCH');
+      await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+      deleted = true;
+      let deleteConfirmed = false;
+      try {
+        await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+      } catch (error) {
+        deleteConfirmed = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404;
+      }
+      if (!deleteConfirmed) throw new Error('OBJECT_STORAGE_PROBE_DELETE_NOT_CONFIRMED');
+      return {
+        provider: 's3', endpoint: this.endpoint, bucket: this.bucket, objectKey,
+        sha256Digest: `sha256:${sha256Hex}`, put: true, head: true, get: true, delete: true, deleteConfirmed: true,
+      };
+    } finally {
+      if (!deleted) {
+        try { await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey })); } catch { /* best effort */ }
+      }
+    }
   }
 }
 

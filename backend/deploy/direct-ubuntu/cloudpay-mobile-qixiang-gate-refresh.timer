@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh CloudPay signed Qixiang production gate every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=10s
+RandomizedDelaySec=10s
+Persistent=true
+Unit=cloudpay-mobile-qixiang-gate-refresh.service
+
+[Install]
+WantedBy=timers.target

@@ -5,6 +5,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const releaseRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const migrationNamePattern = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*\.sql$/u;
+const appleMetadataPattern = /(?:^|\/)(?:\._[^/]*|__MACOSX|\.AppleDouble)(?:\/|$)|\.\.namedfork\/rsrc/u;
 const installDependencies = process.argv.includes('--install');
 const manifestPath = join(releaseRoot, 'RELEASE-MANIFEST.json');
 const failures = [];
@@ -62,8 +64,23 @@ const forbiddenEntries = readdirSync(releaseRoot).filter((name) =>
 if (forbiddenEntries.length === 0) pass('no_release_secrets', 'no environment or credential files');
 else fail('no_release_secrets', forbiddenEntries.join(', '));
 
-const migrations = readdirSync(join(releaseRoot, 'migrations'))
-  .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
+function entriesUnder(directory, prefix = '') {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    return entry.isDirectory() ? [name, ...entriesUnder(join(directory, entry.name), name)] : [name];
+  });
+}
+const releaseEntries = entriesUnder(releaseRoot);
+const appleMetadata = releaseEntries.filter((name) => appleMetadataPattern.test(name));
+if (appleMetadata.length === 0) pass('no_appledouble_or_resource_forks', 'release tree is metadata-clean');
+else fail('no_appledouble_or_resource_forks', appleMetadata.slice(0, 8).join(', '));
+
+const migrationEntries = readdirSync(join(releaseRoot, 'migrations'));
+const forbiddenMigrations = migrationEntries.filter((name) => name.startsWith('._')
+  || (name.endsWith('.sql') && !migrationNamePattern.test(name))).sort();
+if (forbiddenMigrations.length > 0) fail('canonical_migration_names', forbiddenMigrations.join(', '));
+else pass('canonical_migration_names', 'only four-digit canonical SQL names');
+const migrations = migrationEntries.filter((name) => migrationNamePattern.test(name)).sort();
 if (migrations.length === manifest.migrationCount && migrations.at(-1) === manifest.latestMigration) {
   pass('migration_set', `${migrations.length} migrations through ${migrations.at(-1)}`);
 } else {

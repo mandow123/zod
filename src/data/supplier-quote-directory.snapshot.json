@@ -1,0 +1,6260 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "supplierId": "supplier-quote-20260817-001",
+      "sourceRow": 1,
+      "legalName": "阿里巴巴云计算有限公司",
+      "displayName": "阿里巴巴云计算有限公司",
+      "entityType": "上市云厂商",
+      "locations": [
+        "上海",
+        "张家口",
+        "乌兰察布"
+      ],
+      "gpu": {
+        "description": "H100 SXM、H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "25.14",
+            "monthlyAmount": "69610.77"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "32.18",
+            "monthlyAmount": "89520.95"
+          }
+        }
+      ],
+      "contractTerms": "长租1年起8.2折",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "H100少量现货,H200排期30天",
+        "sla": "99.9%",
+        "notes": "阿里云EGS智算实例"
+      },
+      "logo": {
+        "httpsUrl": "https://www.aliyun.com/favicon.ico",
+        "sourceUrl": "https://www.aliyun.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-002",
+      "sourceRow": 2,
+      "legalName": "腾讯云计算(北京)有限责任公司",
+      "displayName": "腾讯云计算(北京)有限责任公司",
+      "entityType": "上市云厂商",
+      "locations": [
+        "清远",
+        "贵安"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "25.74",
+            "monthlyAmount": "70658.68"
+          }
+        }
+      ],
+      "contractTerms": "年约8.5折",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "H100需预约",
+        "sla": "99.9%",
+        "notes": "腾讯云GPU裸金属"
+      },
+      "logo": {
+        "httpsUrl": "https://cloud.tencent.com/favicon.ico",
+        "sourceUrl": "https://cloud.tencent.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-003",
+      "sourceRow": 3,
+      "legalName": "华为云计算技术有限公司",
+      "displayName": "华为云计算技术有限公司",
+      "entityType": "上市云厂商",
+      "locations": [
+        "贵州",
+        "乌兰察布"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "23.80",
+            "monthlyAmount": "65568.86"
+          }
+        }
+      ],
+      "contractTerms": "12个月合约",
+      "networkDescription": "100G以太网",
+      "sourceClaims": {
+        "availability": "现货紧张",
+        "sla": "99.9%",
+        "notes": "海外卡资源调度"
+      },
+      "logo": {
+        "httpsUrl": "https://www.huaweicloud.com/favicon.ico",
+        "sourceUrl": "https://www.huaweicloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-004",
+      "sourceRow": 4,
+      "legalName": "优刻得科技股份有限公司",
+      "displayName": "优刻得科技股份有限公司",
+      "entityType": "上市IDC",
+      "locations": [
+        "上海",
+        "宁夏"
+      ],
+      "gpu": {
+        "description": "H100 SXM/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.85",
+            "monthlyAmount": "61676.64"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "28.89",
+            "monthlyAmount": "80239.52"
+          }
+        }
+      ],
+      "contractTerms": "6个月起9折",
+      "networkDescription": "100G共享/200G专享",
+      "sourceClaims": {
+        "availability": "部分现货",
+        "sla": "99.7%",
+        "notes": "优云智算"
+      },
+      "logo": {
+        "httpsUrl": "https://www.ucloud.cn/favicon.ico",
+        "sourceUrl": "https://www.ucloud.cn/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-005",
+      "sourceRow": 5,
+      "legalName": "深圳市捷智算科技有限公司",
+      "displayName": "深圳市捷智算科技有限公司",
+      "entityType": "民营算力商",
+      "locations": [
+        "四川成都"
+      ],
+      "gpu": {
+        "description": "H100 SXM、H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.65",
+            "monthlyAmount": "59131.73"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "27.84",
+            "monthlyAmount": "77544.91"
+          }
+        }
+      ],
+      "contractTerms": "押一付三",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "8卡整机少量现货",
+        "sla": "99.5%",
+        "notes": "捷智算gogpu"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-006",
+      "sourceRow": 6,
+      "legalName": "成都极云天下科技有限公司",
+      "displayName": "成都极云天下科技有限公司",
+      "entityType": "民营算力平台",
+      "locations": [
+        "宁夏"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.20",
+            "monthlyAmount": "57784.43"
+          }
+        }
+      ],
+      "contractTerms": "包月起租",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "现货稳定",
+        "sla": "99.5%",
+        "notes": "极智算"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-007",
+      "sourceRow": 7,
+      "legalName": "上海一万网络科技有限公司",
+      "displayName": "上海一万网络科技有限公司",
+      "entityType": "IDC服务商",
+      "locations": [
+        "上海临港智算中心"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.25",
+            "monthlyAmount": "60329.34"
+          }
+        }
+      ],
+      "contractTerms": "3个月起租",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "预定排期15天",
+        "sla": "99.6%",
+        "notes": "裸金属整机租赁"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-008",
+      "sourceRow": 8,
+      "legalName": "安诺其智星云(上海)科技有限公司",
+      "displayName": "安诺其智星云(上海)科技有限公司",
+      "entityType": "上市背景算力",
+      "locations": [
+        "山东",
+        "江苏"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.31",
+            "monthlyAmount": "55688.62"
+          }
+        }
+      ],
+      "contractTerms": "长租优惠",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "PCIe版本为主",
+        "sla": "99.4%",
+        "notes": "智星云平台"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-009",
+      "sourceRow": 9,
+      "legalName": "潞晨科技有限公司",
+      "displayName": "潞晨科技有限公司",
+      "entityType": "AI算力服务商",
+      "locations": [
+        "江苏苏州"
+      ],
+      "gpu": {
+        "description": "H100 SXM、H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.10",
+            "monthlyAmount": "60029.94"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "28.29",
+            "monthlyAmount": "78143.71"
+          }
+        }
+      ],
+      "contractTerms": "按月签约",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "资源紧俏",
+        "sla": "99.6%",
+        "notes": "潞晨云"
+      },
+      "logo": {
+        "httpsUrl": "https://www.luchentech.com/favicon.ico",
+        "sourceUrl": "https://www.luchentech.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-010",
+      "sourceRow": 10,
+      "legalName": "博拉网络股份有限公司",
+      "displayName": "博拉网络股份有限公司",
+      "entityType": "互联网算力",
+      "locations": [
+        "重庆"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.86",
+            "monthlyAmount": "54491.01"
+          }
+        }
+      ],
+      "contractTerms": "押一付一",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "PCIe现货",
+        "sla": "99.3%",
+        "notes": "好易智算"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-011",
+      "sourceRow": 11,
+      "legalName": "上海算家信息科技有限公司",
+      "displayName": "上海算家信息科技有限公司",
+      "entityType": "民营算力平台",
+      "locations": [
+        "上海"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.41",
+            "monthlyAmount": "53143.71"
+          }
+        }
+      ],
+      "contractTerms": "短租友好",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "个人/企业均可",
+        "sla": "99.2%",
+        "notes": "算家云"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-012",
+      "sourceRow": 12,
+      "legalName": "深圳市啸月网络科技有限公司",
+      "displayName": "深圳市啸月网络科技有限公司",
+      "entityType": "IDC服务商",
+      "locations": [
+        "香港"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.76",
+            "monthlyAmount": "56586.82"
+          }
+        }
+      ],
+      "contractTerms": "香港机房无需备案",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "海外现货",
+        "sla": "99.5%",
+        "notes": "跨境算力"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-013",
+      "sourceRow": 13,
+      "legalName": "深圳云尚工坊信息技术有限公司",
+      "displayName": "深圳云尚工坊信息技术有限公司",
+      "entityType": "中小算力租赁",
+      "locations": [
+        "广东"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.66",
+            "monthlyAmount": "51197.60"
+          }
+        }
+      ],
+      "contractTerms": "最低包月",
+      "networkDescription": "100M专享",
+      "sourceClaims": {
+        "availability": "货源波动大",
+        "sla": "99.0%",
+        "notes": "零售算力"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-014",
+      "sourceRow": 14,
+      "legalName": "北京无穹智联科技有限公司",
+      "displayName": "北京无穹智联科技有限公司",
+      "entityType": "北京算力服务商",
+      "locations": [
+        "北京"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.11",
+            "monthlyAmount": "52544.91"
+          }
+        }
+      ],
+      "contractTerms": "企业客户优先",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "少量现货",
+        "sla": "99.1%",
+        "notes": "无穹AI算力"
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-015",
+      "sourceRow": 15,
+      "legalName": "星辰云(天津)信息技术有限公司",
+      "displayName": "星辰云(天津)信息技术有限公司",
+      "entityType": "民营IDC",
+      "locations": [
+        "天津"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.21",
+            "monthlyAmount": "50299.40"
+          }
+        }
+      ],
+      "contractTerms": "批量采购议价",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "按需调度",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-016",
+      "sourceRow": 16,
+      "legalName": "上海共绩智能科技有限公司",
+      "displayName": "上海共绩智能科技有限公司",
+      "entityType": "智算运营",
+      "locations": [
+        "上海宝山"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.35",
+            "monthlyAmount": "58233.53"
+          }
+        }
+      ],
+      "contractTerms": "3个月",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期20天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-017",
+      "sourceRow": 17,
+      "legalName": "广州并行智算信息技术有限公司",
+      "displayName": "广州并行智算信息技术有限公司",
+      "entityType": "GPU算力平台",
+      "locations": [
+        "广州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.91",
+            "monthlyAmount": "49401.19"
+          }
+        }
+      ],
+      "contractTerms": "学生/企业折扣",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "容器算力",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-018",
+      "sourceRow": 18,
+      "legalName": "杭州恒源云科技有限公司",
+      "displayName": "杭州恒源云科技有限公司",
+      "entityType": "线上算力平台",
+      "locations": [
+        "杭州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.61",
+            "monthlyAmount": "48502.99"
+          }
+        }
+      ],
+      "contractTerms": "学生认证95折",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "适合调试",
+        "sla": "99.0%",
+        "notes": "恒源云"
+      },
+      "logo": {
+        "httpsUrl": "https://www.gpushare.com/favicon.ico",
+        "sourceUrl": "https://www.gpushare.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-019",
+      "sourceRow": 19,
+      "legalName": "浙江晨涧信息技术有限公司",
+      "displayName": "浙江晨涧信息技术有限公司",
+      "entityType": "IDC资源商",
+      "locations": [
+        "浙江"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.61",
+            "monthlyAmount": "56137.72"
+          }
+        }
+      ],
+      "contractTerms": "整机优先",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "预定资源",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-020",
+      "sourceRow": 20,
+      "legalName": "福建智联算力科技有限公司",
+      "displayName": "福建智联算力科技有限公司",
+      "entityType": "东南IDC",
+      "locations": [
+        "福建厦门"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.05",
+            "monthlyAmount": "57335.32"
+          }
+        }
+      ],
+      "contractTerms": "长租闭口合约",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期30天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-021",
+      "sourceRow": 21,
+      "legalName": "新疆云途智算有限公司",
+      "displayName": "新疆云途智算有限公司",
+      "entityType": "西北算力基地",
+      "locations": [
+        "新疆"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.16",
+            "monthlyAmount": "55089.82"
+          }
+        }
+      ],
+      "contractTerms": "电价优势",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "现货少量",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-022",
+      "sourceRow": 22,
+      "legalName": "青海青算智能科技有限公司",
+      "displayName": "青海青算智能科技有限公司",
+      "entityType": "西部智算",
+      "locations": [
+        "青海"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.71",
+            "monthlyAmount": "53892.21"
+          }
+        }
+      ],
+      "contractTerms": "3年合约低价",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "B300接受预定",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-023",
+      "sourceRow": 23,
+      "legalName": "甘肃陇智云计算有限公司",
+      "displayName": "甘肃陇智云计算有限公司",
+      "entityType": "甘肃IDC",
+      "locations": [
+        "兰州"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.01",
+            "monthlyAmount": "54640.71"
+          }
+        }
+      ],
+      "contractTerms": "大批量议价",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "H200排期",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-024",
+      "sourceRow": 24,
+      "legalName": "环京智联科技(廊坊)有限公司",
+      "displayName": "环京智联科技(廊坊)有限公司",
+      "entityType": "环京算力集群",
+      "locations": [
+        "廊坊"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.50",
+            "monthlyAmount": "58532.93"
+          }
+        }
+      ],
+      "contractTerms": "5年长约",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "B300集群预定",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-025",
+      "sourceRow": 25,
+      "legalName": "成都云极智信息技术有限公司",
+      "displayName": "成都云极智信息技术有限公司",
+      "entityType": "西南算力商",
+      "locations": [
+        "成都"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.36",
+            "monthlyAmount": "50748.50"
+          }
+        }
+      ],
+      "contractTerms": "灵活短租",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "容器实例",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-026",
+      "sourceRow": 26,
+      "legalName": "武汉华中智算运营有限公司",
+      "displayName": "武汉华中智算运营有限公司",
+      "entityType": "华中智算中心",
+      "locations": [
+        "武汉"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.91",
+            "monthlyAmount": "56886.22"
+          }
+        }
+      ],
+      "contractTerms": "3年闭口",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期25天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-027",
+      "sourceRow": 27,
+      "legalName": "深圳前海智芯云科技有限公司",
+      "displayName": "深圳前海智芯云科技有限公司",
+      "entityType": "跨境算力",
+      "locations": [
+        "深圳",
+        "香港"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.80",
+            "monthlyAmount": "59580.83"
+          }
+        }
+      ],
+      "contractTerms": "香港机房",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "免备案算力",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-028",
+      "sourceRow": 28,
+      "legalName": "宁波甬智云计算有限公司",
+      "displayName": "宁波甬智云计算有限公司",
+      "entityType": "浙江IDC",
+      "locations": [
+        "宁波"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.81",
+            "monthlyAmount": "51646.70"
+          }
+        }
+      ],
+      "contractTerms": "按月结算",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "现货充足",
+        "sla": "99.2%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-029",
+      "sourceRow": 29,
+      "legalName": "合肥合智算力运营有限公司",
+      "displayName": "合肥合智算力运营有限公司",
+      "entityType": "合肥智算中心",
+      "locations": [
+        "合肥"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.46",
+            "monthlyAmount": "55688.62"
+          }
+        }
+      ],
+      "contractTerms": "政企项目优惠",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期18天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-030",
+      "sourceRow": 30,
+      "legalName": "郑州中原智联科技有限公司",
+      "displayName": "郑州中原智联科技有限公司",
+      "entityType": "中部IDC",
+      "locations": [
+        "郑州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.06",
+            "monthlyAmount": "49850.29"
+          }
+        }
+      ],
+      "contractTerms": "中小客户友好",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "稳定现货",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-031",
+      "sourceRow": 31,
+      "legalName": "长沙湘云智算科技有限公司",
+      "displayName": "长沙湘云智算科技有限公司",
+      "entityType": "湖南算力服务商",
+      "locations": [
+        "长沙"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.76",
+            "monthlyAmount": "48952.09"
+          }
+        }
+      ],
+      "contractTerms": "新客户首月9折",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "容器算力",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-032",
+      "sourceRow": 32,
+      "legalName": "西安西智云计算有限公司",
+      "displayName": "西安西智云计算有限公司",
+      "entityType": "西北IDC",
+      "locations": [
+        "西安"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.56",
+            "monthlyAmount": "53592.81"
+          }
+        }
+      ],
+      "contractTerms": "批量折扣",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "少量现货",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-033",
+      "sourceRow": 33,
+      "legalName": "昆明滇云智能科技有限公司",
+      "displayName": "昆明滇云智能科技有限公司",
+      "entityType": "西南算力",
+      "locations": [
+        "昆明"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.46",
+            "monthlyAmount": "47904.19"
+          }
+        }
+      ],
+      "contractTerms": "电价优惠",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "适合推理业务",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-034",
+      "sourceRow": 34,
+      "legalName": "沈阳辽智算力有限公司",
+      "displayName": "沈阳辽智算力有限公司",
+      "entityType": "东北IDC",
+      "locations": [
+        "沈阳"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.86",
+            "monthlyAmount": "54191.61"
+          }
+        }
+      ],
+      "contractTerms": "整机打包价优",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期22天",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-035",
+      "sourceRow": 35,
+      "legalName": "青岛鲁云智联科技有限公司",
+      "displayName": "青岛鲁云智联科技有限公司",
+      "entityType": "山东算力",
+      "locations": [
+        "青岛"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.51",
+            "monthlyAmount": "51047.90"
+          }
+        }
+      ],
+      "contractTerms": "企业对公签约",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "现货",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-036",
+      "sourceRow": 36,
+      "legalName": "厦门海峡智算科技有限公司",
+      "displayName": "厦门海峡智算科技有限公司",
+      "entityType": "福建IDC",
+      "locations": [
+        "厦门"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.61",
+            "monthlyAmount": "56287.42"
+          }
+        }
+      ],
+      "contractTerms": "跨境专线可选",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "海外资源调度",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-037",
+      "sourceRow": 37,
+      "legalName": "海口琼云算力有限公司",
+      "displayName": "海口琼云算力有限公司",
+      "entityType": "海南智算",
+      "locations": [
+        "海口"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.21",
+            "monthlyAmount": "50000.00"
+          }
+        }
+      ],
+      "contractTerms": "自贸港政策",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "开发调试算力",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-038",
+      "sourceRow": 38,
+      "legalName": "太原晋智云计算有限公司",
+      "displayName": "太原晋智云计算有限公司",
+      "entityType": "山西IDC",
+      "locations": [
+        "太原"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.61",
+            "monthlyAmount": "48203.59"
+          }
+        }
+      ],
+      "contractTerms": "长租降价",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "稳定调度",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-039",
+      "sourceRow": 39,
+      "legalName": "贵阳贵智算力运营有限公司",
+      "displayName": "贵阳贵智算力运营有限公司",
+      "entityType": "贵州智算基地",
+      "locations": [
+        "贵阳"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.31",
+            "monthlyAmount": "55389.22"
+          }
+        }
+      ],
+      "contractTerms": "大规模集群优先",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期20天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-040",
+      "sourceRow": 40,
+      "legalName": "南宁桂云智能科技有限公司",
+      "displayName": "南宁桂云智能科技有限公司",
+      "entityType": "华南IDC",
+      "locations": [
+        "南宁"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.91",
+            "monthlyAmount": "49251.49"
+          }
+        }
+      ],
+      "contractTerms": "带宽加价可选",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "零售算力",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-041",
+      "sourceRow": 41,
+      "legalName": "苏州苏智云计算有限公司",
+      "displayName": "苏州苏智云计算有限公司",
+      "entityType": "长三角IDC",
+      "locations": [
+        "苏州"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.20",
+            "monthlyAmount": "57634.73"
+          }
+        }
+      ],
+      "contractTerms": "液冷机房",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "液冷算力",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-042",
+      "sourceRow": 42,
+      "legalName": "无锡锡联智算科技有限公司",
+      "displayName": "无锡锡联智算科技有限公司",
+      "entityType": "无锡智算园",
+      "locations": [
+        "无锡"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.05",
+            "monthlyAmount": "57185.62"
+          }
+        }
+      ],
+      "contractTerms": "千卡集群方案",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "适合大模型训练",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-043",
+      "sourceRow": 43,
+      "legalName": "常州常云算力有限公司",
+      "displayName": "常州常云算力有限公司",
+      "entityType": "常州IDC",
+      "locations": [
+        "常州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.66",
+            "monthlyAmount": "51347.30"
+          }
+        }
+      ],
+      "contractTerms": "中小团队适配",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "容器算力",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-044",
+      "sourceRow": 44,
+      "legalName": "南通通智信息技术有限公司",
+      "displayName": "南通通智信息技术有限公司",
+      "entityType": "南通智算",
+      "locations": [
+        "南通"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.36",
+            "monthlyAmount": "50598.80"
+          }
+        }
+      ],
+      "contractTerms": "按月灵活解约",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "短期项目友好",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-045",
+      "sourceRow": 45,
+      "legalName": "镇江镇云智联科技有限公司",
+      "displayName": "镇江镇云智联科技有限公司",
+      "entityType": "镇江IDC",
+      "locations": [
+        "镇江"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.01",
+            "monthlyAmount": "54790.41"
+          }
+        }
+      ],
+      "contractTerms": "裸金属整机",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "需要预定",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-046",
+      "sourceRow": 46,
+      "legalName": "扬州扬智算力有限公司",
+      "displayName": "扬州扬智算力有限公司",
+      "entityType": "扬州算力基地",
+      "locations": [
+        "扬州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.76",
+            "monthlyAmount": "48802.39"
+          }
+        }
+      ],
+      "contractTerms": "推理算力低价",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "适合线上服务",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-047",
+      "sourceRow": 47,
+      "legalName": "嘉兴嘉云云计算有限公司",
+      "displayName": "嘉兴嘉云云计算有限公司",
+      "entityType": "嘉兴智算",
+      "locations": [
+        "嘉兴"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.76",
+            "monthlyAmount": "56437.12"
+          }
+        }
+      ],
+      "contractTerms": "长三角低延迟",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期15天",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-048",
+      "sourceRow": 48,
+      "legalName": "湖州湖智信息技术有限公司",
+      "displayName": "湖州湖智信息技术有限公司",
+      "entityType": "湖州IDC",
+      "locations": [
+        "湖州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.06",
+            "monthlyAmount": "49550.89"
+          }
+        }
+      ],
+      "contractTerms": "镜像预装AI框架",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "开箱即用",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-049",
+      "sourceRow": 49,
+      "legalName": "绍兴绍云算力有限公司",
+      "displayName": "绍兴绍云算力有限公司",
+      "entityType": "绍兴智算园区",
+      "locations": [
+        "绍兴"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.46",
+            "monthlyAmount": "47754.49"
+          }
+        }
+      ],
+      "contractTerms": "学生科研优惠",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "高校合作渠道",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-050",
+      "sourceRow": 50,
+      "legalName": "金华金智云计算有限公司",
+      "displayName": "金华金智云计算有限公司",
+      "entityType": "金华IDC",
+      "locations": [
+        "金华"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.61",
+            "monthlyAmount": "48353.29"
+          }
+        }
+      ],
+      "contractTerms": "按量付费无押金",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "短期实验首选",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-051",
+      "sourceRow": 51,
+      "legalName": "惠州惠联智算科技有限公司",
+      "displayName": "惠州惠联智算科技有限公司",
+      "entityType": "广东IDC",
+      "locations": [
+        "惠州"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.16",
+            "monthlyAmount": "54940.11"
+          }
+        }
+      ],
+      "contractTerms": "华南液冷机房",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "预定资源",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-052",
+      "sourceRow": 52,
+      "legalName": "东莞东云算力运营有限公司",
+      "displayName": "东莞东云算力运营有限公司",
+      "entityType": "东莞算力集群",
+      "locations": [
+        "东莞"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.51",
+            "monthlyAmount": "50898.20"
+          }
+        }
+      ],
+      "contractTerms": "带宽弹性扩容",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "现货充足",
+        "sla": "99.1%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-053",
+      "sourceRow": 53,
+      "legalName": "佛山佛智云计算有限公司",
+      "displayName": "佛山佛智云计算有限公司",
+      "entityType": "佛山IDC",
+      "locations": [
+        "佛山"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.21",
+            "monthlyAmount": "50149.70"
+          }
+        }
+      ],
+      "contractTerms": "小微企业方案",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "对公结算",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-054",
+      "sourceRow": 54,
+      "legalName": "中山中云智能科技有限公司",
+      "displayName": "中山中云智能科技有限公司",
+      "entityType": "中山算力服务商",
+      "locations": [
+        "中山"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.91",
+            "monthlyAmount": "49401.19"
+          }
+        }
+      ],
+      "contractTerms": "长租阶梯价",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "批量更优惠",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-055",
+      "sourceRow": 55,
+      "legalName": "珠海珠智算力有限公司",
+      "displayName": "珠海珠智算力有限公司",
+      "entityType": "珠海IDC",
+      "locations": [
+        "珠海"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.46",
+            "monthlyAmount": "55538.92"
+          }
+        }
+      ],
+      "contractTerms": "临近香港专线",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "跨境业务优选",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-056",
+      "sourceRow": 56,
+      "legalName": "南宁南智云计算有限公司",
+      "displayName": "南宁南智云计算有限公司",
+      "entityType": "广西IDC",
+      "locations": [
+        "南宁"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.46",
+            "monthlyAmount": "47604.79"
+          }
+        }
+      ],
+      "contractTerms": "电力成本优势",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "持续现货",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-057",
+      "sourceRow": 57,
+      "legalName": "三亚亚云算力科技有限公司",
+      "displayName": "三亚亚云算力科技有限公司",
+      "entityType": "海南三亚",
+      "locations": [
+        "三亚"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "17.06",
+            "monthlyAmount": "49700.59"
+          }
+        }
+      ],
+      "contractTerms": "自贸港跨境便利",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "海外数据业务",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-058",
+      "sourceRow": 58,
+      "legalName": "赣州赣智信息技术有限公司",
+      "displayName": "赣州赣智信息技术有限公司",
+      "entityType": "江西IDC",
+      "locations": [
+        "赣州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.61",
+            "monthlyAmount": "48053.89"
+          }
+        }
+      ],
+      "contractTerms": "底价零售算力",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "预算敏感客户",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-059",
+      "sourceRow": 59,
+      "legalName": "宜春宜云算力有限公司",
+      "displayName": "宜春宜云算力有限公司",
+      "entityType": "江西宜春",
+      "locations": [
+        "宜春"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.31",
+            "monthlyAmount": "47155.68"
+          }
+        }
+      ],
+      "contractTerms": "行业最低价梯队",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "大量容器算力",
+        "sla": "98.9%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-060",
+      "sourceRow": 60,
+      "legalName": "上饶饶智云计算有限公司",
+      "displayName": "上饶饶智云计算有限公司",
+      "entityType": "江西上饶",
+      "locations": [
+        "上饶"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.71",
+            "monthlyAmount": "53742.51"
+          }
+        }
+      ],
+      "contractTerms": "裸金属整机打包",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "需要预定",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-061",
+      "sourceRow": 61,
+      "legalName": "临沂临云算力有限公司",
+      "displayName": "临沂临云算力有限公司",
+      "entityType": "山东临沂",
+      "locations": [
+        "临沂"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "16.76",
+            "monthlyAmount": "48652.69"
+          }
+        }
+      ],
+      "contractTerms": "北方算力节点",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "稳定调度",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-062",
+      "sourceRow": 62,
+      "legalName": "烟台烟智信息技术有限公司",
+      "displayName": "烟台烟智信息技术有限公司",
+      "entityType": "山东烟台",
+      "locations": [
+        "烟台"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.86",
+            "monthlyAmount": "54341.31"
+          }
+        }
+      ],
+      "contractTerms": "港口跨境资源",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "海外卡调度",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-063",
+      "sourceRow": 63,
+      "legalName": "唐山唐联智算科技有限公司",
+      "displayName": "唐山唐联智算科技有限公司",
+      "entityType": "河北唐山",
+      "locations": [
+        "唐山"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.31",
+            "monthlyAmount": "55239.52"
+          }
+        }
+      ],
+      "contractTerms": "环京算力备选",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "排期20天",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-064",
+      "sourceRow": 64,
+      "legalName": "呼和浩特呼智云计算有限公司",
+      "displayName": "呼和浩特呼智云计算有限公司",
+      "entityType": "内蒙古",
+      "locations": [
+        "呼和浩特"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.41",
+            "monthlyAmount": "53143.71"
+          }
+        }
+      ],
+      "contractTerms": "绿电智算中心",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "电价优势",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-065",
+      "sourceRow": 65,
+      "legalName": "银川银云算力运营有限公司",
+      "displayName": "银川银云算力运营有限公司",
+      "entityType": "宁夏中卫",
+      "locations": [
+        "中卫"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "18.26",
+            "monthlyAmount": "52694.61"
+          }
+        }
+      ],
+      "contractTerms": "国内知名算力基地",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "多家平台上游供货商",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-066",
+      "sourceRow": 66,
+      "legalName": "Amazon Web Services (AWS)",
+      "displayName": "Amazon Web Services (AWS)",
+      "entityType": "全球公有云",
+      "locations": [
+        "美国",
+        "欧洲"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "37.12",
+            "monthlyAmount": "102544.91"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "45.80",
+            "monthlyAmount": "126047.90"
+          }
+        }
+      ],
+      "contractTerms": "按需/1年预留",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "现货紧张",
+        "sla": "99.99%",
+        "notes": "P5/P5e实例"
+      },
+      "logo": {
+        "httpsUrl": "https://aws.amazon.com/favicon.ico",
+        "sourceUrl": "https://aws.amazon.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-067",
+      "sourceRow": 67,
+      "legalName": "Microsoft Azure",
+      "displayName": "Microsoft Azure",
+      "entityType": "全球公有云",
+      "locations": [
+        "美欧"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "35.17",
+            "monthlyAmount": "97604.79"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "43.71",
+            "monthlyAmount": "120508.98"
+          }
+        }
+      ],
+      "contractTerms": "预留实例折扣",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "B300限量预览",
+        "sla": "99.99%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://azure.microsoft.com/favicon.ico",
+        "sourceUrl": "https://azure.microsoft.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-068",
+      "sourceRow": 68,
+      "legalName": "Google Cloud (GCP)",
+      "displayName": "Google Cloud (GCP)",
+      "entityType": "全球公有云",
+      "locations": [
+        "美欧"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "38.32",
+            "monthlyAmount": "105988.02"
+          }
+        }
+      ],
+      "contractTerms": "长期合约议价",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "高端卡稀缺",
+        "sla": "99.99%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://cloud.google.com/favicon.ico",
+        "sourceUrl": "https://cloud.google.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-069",
+      "sourceRow": 69,
+      "legalName": "CoreWeave Inc",
+      "displayName": "CoreWeave Inc",
+      "entityType": "专业AI云厂商",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100/H200/B300",
+        "models": [
+          "H100",
+          "H200",
+          "B300"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "24.25",
+            "monthlyAmount": "67365.26"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "31.13",
+            "monthlyAmount": "86526.94"
+          }
+        },
+        {
+          "model": "B300",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "48.65",
+            "monthlyAmount": "136227.54"
+          }
+        }
+      ],
+      "contractTerms": "3-12个月",
+      "networkDescription": "400G IB",
+      "sourceClaims": {
+        "availability": "B300少量现货",
+        "sla": "99.9%",
+        "notes": "英伟达精英合作伙伴"
+      },
+      "logo": {
+        "httpsUrl": "https://www.coreweave.com/favicon.ico",
+        "sourceUrl": "https://www.coreweave.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-070",
+      "sourceRow": 70,
+      "legalName": "Lambda Labs Inc",
+      "displayName": "Lambda Labs Inc",
+      "entityType": "GPU专业云",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100/H200/B300",
+        "models": [
+          "H100",
+          "H200",
+          "B300"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "23.20",
+            "monthlyAmount": "64670.65"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "29.79",
+            "monthlyAmount": "83083.83"
+          }
+        },
+        {
+          "model": "B300",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "46.70",
+            "monthlyAmount": "130988.02"
+          }
+        }
+      ],
+      "contractTerms": "按需/预留",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "现货稳定",
+        "sla": "99.8%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://lambda.ai/favicon.ico",
+        "sourceUrl": "https://lambda.ai/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-071",
+      "sourceRow": 71,
+      "legalName": "RunPod Inc",
+      "displayName": "RunPod Inc",
+      "entityType": "海外算力平台",
+      "locations": [
+        "全球"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.15",
+            "monthlyAmount": "61826.34"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "28.74",
+            "monthlyAmount": "80239.52"
+          }
+        }
+      ],
+      "contractTerms": "Spot实例折扣",
+      "networkDescription": "弹性网络",
+      "sourceClaims": {
+        "availability": "社区算力池",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.runpod.io/favicon.ico",
+        "sourceUrl": "https://www.runpod.io/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-072",
+      "sourceRow": 72,
+      "legalName": "Vast.ai",
+      "displayName": "Vast.ai",
+      "entityType": "分布式算力集市",
+      "locations": [
+        "全球"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.80",
+            "monthlyAmount": "58083.83"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "27.39",
+            "monthlyAmount": "76497.00"
+          }
+        }
+      ],
+      "contractTerms": "抢占式实例低价",
+      "networkDescription": "带宽计费",
+      "sourceClaims": {
+        "availability": "资源波动大",
+        "sla": "99.0%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://vast.ai/favicon.ico",
+        "sourceUrl": "https://vast.ai/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-073",
+      "sourceRow": 73,
+      "legalName": "Spheron Network",
+      "displayName": "Spheron Network",
+      "entityType": "聚合算力平台",
+      "locations": [
+        "全球"
+      ],
+      "gpu": {
+        "description": "H100/H200/B300",
+        "models": [
+          "H100",
+          "H200",
+          "B300"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.70",
+            "monthlyAmount": "60628.74"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "28.14",
+            "monthlyAmount": "78592.81"
+          }
+        },
+        {
+          "model": "B300",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "45.65",
+            "monthlyAmount": "127844.31"
+          }
+        }
+      ],
+      "contractTerms": "无强制合约",
+      "networkDescription": "多机房调度",
+      "sourceClaims": {
+        "availability": "现货充足",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.spheron.network/favicon.ico",
+        "sourceUrl": "https://www.spheron.network/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-074",
+      "sourceRow": 74,
+      "legalName": "Nebius Group N.V",
+      "displayName": "Nebius Group N.V",
+      "entityType": "欧洲智算服务商",
+      "locations": [
+        "荷兰"
+      ],
+      "gpu": {
+        "description": "H100/H200/B300",
+        "models": [
+          "H100",
+          "H200",
+          "B300"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "23.80",
+            "monthlyAmount": "66167.66"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "30.68",
+            "monthlyAmount": "85179.64"
+          }
+        },
+        {
+          "model": "B300",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "48.05",
+            "monthlyAmount": "134431.13"
+          }
+        }
+      ],
+      "contractTerms": "长约优惠",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "欧洲低延迟",
+        "sla": "99.8%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://nebius.com/favicon.ico",
+        "sourceUrl": "https://nebius.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-075",
+      "sourceRow": 75,
+      "legalName": "FluidStack",
+      "displayName": "FluidStack",
+      "entityType": "海外AI算力集群",
+      "locations": [
+        "英国"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.75",
+            "monthlyAmount": "63323.35"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "29.19",
+            "monthlyAmount": "81437.12"
+          }
+        }
+      ],
+      "contractTerms": "企业定制集群",
+      "networkDescription": "400G IB",
+      "sourceClaims": {
+        "availability": "面向大模型企业",
+        "sla": "99.7%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.fluidstack.io/favicon.ico",
+        "sourceUrl": "https://www.fluidstack.io/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-076",
+      "sourceRow": 76,
+      "legalName": "JarvisLabs AI",
+      "displayName": "JarvisLabs AI",
+      "entityType": "海外开发算力",
+      "locations": [
+        "新加坡"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.91",
+            "monthlyAmount": "55688.62"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "26.64",
+            "monthlyAmount": "74251.49"
+          }
+        }
+      ],
+      "contractTerms": "适合研发调试",
+      "networkDescription": "弹性带宽",
+      "sourceClaims": {
+        "availability": "亚太节点",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://jarvislabs.ai/favicon.ico",
+        "sourceUrl": "https://jarvislabs.ai/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-077",
+      "sourceRow": 77,
+      "legalName": "Theta EdgeCloud",
+      "displayName": "Theta EdgeCloud",
+      "entityType": "分布式云",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.10",
+            "monthlyAmount": "59131.73"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "27.84",
+            "monthlyAmount": "77544.91"
+          }
+        }
+      ],
+      "contractTerms": "按需付费",
+      "networkDescription": "100G/200G",
+      "sourceClaims": {
+        "availability": "抢占资源可选",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.thetaedgecloud.com/favicon.ico",
+        "sourceUrl": "https://www.thetaedgecloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-078",
+      "sourceRow": 78,
+      "legalName": "Hyperstack",
+      "displayName": "Hyperstack",
+      "entityType": "北美算力服务商",
+      "locations": [
+        "加拿大"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.35",
+            "monthlyAmount": "57035.92"
+          }
+        }
+      ],
+      "contractTerms": "spot最高4折",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "北美客户优选",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.hyperstack.cloud/favicon.ico",
+        "sourceUrl": "https://www.hyperstack.cloud/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-079",
+      "sourceRow": 79,
+      "legalName": "Impossible Cloud",
+      "displayName": "Impossible Cloud",
+      "entityType": "裸金属服务商",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.40",
+            "monthlyAmount": "59730.53"
+          }
+        }
+      ],
+      "contractTerms": "最少3个月合约",
+      "networkDescription": "400G IB",
+      "sourceClaims": {
+        "availability": "大规模裸金属",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.impossiblecloud.com/favicon.ico",
+        "sourceUrl": "https://www.impossiblecloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-080",
+      "sourceRow": 80,
+      "legalName": "Oblivus Cloud",
+      "displayName": "Oblivus Cloud",
+      "entityType": "海外IDC",
+      "locations": [
+        "英国"
+      ],
+      "gpu": {
+        "description": "H100/H200",
+        "models": [
+          "H100",
+          "H200"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.60",
+            "monthlyAmount": "62724.55"
+          }
+        },
+        {
+          "model": "H200",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "29.04",
+            "monthlyAmount": "80988.02"
+          }
+        }
+      ],
+      "contractTerms": "支持免实名测试",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "短期实验",
+        "sla": "99.2%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://oblivus.com/favicon.ico",
+        "sourceUrl": "https://oblivus.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-081",
+      "sourceRow": 81,
+      "legalName": "Latitude.sh",
+      "displayName": "Latitude.sh",
+      "entityType": "美洲算力平台",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.65",
+            "monthlyAmount": "57485.02"
+          }
+        }
+      ],
+      "contractTerms": "开发环境预装",
+      "networkDescription": "弹性网络",
+      "sourceClaims": {
+        "availability": "个人开发者友好",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.latitude.sh/favicon.ico",
+        "sourceUrl": "https://www.latitude.sh/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-082",
+      "sourceRow": 82,
+      "legalName": "Thunder Compute",
+      "displayName": "Thunder Compute",
+      "entityType": "北美IDC",
+      "locations": [
+        "美国德州"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.61",
+            "monthlyAmount": "54491.01"
+          }
+        }
+      ],
+      "contractTerms": "性价比PCIe算力",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "推理业务首选",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.thundercompute.com/favicon.ico",
+        "sourceUrl": "https://www.thundercompute.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-083",
+      "sourceRow": 83,
+      "legalName": "Crusoe Energy",
+      "displayName": "Crusoe Energy",
+      "entityType": "绿色算力",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.95",
+            "monthlyAmount": "58682.63"
+          }
+        }
+      ],
+      "contractTerms": "燃气发电绿算力",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "碳中和项目",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.crusoe.ai/favicon.ico",
+        "sourceUrl": "https://www.crusoe.ai/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-084",
+      "sourceRow": 84,
+      "legalName": "Gcore",
+      "displayName": "Gcore",
+      "entityType": "欧洲云服务商",
+      "locations": [
+        "卢森堡"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.00",
+            "monthlyAmount": "61377.24"
+          }
+        }
+      ],
+      "contractTerms": "全球边缘节点",
+      "networkDescription": "专线可选",
+      "sourceClaims": {
+        "availability": "跨境低延迟",
+        "sla": "99.7%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://gcore.com/favicon.ico",
+        "sourceUrl": "https://gcore.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-085",
+      "sourceRow": 85,
+      "legalName": "OVHcloud",
+      "displayName": "OVHcloud",
+      "entityType": "欧洲大型IDC",
+      "locations": [
+        "法国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "23.05",
+            "monthlyAmount": "64221.55"
+          }
+        }
+      ],
+      "contractTerms": "裸金属服务器",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "长期合约优惠",
+        "sla": "99.8%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.ovhcloud.com/favicon.ico",
+        "sourceUrl": "https://www.ovhcloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-086",
+      "sourceRow": 86,
+      "legalName": "Hetzner",
+      "displayName": "Hetzner",
+      "entityType": "德国IDC",
+      "locations": [
+        "德国"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.16",
+            "monthlyAmount": "53293.41"
+          }
+        }
+      ],
+      "contractTerms": "欧洲底价梯队",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "PCIe现货充足",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.hetzner.com/favicon.ico",
+        "sourceUrl": "https://www.hetzner.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-087",
+      "sourceRow": 87,
+      "legalName": "Equinix",
+      "displayName": "Equinix",
+      "entityType": "全球数据中心运营商",
+      "locations": [
+        "全球"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "24.70",
+            "monthlyAmount": "69011.97"
+          }
+        }
+      ],
+      "contractTerms": "机柜+算力托管",
+      "networkDescription": "专线服务",
+      "sourceClaims": {
+        "availability": "资源中介模式",
+        "sla": "99.9%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.equinix.com/favicon.ico",
+        "sourceUrl": "https://www.equinix.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-088",
+      "sourceRow": 88,
+      "legalName": "DigitalOcean",
+      "displayName": "DigitalOcean",
+      "entityType": "海外开发者云",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.25",
+            "monthlyAmount": "59431.13"
+          }
+        }
+      ],
+      "contractTerms": "简单易用容器",
+      "networkDescription": "弹性带宽",
+      "sourceClaims": {
+        "availability": "中小团队",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.digitalocean.com/favicon.ico",
+        "sourceUrl": "https://www.digitalocean.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-089",
+      "sourceRow": 89,
+      "legalName": "Vultr",
+      "displayName": "Vultr",
+      "entityType": "全球云主机服务商",
+      "locations": [
+        "美欧"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.20",
+            "monthlyAmount": "56586.82"
+          }
+        }
+      ],
+      "contractTerms": "按小时启停",
+      "networkDescription": "带宽流量计费",
+      "sourceClaims": {
+        "availability": "短期测试",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.vultr.com/favicon.ico",
+        "sourceUrl": "https://www.vultr.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-090",
+      "sourceRow": 90,
+      "legalName": "Linode (Akamai)",
+      "displayName": "Linode (Akamai)",
+      "entityType": "全球云平台",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.50",
+            "monthlyAmount": "57335.32"
+          }
+        }
+      ],
+      "contractTerms": "Akamai网络加速",
+      "networkDescription": "全球节点",
+      "sourceClaims": {
+        "availability": "互联网业务",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.linode.com/favicon.ico",
+        "sourceUrl": "https://www.linode.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-091",
+      "sourceRow": 91,
+      "legalName": "Scaleway",
+      "displayName": "Scaleway",
+      "entityType": "法国公有云",
+      "locations": [
+        "法国"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.31",
+            "monthlyAmount": "53742.51"
+          }
+        }
+      ],
+      "contractTerms": "欧洲低成本算力",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "批量折扣",
+        "sla": "99.3%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.scaleway.com/favicon.ico",
+        "sourceUrl": "https://www.scaleway.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-092",
+      "sourceRow": 92,
+      "legalName": "Paperspace",
+      "displayName": "Paperspace",
+      "entityType": "AI开发云",
+      "locations": [
+        "美国纽约"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.55",
+            "monthlyAmount": "60179.64"
+          }
+        }
+      ],
+      "contractTerms": "Jupyter内置环境",
+      "networkDescription": "弹性网络",
+      "sourceClaims": {
+        "availability": "科研团队",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.paperspace.com/favicon.ico",
+        "sourceUrl": "https://www.paperspace.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-093",
+      "sourceRow": 93,
+      "legalName": "Genesis Cloud",
+      "displayName": "Genesis Cloud",
+      "entityType": "欧洲高性能云",
+      "locations": [
+        "奥地利"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.85",
+            "monthlyAmount": "61077.84"
+          }
+        }
+      ],
+      "contractTerms": "HPC优化网络",
+      "networkDescription": "200G IB",
+      "sourceClaims": {
+        "availability": "科学计算",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.genesiscloud.com/favicon.ico",
+        "sourceUrl": "https://www.genesiscloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-094",
+      "sourceRow": 94,
+      "legalName": "Packet (Aequus)",
+      "displayName": "Packet (Aequus)",
+      "entityType": "裸金属服务商",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100 SXM",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "SXM",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.45",
+            "monthlyAmount": "62275.44"
+          }
+        }
+      ],
+      "contractTerms": "整机裸金属交付",
+      "networkDescription": "400G IB",
+      "sourceClaims": {
+        "availability": "集群训练",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": null,
+        "sourceUrl": null,
+        "status": "not_verified"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-095",
+      "sourceRow": 95,
+      "legalName": "Nimbix",
+      "displayName": "Nimbix",
+      "entityType": "HPC专业算力",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.90",
+            "monthlyAmount": "63772.45"
+          }
+        }
+      ],
+      "contractTerms": "超算调度平台",
+      "networkDescription": "高速互联",
+      "sourceClaims": {
+        "availability": "科研仿真",
+        "sla": "99.7%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.nimbix.net/favicon.ico",
+        "sourceUrl": "https://www.nimbix.net/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-096",
+      "sourceRow": 96,
+      "legalName": "Sabey Data Centers",
+      "displayName": "Sabey Data Centers",
+      "entityType": "北美IDC运营商",
+      "locations": [
+        "美国"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "22.30",
+            "monthlyAmount": "61976.04"
+          }
+        }
+      ],
+      "contractTerms": "机柜+算力打包",
+      "networkDescription": "专线定制",
+      "sourceClaims": {
+        "availability": "企业长期租用",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://sabeydatacenters.com/favicon.ico",
+        "sourceUrl": "https://sabeydatacenters.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-097",
+      "sourceRow": 97,
+      "legalName": "Civo",
+      "displayName": "Civo",
+      "entityType": "英国云服务商",
+      "locations": [
+        "英国"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "19.76",
+            "monthlyAmount": "55089.82"
+          }
+        }
+      ],
+      "contractTerms": "英国本地低延迟",
+      "networkDescription": "弹性带宽",
+      "sourceClaims": {
+        "availability": "欧洲初创",
+        "sla": "99.2%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.civo.com/favicon.ico",
+        "sourceUrl": "https://www.civo.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-098",
+      "sourceRow": 98,
+      "legalName": "CloudSigma",
+      "displayName": "CloudSigma",
+      "entityType": "瑞士IDC",
+      "locations": [
+        "瑞士"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.10",
+            "monthlyAmount": "58982.03"
+          }
+        }
+      ],
+      "contractTerms": "中立数据中心",
+      "networkDescription": "合规优势",
+      "sourceClaims": {
+        "availability": "金融AI项目",
+        "sla": "99.6%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.cloudsigma.com/favicon.ico",
+        "sourceUrl": "https://www.cloudsigma.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-099",
+      "sourceRow": 99,
+      "legalName": "UpCloud",
+      "displayName": "UpCloud",
+      "entityType": "芬兰云平台",
+      "locations": [
+        "北欧"
+      ],
+      "gpu": {
+        "description": "H100 PCIe",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": "PCIe",
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "20.05",
+            "monthlyAmount": "55988.02"
+          }
+        }
+      ],
+      "contractTerms": "北欧稳定算力",
+      "networkDescription": "100G",
+      "sourceClaims": {
+        "availability": "低隐私风险",
+        "sla": "99.4%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://upcloud.com/favicon.ico",
+        "sourceUrl": "https://upcloud.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-100",
+      "sourceRow": 100,
+      "legalName": "Exoscale",
+      "displayName": "Exoscale",
+      "entityType": "瑞士高性能云",
+      "locations": [
+        "瑞士"
+      ],
+      "gpu": {
+        "description": "H100",
+        "models": [
+          "H100"
+        ]
+      },
+      "quotes": [
+        {
+          "model": "H100",
+          "formFactor": null,
+          "referencePrice": {
+            "currency": "KAI_CARD_HOUR",
+            "precision": 2,
+            "status": "reference_only",
+            "hourlyAmount": "21.40",
+            "monthlyAmount": "59580.83"
+          }
+        }
+      ],
+      "contractTerms": "企业私有化部署方案",
+      "networkDescription": "专线互联",
+      "sourceClaims": {
+        "availability": "合规要求高客户",
+        "sla": "99.5%",
+        "notes": null
+      },
+      "logo": {
+        "httpsUrl": "https://www.exoscale.com/favicon.ico",
+        "sourceUrl": "https://www.exoscale.com/",
+        "status": "official_domain_candidate"
+      },
+      "availability": {
+        "status": "inquiry_required",
+        "quantity": null,
+        "inventoryCommitment": false
+      },
+      "purchase": {
+        "purchasable": false,
+        "orderCreation": false,
+        "inquiryAvailable": true,
+        "cta": "publish_directed_requirement"
+      },
+      "source": {
+        "kind": "USER_PROVIDED_SUPPLIER_WORKBOOK",
+        "observedAt": "2026-08-17",
+        "validUntil": "2026-09-17T15:59:59.000Z",
+        "verificationStatus": "unverified",
+        "label": "资料来源：用户提供的 100 家供应商报价表；价格、库存、主体与 SLA 均待核验"
+      },
+      "terms": "inquiry-required"
+    }
+  ],
+  "totalPublished": 100,
+  "cache": {
+    "kind": "bundled_reference_snapshot",
+    "sourceSha256": "sha256:6830d0d10000b9d87424dc33d662b6b27a1a10f47b76455ce555806088874b41",
+    "observedAt": "2026-08-17",
+    "validUntil": "2026-09-17T15:59:59.000Z"
+  }
+}

@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.kaicloud.marketplace'
+version = '1.0.0'
+def kaiAuthLoopbackStaging = System.getenv()['CLOUDPAY_STAGING_DEMO'] == '1'
+
+android {
+  namespace "expo.modules.kaiauthloopback"
+  sourceSets {
+    main {
+      java.srcDirs += [kaiAuthLoopbackStaging ? 'src/staging/java' : 'src/formal/java']
+      manifest.srcFile(kaiAuthLoopbackStaging ? 'src/staging/AndroidManifest.xml' : 'src/formal/AndroidManifest.xml')
+    }
+  }
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  testImplementation 'junit:junit:4.13.2'
+}

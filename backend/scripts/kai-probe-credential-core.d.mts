@@ -1,0 +1,14 @@
+export type KaiProbeRefreshState=Readonly<{schemaVersion:1;refreshToken:string;subject:string}>;
+export type KaiProbeRevocationState=Readonly<{schemaVersion:2;mode:'attempt_pending'|'revoke_only'|'manual_admin_required';refreshToken:string;subject:string;attemptId:string;originMode:'active'|'revoke_only';preparedAt:string;ambiguousSince:string|null;reason:string}>;
+export const KAI_ISSUER:string;export const KAI_CLIENT_ID:string;export const KAI_TOKEN_ENDPOINT:string;export const KAI_REVOCATION_ENDPOINT:string;
+export function parseRefreshState(value:unknown):KaiProbeRefreshState;
+export function parseKaiProbeCredentialState(value:unknown):KaiProbeRefreshState|KaiProbeRevocationState;
+export function createRevocationAttempt(value:unknown,attemptId:string,preparedAt:string):KaiProbeRevocationState;
+export function createRevokeOnlyCandidate(value:unknown,refreshToken:string,preparedAt:string):KaiProbeRevocationState;
+export function createManualAdminState(value:unknown,reason:'revocation_attempt_interrupted'|'revocation_confirmation_unconfirmed',preparedAt:string):KaiProbeRevocationState;
+export function validateLoopbackProbeDatabaseUrl(value:string):string;
+export function refreshKaiProbeTokens(value:unknown,options?:Readonly<{fetcher?:typeof fetch;verifyPair?:(id:string,access:string,subject:string)=>Promise<void>}>):Promise<Readonly<{accessToken:string;idToken:string;nextState:KaiProbeRefreshState}>>;
+export function revokeKaiProbeFamily(value:unknown,options?:Readonly<{fetcher?:typeof fetch}>):Promise<Readonly<{revoked:true}|{revoked:false;candidateRefreshToken:string}>>;
+export function prepareProbeRefreshState(credentialPath:string,runtimeDirectory:string):Promise<KaiProbeRefreshState>;
+export function withExclusiveRotationLock<T>(path:string,action:()=>Promise<T>):Promise<T>;
+export function atomicWriteHandoff(path:string,value:unknown):Promise<void>;

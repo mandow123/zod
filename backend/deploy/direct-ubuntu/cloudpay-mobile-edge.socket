@@ -1,0 +1,12 @@
+[Unit]
+Description=KAI CloudPay mobile API private ingress on 172.31.31.78:4154
+Requires=cloudpay-mobile-edge-firewall.service
+After=cloudpay-mobile-edge-firewall.service
+
+[Socket]
+ListenStream=172.31.31.78:4154
+Accept=no
+FreeBind=no
+
+[Install]
+WantedBy=sockets.target

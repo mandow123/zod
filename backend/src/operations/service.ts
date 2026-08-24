@@ -2,8 +2,13 @@ import { constantTimeEqual } from '../account/crypto.js';
 import type { AccountPrincipal } from '../account/types.js';
 import { adminProcessMetrics, type AdminMetricReader } from '../admin/metrics.js';
 import type { RuntimeConfig } from '../config.js';
+import { databaseFingerprint } from '../backups/postgres.js';
+import { readBackupHeader, sha256File } from '../backups/format.js';
+import { stat } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { AppError } from '../errors.js';
 import type { OperationalCounts, OperationsStore } from './store.js';
+import { probeEvidenceDigest } from './probe-evidence.js';
 
 function required(value: string | undefined, name: string) {
   if (!value) throw new Error(`${name} is required.`);
@@ -32,14 +37,26 @@ const metricNames: Record<keyof OperationalCounts, string> = {
 
 export class OperationsService {
   private readonly token: string;
+  private readonly databaseFingerprint: string | null;
+  private readonly auditPepper: string | null;
+  private readonly publicOrigin: string;
+  private readonly backupDirectory: string | null;
+  private readonly backupKeyId: string | null;
+  private readonly backupVerificationCache=new Map<string,{mtimeMs:number;size:number;digest:string;checkedAt:number;ready:boolean}>();
 
   constructor(
     private readonly store: OperationsStore,
     config: RuntimeConfig,
     private readonly now: () => Date = () => new Date(),
     private readonly adminMetrics: AdminMetricReader = adminProcessMetrics,
+    private readonly localBackupVerifier?: (artifact:NonNullable<Awaited<ReturnType<OperationsStore['inquiryReadiness']>>['backupArtifact']>)=>Promise<boolean>,
   ) {
     this.token = required(config.METRICS_BEARER_TOKEN, 'METRICS_BEARER_TOKEN');
+    this.databaseFingerprint = config.DATABASE_URL ? databaseFingerprint(config.DATABASE_URL) : null;
+    this.auditPepper = config.AUDIT_PEPPER ?? null;
+    this.publicOrigin=config.PUBLIC_ORIGIN;
+    this.backupDirectory=config.BACKUP_LOCAL_DIRECTORY??null;
+    this.backupKeyId=config.BACKUP_KEY_ID??null;
   }
 
   authorizeMetrics(authorization: string | undefined) {
@@ -104,6 +121,67 @@ export class OperationsService {
       `cloudpay_metrics_snapshot_timestamp_seconds ${Math.floor(capturedAt.getTime() / 1000)}`,
     );
     return `${lines.join('\n')}\n`;
+  }
+
+  async inquiryReleaseReadiness() {
+    const capturedAt = this.now();
+    if (!this.databaseFingerprint) {
+      return {
+        ready: false,
+        backup: { ready: false }, restore: { ready: false }, kaiPaired: { ready: false }, appSession: {ready:false},
+        blockers: ['DATABASE_FINGERPRINT'],
+      };
+    }
+    const [counts, evidence] = await Promise.all([
+      this.store.snapshot(capturedAt), this.store.inquiryReadiness(capturedAt, this.databaseFingerprint),
+    ]);
+    const evidenceAuthentic=(proof:typeof evidence.kaiPairedProbeEvidence)=>Boolean(this.auditPepper&&proof
+      &&constantTimeEqual(proof.payloadDigest,probeEvidenceDigest(proof.metadata,this.auditPepper)));
+    const kaiPairedProbeReady=evidence.kaiPairedProbeReady&&evidenceAuthentic(evidence.kaiPairedProbeEvidence)
+      &&evidence.kaiPairedProbeEvidence?.metadata.probeOrigin===this.publicOrigin
+      &&evidence.kaiPairedProbeEvidence.metadata.publicOrigin===this.publicOrigin;
+    const appSessionProbeReady=evidence.appSessionProbeReady&&evidenceAuthentic(evidence.appSessionProbeEvidence)
+      &&evidence.appSessionProbeEvidence?.metadata.publicOrigin===this.publicOrigin;
+    const backupFileReady=Boolean(evidence.backupArtifact&&await(this.localBackupVerifier
+      ?this.localBackupVerifier(evidence.backupArtifact):this.verifyLocalBackup(evidence.backupArtifact)));
+    const backupReady = evidence.backupArtifactReady&&backupFileReady&&counts.backupFailures24h === 0;
+    const blockers = [
+      ...(backupFileReady ? [] : ['LOCAL_BACKUP_ARTIFACT_24H']),
+      ...(counts.backupFailures24h === 0 ? [] : ['BACKUP_FAILURES_24H']),
+      ...(evidence.restoreDrillReady ? [] : ['RESTORE_DRILL_SUCCESS_90D']),
+      ...(kaiPairedProbeReady ? [] : ['KAI_PAIRED_PROBE_30M']),
+      ...(appSessionProbeReady ? [] : ['APP_STORED_SESSION_PROBE_24H']),
+    ];
+    return {
+      ready: blockers.length === 0,
+      backup: { ready: backupReady },
+      restore: { ready: evidence.restoreDrillReady },
+      kaiPaired: { ready: kaiPairedProbeReady },
+      appSession: {ready:appSessionProbeReady},
+      durability:{mode:'local_only',offsiteBackup:false,highAvailability:false,
+        disasterRecovery:false,riskAccepted:true} as const,
+      blockers,
+    };
+  }
+
+  private async verifyLocalBackup(artifact:NonNullable<Awaited<ReturnType<OperationsStore['inquiryReadiness']>>['backupArtifact']>) {
+    try {
+      if(!this.backupDirectory||!this.backupKeyId||artifact.location!==`local://${artifact.artifactName}`)return false;
+      const directory=resolve(this.backupDirectory),path=resolve(directory,artifact.artifactName);
+      if(dirname(path)!==directory)return false;
+      const info=await stat(path);
+      if(!info.isFile()||(info.mode&0o077)!==0||info.size!==artifact.encryptedSizeBytes)return false;
+      const cached=this.backupVerificationCache.get(path);
+      if(cached&&cached.mtimeMs===info.mtimeMs&&cached.size===info.size&&cached.digest===artifact.sha256Digest
+        &&this.now().getTime()-cached.checkedAt<5*60_000)return cached.ready;
+      const parsed=await readBackupHeader(path);
+      const ready=parsed.header.databaseFingerprint===this.databaseFingerprint
+        &&parsed.header.schemaVersion==='0065_credit_order_transition_closure.sql'
+        &&parsed.header.keyId===this.backupKeyId&&await sha256File(path)===artifact.sha256Digest;
+      this.backupVerificationCache.set(path,{mtimeMs:info.mtimeMs,size:info.size,digest:artifact.sha256Digest,
+        checkedAt:this.now().getTime(),ready});
+      return ready;
+    }catch{return false;}
   }
 
   private status(counts: OperationalCounts): 'healthy' | 'warning' | 'critical' {

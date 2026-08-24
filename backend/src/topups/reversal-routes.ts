@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { TopupReversalService } from './reversal-service.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
@@ -13,7 +14,7 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 export async function registerTopupReversalRoutes(app: FastifyInstance, accounts: AccountService,
   reversals: TopupReversalService) {
   app.post('/mobile/v1/operator/credits/topups/:topupId/reversals', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ topupId: z.string().uuid() }), request.params);
     const body = parse(z.object({ kind: z.enum(['refund', 'chargeback']),
       amountCents: z.number().int().positive().max(10_000_000),
@@ -24,7 +25,7 @@ export async function registerTopupReversalRoutes(app: FastifyInstance, accounts
     return reply.status(result.replayed ? 200 : 201).send({ ok: true, ...result });
   });
   app.post('/mobile/v1/operator/credit-topup-reversals/:reversalId/recover-credits', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ reversalId: z.string().uuid() }), request.params);
     parse(z.object({}).strict(), request.body ?? {});
     return { ok: true, ...(await reversals.recoverCredits(principal, parameters.reversalId)) };

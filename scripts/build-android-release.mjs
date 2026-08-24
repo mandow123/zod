@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { homedir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { androidToolchainEnvironment, runGradle } from './android-toolchain.mjs';
@@ -53,6 +54,20 @@ const contract = spawnSync(process.execPath, [join(root, 'scripts/verify-mobile-
   cwd: root, stdio: 'inherit', env: toolchainEnvironment,
 });
 if (contract.status !== 0) process.exit(contract.status ?? 1);
+const supplierLogos = spawnSync(process.execPath, [join(root, 'scripts/verify-supplier-logo-evidence.mjs')], {
+  cwd: root, stdio: 'inherit', env: toolchainEnvironment,
+});
+if (supplierLogos.status !== 0) process.exit(supplierLogos.status ?? 1);
+// Gradle removes dependency codegen before cleaning the app's cached CMake graph.
+// Isolate that disposable graph first so a clean release remains reproducible.
+const nativeBuildCache = join(root, 'android/app/.cxx');
+try {
+  await access(nativeBuildCache, constants.F_OK);
+  const cacheQuarantine = await mkdtemp(join(tmpdir(), 'cloudpay-native-cache-'));
+  await rename(nativeBuildCache, join(cacheQuarantine, 'app-cxx'));
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+}
 const clean = runGradle(root, ['clean'], {
   stdio: 'inherit', env: { ...toolchainEnvironment, NODE_ENV: 'production' },
 });
@@ -140,7 +155,7 @@ if (!localE2e) {
 const requiredFrontendMarkers = [
   'KAI_CLOUD_UNIFIED_ASSETS_V2',
   'UnifiedAssetsScreen',
-  'ProviderHomeScreen',
+  'ProviderWorkspaceScreen',
   'PublishScreen',
   '/mobile/v1/provider/bootstrap',
   '/mobile/v1/provider/resources',
@@ -151,9 +166,10 @@ const requiredFrontendMarkers = [
   '/delivery/start',
   '/delivery/ready',
   '/refund/approve',
-  '/mobile/v1/auth/kai/start',
-  '/mobile/v1/auth/kai/exchange',
-  'kaicloudpay://auth/kai/callback',
+  'https://auth.kai.com/api/auth',
+  'xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K',
+  'http://127.0.0.1:',
+  '/oauth2redirect/kai',
   '/mobile/v1/device-products',
   '/mobile/v1/device-orders',
   '/mobile/v1/device-assets',
@@ -167,13 +183,25 @@ if (missingFrontendMarkers.length > 0) {
   process.exit(1);
 }
 if (!localE2e) {
-  if (!embeddedBundle.stdout.includes(Buffer.from('KAI_CLOUD_UNIFIED_IDENTITY_V1'))) {
-    process.stderr.write('Production artifact is missing the KAI unified identity login.\n');
+  const productionIdentityMarkers = [
+    'KAI_CLOUD_UNIFIED_IDENTITY_V1', 'X-KAI-ID-Token',
+    '/mobile/v1/auth/kai/consents', 'kai.zod.auth.pending-revocations.v1',
+  ];
+  const missingIdentityMarkers = productionIdentityMarkers.filter(
+    (marker) => !embeddedBundle.stdout.includes(Buffer.from(marker)),
+  );
+  if (missingIdentityMarkers.length > 0) {
+    process.stderr.write(`Production artifact is missing the KAI unified identity protocol: ${missingIdentityMarkers.join(', ')}\n`);
     process.exit(1);
   }
   const forbiddenMarkers = [
     '10.0.2.2', '/__e2e/', 'CLOUDPAY_LOCAL_E2E',
     '/mobile/v1/auth/otp/request', '/mobile/v1/auth/otp/verify',
+    '/mobile/v1/auth/kai/start', '/mobile/v1/auth/kai/exchange',
+    '/mobile/v1/auth/refresh', '/mobile/v1/auth/logout', '/mobile/v1/auth/sessions',
+    'kaicloudpay://auth/kai/callback',
+    'com.kaicloud.marketplace:/oauth2redirect/kai',
+    'https://cloud.kai.com/zod/oauth2redirect/kai',
   ];
   const found = forbiddenMarkers.filter((marker) => embeddedBundle.stdout.includes(Buffer.from(marker)));
   if (found.length > 0) {

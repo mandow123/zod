@@ -1,0 +1,13 @@
+[Unit]
+Description=Allow KAI CloudPay private ingress only from the legacy origin
+Before=cloudpay-mobile-edge.socket
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/sbin/nft delete table inet kai_cloudpay_mobile_4154
+ExecStart=/usr/sbin/nft -f /etc/kai-cloudpay/cloudpay-mobile-edge.nft
+ExecStop=-/usr/sbin/nft delete table inet kai_cloudpay_mobile_4154
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+[Unit]
+Description=KAI CloudPay mobile private relay to loopback
+After=network-online.target cloudpay-mobile-backend.service
+Wants=network-online.target
+Requires=cloudpay-mobile-backend.service
+PartOf=cloudpay-mobile-edge.socket
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:4100
+DynamicUser=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Restart=on-failure
+RestartSec=2s

@@ -22,6 +22,7 @@ export const initialSnapshot: CloudPaySnapshot = {
   releaseBlockers: [],
   creditCommerceReady: false,
   commerceBlockers: [],
+  qixiangTopupCapability: null,
   subjects: [],
   currentSubjectId: null,
   creditBalance: null,

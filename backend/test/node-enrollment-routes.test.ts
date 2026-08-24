@@ -44,7 +44,7 @@ describe('node enrollment routes', () => {
     expect(response.statusCode).toBe(201); expect(response.headers['cache-control']).toBe('no-store, private');
     expect(response.json().claim.claimToken).toBe('T'.repeat(43));
     expect(response.json().claim.consumePath).toBe(`/node/v1/claims/${claimId}/consume`);
-    expect(f.accounts.authenticate).toHaveBeenCalledWith('Bearer access'); await f.app.close();
+    expect(f.accounts.authenticate).toHaveBeenCalledWith('Bearer access', undefined, expect.any(Array)); await f.app.close();
   });
 
   it('takes claim token only from NodeClaim authorization and never echoes secrets', async () => {

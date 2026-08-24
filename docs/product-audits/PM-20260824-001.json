@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260824-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-24T02:51:04Z",
+  "baseCommit": "aef18b58ef2039327b9b0a26f475e1d6deb02f80",
+  "stagedDiffSha256": "ecf7fb5fe66c9b1a31abff879878a3f111c7761997ee2e8d3ef0e7bccb667f98",
+  "summary": "已独立审阅本批269个产品暂存文件。生产登录采用auth.kai.com公有客户端OIDC、PKCE/state/nonce、原生IPv4 loopback、AndroidKeyStore密文恢复与延迟确认；只有严格解码的身份、法务文档和同意结果写入业务会话，HTML、非法JSON、网络歧义、孤儿令牌撤销或可靠队列失败均保持失败关闭。供应商市场固定100家资料导入目录，100/100均为inquiry_required、数量未知、inventoryCommitment=false、purchasable=false且不创建订单；参考卡时不冒充库存或成交价，默认市场入口、搜索、筛选和分批渲染覆盖完整目录，CloudPay K线独立展示且不改变交易能力。31个供应商Logo仅使用官方HTTPS页面取证、本地PNG哈希和人工视觉批准完全匹配的静态资产，其余使用公司简称回退，拒绝的阿里云素材不映射为Logo。七相充值的新建与历史恢复模式分离，回调、主动查单、幂等、跨实例共享worker健康、364天批次账本、退款人工接管和数据库闭包均失败关闭；生产create/refund还必须通过空仓库信任策略之外的受审外部Ed25519证据、实时新旧密钥事实、发布/数据库/probe绑定、短时签名票据、进程phase/canary锁和相邻外呼数据库复核，当前默认配置及外部备案事实不会误开真实支付。inquiry_only与full_commerce物理路由、worker和部署入口保持隔离，README明确技术验收不等于法务或生产放行。本次暂存未包含APK、截图、数据库、私有表格、明文密钥、令牌、签名私钥或运行时生产证据；本机白皮书生成脚本与macOS字体配置已从暂存移除并忽略。独立复核通过前端262/262、root及backend类型检查、关键后端19文件211/211、移动端与后端契约184/160、Logo证据31项、部署24/24及差异检查；后端全量另有既存通过证据548/548，本审计沙箱复跑532项通过，剩余监听型用例仅因环境禁止绑定127.0.0.1而无法在本会话重现。批准范围仅为代码提交，不代表外部法务、七相商户证据、专用probe或生产切流已完成，相关条件未满足时必须继续关闭真实支付和长期公开切流。"
+}

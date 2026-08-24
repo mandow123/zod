@@ -3,6 +3,7 @@ import { cp, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { gunzipSync } from 'node:zlib';
 
 const backendRoot = resolve(import.meta.dirname, '..');
 const projectRoot = resolve(backendRoot, '..');
@@ -13,6 +14,8 @@ const archivePath = join(outputDirectory, `${releaseName}.tar.gz`);
 const digestPath = `${archivePath}.sha256`;
 const stagingRoot = await mkdtemp(join(tmpdir(), 'cloudpay-backend-release-'));
 const stagingDirectory = join(stagingRoot, releaseName);
+const migrationNamePattern = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*\.sql$/u;
+const appleMetadataPattern = /(?:^|\/)(?:\._[^/]*|__MACOSX|\.AppleDouble)(?:\/|$)|\.\.namedfork\/rsrc/u;
 
 function run(binary, args, options = {}) {
   const result = spawnSync(binary, args, { cwd: backendRoot, stdio: 'inherit', ...options });
@@ -41,18 +44,41 @@ try {
   run('npm', ['run', 'build']);
   run('npm', ['run', 'deployment:verify']);
 
-  const migrations = (await readdir(join(backendRoot, 'migrations')))
-    .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-  if (migrations.length !== 60 || migrations.at(-1) !== '0060_admin_identity_rbac_sessions.sql') {
-    throw new Error(`Expected 60 migrations through 0060; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+  const migrationEntries = await readdir(join(backendRoot, 'migrations'));
+  const forbiddenMigrationEntries = migrationEntries.filter((name) => name.startsWith('._')
+    || (name.endsWith('.sql') && !migrationNamePattern.test(name))).sort();
+  if (forbiddenMigrationEntries.length > 0) {
+    throw new Error(`Forbidden migration directory entries: ${forbiddenMigrationEntries.join(', ')}`);
+  }
+  const migrations = migrationEntries.filter((name) => migrationNamePattern.test(name)).sort();
+  const branchMigrations = ['0060_admin_identity_rbac_sessions.sql', '0060_kai_direct_auth_consents.sql'];
+  if (migrations.length !== 66
+    || new Set(migrations).size !== migrations.length
+    || branchMigrations.some((name) => !migrations.includes(name))
+    || migrations.at(-1) !== '0065_credit_order_transition_closure.sql') {
+    throw new Error(`Expected 66 migrations including both 0060 branch migrations through 0065_credit_order_transition_closure.sql; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [
     '.dockerignore', '.env.example', 'Dockerfile', 'README.md', 'package.json', 'package-lock.json',
     'tsconfig.json', 'tsconfig.build.json', 'src', 'dist', 'migrations', 'deploy', 'docs/production-runbook.md',
     'docs/creator-commissions.md',
+    'docs/dual-rewards-core.md',
+    'docs/honghuan-supplier-inquiry-catalog.md',
     'scripts/build-deployment-bundle.mjs', 'scripts/verify-production-env.mjs',
     'scripts/verify-container-env.mjs', 'scripts/start-production-container.mjs',
+    'scripts/record-inquiry-readiness.mjs',
+    'scripts/record-inquiry-app-session.mjs',
+    'scripts/run-inquiry-readiness-systemd.mjs',
+    'scripts/run-private-honghuan-acceptance-systemd.mjs',
+    'scripts/rotate-kai-probe-credential.mjs',
+    'scripts/kai-probe-credential-core.mjs',
+    'scripts/authorize-and-enroll-kai-probe.mjs',
+    'scripts/authorize-and-enroll-kai-probe.d.mts',
+    'scripts/persist-kai-probe-refresh.mjs',
+    'scripts/prepare-kai-probe-revocation.mjs',
+    'scripts/revoke-kai-probe-family.mjs',
+    'scripts/finalize-kai-probe-revocation.mjs',
     'scripts/verify-release.mjs', 'scripts/verify-deployment-contract.mjs',
   ];
   await mkdir(stagingDirectory, { recursive: true });
@@ -80,7 +106,7 @@ try {
       isolatedCompiledEntrypoint: 'passed',
       incompleteContainerEnvironmentRejected: 'passed',
       deploymentConfigurationContract: 'passed',
-      targetHostPreflightIncluded: 'passed',
+      sidecarAndOriginPreflightIncluded: 'passed',
       privateSidecarVerificationIncluded: 'passed',
       secretsIncluded: false,
     },
@@ -101,27 +127,65 @@ try {
 
   await mkdir(outputDirectory, { recursive: true });
   await rm(archivePath, { force: true });
-  run('tar', ['-czf', archivePath, '-C', stagingRoot, releaseName]);
+  run('tar', ['--no-xattrs', '-czf', archivePath, '-C', stagingRoot, releaseName], {
+    env: { ...process.env, COPYFILE_DISABLE: '1' },
+  });
 
   const archiveEntries = spawnSync('tar', ['-tzf', archivePath], { encoding: 'utf8' });
   if (archiveEntries.status !== 0) throw new Error(archiveEntries.stderr || 'Unable to inspect deployment archive.');
-  const forbidden = archiveEntries.stdout.split(/\r?\n/u).filter((entry) =>
+  const archivePaths = archiveEntries.stdout.split(/\r?\n/u).filter(Boolean);
+  const appleMetadata = archivePaths.filter((entry) => appleMetadataPattern.test(entry));
+  if (appleMetadata.length > 0) throw new Error(`AppleDouble or resource-fork archive entries: ${appleMetadata.join(', ')}`);
+  const forbidden = archivePaths.filter((entry) =>
     /(?:^|\/)(?:node_modules|test|coverage)(?:\/|$)/u.test(entry)
       || (/(?:^|\/)\.env(?:\.|$)/u.test(entry) && !entry.endsWith('/.env.example')),
   );
   if (forbidden.length > 0) throw new Error(`Forbidden release entries: ${forbidden.join(', ')}`);
 
-  const archivePaths = archiveEntries.stdout.split(/\r?\n/u).filter(Boolean);
-  const archivedMigrations = archivePaths.filter((entry) => /\/migrations\/\d{4}_.+\.sql$/u.test(entry));
+  const archivedMigrationEntries = archivePaths.filter((entry) => /\/migrations\/[^/]+\.sql$/u.test(entry));
+  const forbiddenArchivedMigrations = archivedMigrationEntries.filter((entry) => {
+    const name = entry.slice(entry.lastIndexOf('/') + 1);
+    return !migrationNamePattern.test(name);
+  });
+  if (forbiddenArchivedMigrations.length > 0) {
+    throw new Error(`Non-canonical archived migrations: ${forbiddenArchivedMigrations.join(', ')}`);
+  }
+  const archivedMigrations = archivedMigrationEntries.filter((entry) => migrationNamePattern.test(entry.slice(entry.lastIndexOf('/') + 1)));
   if (archivedMigrations.length !== migrations.length
     || !archivePaths.some((entry) => entry.endsWith(`/migrations/${migrations.at(-1)}`))) {
     throw new Error(`Deployment archive migration set is incomplete: ${archivedMigrations.length}/${migrations.length}.`);
   }
   for (const required of [
-    'RELEASE-MANIFEST.json', 'deploy/aws-ubuntu/verify-routing.mjs', 'deploy/aws-ubuntu/preflight-host.mjs',
-    'deploy/aws-ubuntu/verify-sidecar.mjs',
+    'RELEASE-MANIFEST.json', 'deploy/direct-ubuntu/verify-routing.mjs',
+    'deploy/direct-ubuntu/preflight-sidecar.mjs', 'deploy/direct-ubuntu/preflight-origin.mjs',
+    'deploy/direct-ubuntu/verify-sidecar.mjs', 'deploy/direct-ubuntu/verify-nginx-config.mjs',
+    'deploy/direct-ubuntu/verify-rollback.mjs', 'deploy/direct-ubuntu/verify-paired-probe-systemd.mjs',
+    'deploy/direct-ubuntu/acceptance-watchdog-policy.mjs',
+    'deploy/direct-ubuntu/cloudpay-mobile-nginx-routes.conf',
     'scripts/verify-production-env.mjs', 'scripts/verify-container-env.mjs',
     'scripts/start-production-container.mjs', 'scripts/verify-release.mjs',
+    'scripts/record-inquiry-readiness.mjs',
+    'scripts/record-inquiry-app-session.mjs',
+    'scripts/run-inquiry-readiness-systemd.mjs',
+    'scripts/run-private-honghuan-acceptance-systemd.mjs',
+    'scripts/rotate-kai-probe-credential.mjs',
+    'scripts/kai-probe-credential-core.mjs',
+    'scripts/authorize-and-enroll-kai-probe.mjs',
+    'deploy/direct-ubuntu/enroll-probe-refresh-credential.mjs',
+    'deploy/direct-ubuntu/full-commerce-gate-core.mjs',
+    'deploy/direct-ubuntu/qixiang-evidence-trust-policy.mjs',
+    'deploy/direct-ubuntu/qixiang-production-evidence-core.mjs',
+    'deploy/direct-ubuntu/assert-full-commerce-runtime.mjs',
+    'deploy/direct-ubuntu/verify-qixiang-production-evidence.mjs',
+    'deploy/direct-ubuntu/preflight-full-commerce.mjs',
+    'deploy/direct-ubuntu/cloudpay-mobile-backend-commerce-credentials.conf',
+    'deploy/direct-ubuntu/cloudpay-mobile-qixiang-gate-refresh.service',
+    'deploy/direct-ubuntu/cloudpay-mobile-qixiang-gate-refresh.timer',
+    'deploy/direct-ubuntu/enroll-qixiang-commerce-credentials.mjs',
+    'scripts/persist-kai-probe-refresh.mjs',
+    'scripts/prepare-kai-probe-revocation.mjs',
+    'scripts/revoke-kai-probe-family.mjs',
+    'scripts/finalize-kai-probe-revocation.mjs',
     'scripts/verify-deployment-contract.mjs',
   ]) {
     if (!archivePaths.some((entry) => entry.endsWith(`/${required}`))) throw new Error(`Deployment archive is missing ${required}.`);
@@ -139,6 +203,13 @@ try {
   }
 
   const archiveBytes = await readFile(archivePath);
+  const rawArchive = gunzipSync(archiveBytes);
+  const metadataMarkers = [
+    ['LIBARCHIVE', 'xattr'], ['SCHILY', 'xattr'], ['com', 'apple', 'provenance'], ['com', 'apple', 'ResourceFork'],
+  ].map((parts) => parts.join('.'));
+  for (const marker of metadataMarkers) {
+    if (rawArchive.includes(Buffer.from(marker))) throw new Error(`Deployment archive contains extended metadata: ${marker}.`);
+  }
   if ((await stat(archivePath)).size < 100_000) throw new Error('Deployment archive is unexpectedly small.');
   const digest = sha256(archiveBytes);
   await writeFile(digestPath, `${digest}  ${basename(archivePath)}\n`);

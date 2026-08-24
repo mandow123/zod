@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
+import { CreditLotAllocator } from '../credits/lot-allocator.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../credits/types.js';
 import { planFeeReversal, planSettlementFee, shanghaiPeriodStart, validateFeeTiers } from './engine.js';
 import type {
@@ -87,7 +88,7 @@ export interface SettlementFeeStore {
 }
 
 export class PostgresSettlementFeeStore implements SettlementFeeStore {
-  constructor(private readonly database: Database) {}
+  constructor(private readonly database: Database, private readonly lotAllocator = new CreditLotAllocator()) {}
 
   async createDraftSchedule(input: Parameters<SettlementFeeStore['createDraftSchedule']>[0]) {
     const tiers = validateFeeTiers(input.tiers);
@@ -282,23 +283,51 @@ export class PostgresSettlementFeeStore implements SettlementFeeStore {
       if (reversal.reversedServiceFeeCreditMicros < 0n || reversal.reversedNetCreditMicros <= 0n) {
         throw new Error('FEE_LEDGER_AMOUNT_INVALID');
       }
-      const parties = await client.query<{ buyer_subject_id: string }>(`SELECT buyer_subject_id
-        FROM kai_credit_orders WHERE id = $1 AND supplier_subject_id = $2 FOR SHARE`,
+      const parties = await client.query<{ buyer_subject_id: string; total_credit_micros: string;
+        capture_transaction_id: string | null }>(`SELECT o.buyer_subject_id,o.total_credit_micros::text,
+          (SELECT a.capture_transaction_id FROM kai_credit_order_acceptances a WHERE a.order_id=o.id)capture_transaction_id
+        FROM kai_credit_orders o WHERE o.id = $1 AND o.supplier_subject_id = $2 FOR SHARE OF o`,
       [input.orderId, input.supplierSubjectId]);
       if (!parties.rows[0]) throw new Error('FEE_REVERSAL_ORDER_MISMATCH');
       const accounts = await this.lockRefundAccounts(client, input.supplierSubjectId, parties.rows[0].buyer_subject_id);
       const transactionId = randomUUID();
-      await this.createTransaction(client, {
-        id: transactionId, owner: input.idempotencyOwner,
-        scope: 'CREDIT_SETTLEMENT_REFUND_WITH_FEE_REVERSAL', key: input.idempotencyKey,
-        digest: input.payloadDigest, referenceType: 'service_fee_reversal', referenceId: input.orderId,
-        description: '算力成交退款与服务费冲正', now: input.assessedAt,
-        entries: compactLedgerEntries([
-          { accountId: accounts.supplierEarnings, amount: -reversal.reversedNetCreditMicros, memo: '提供方结算净收益冲回' },
-          { accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue, amount: -reversal.reversedServiceFeeCreditMicros, memo: '平台服务费冲正' },
-          { accountId: accounts.buyerAvailable, amount: reversal.reversedGrossCreditMicros, memo: '买方退款到账' },
-        ]),
-      });
+      const counterpartEntries = [
+          { accountId: accounts.supplierEarnings, amountMicros: -reversal.reversedNetCreditMicros,
+            memo: '提供方结算净收益冲回' },
+          ...(reversal.reversedServiceFeeCreditMicros > 0n ? [{ accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.revenue,
+            amountMicros: -reversal.reversedServiceFeeCreditMicros, memo: '平台服务费冲正' }] : []),
+        ];
+      const lotCapability = await client.query<{ lots: string | null }>(
+        `SELECT to_regclass('kai_credit_lots')::text lots`,
+      );
+      if (lotCapability.rows[0]?.lots && parties.rows[0].capture_transaction_id) {
+        const prior = await client.query<{ amount: string }>(`SELECT(
+            COALESCE((SELECT sum(credit_micros) FROM kai_credit_order_post_acceptance_refunds
+              WHERE order_id=$1 AND status='succeeded'),0)
+            +COALESCE((SELECT sum(gross_credit_micros) FROM kai_credit_fee_assessments
+              WHERE order_id=$1 AND kind='reversal'),0))::text amount`, [input.orderId]);
+        const restoration = await this.lotAllocator.restoreConsumed(client, {
+          subjectId: parties.rows[0].buyer_subject_id, referenceType: 'credit_order', referenceId: input.orderId,
+          captureTransactionId: parties.rows[0].capture_transaction_id,
+          capturedMicros: BigInt(parties.rows[0].total_credit_micros),
+          previouslyRefundedMicros: BigInt(prior.rows[0]?.amount ?? '0'),
+          refundMicros: reversal.reversedGrossCreditMicros, now: input.assessedAt, transactionId,
+          scope: 'CREDIT_SETTLEMENT_REFUND_WITH_FEE_REVERSAL', ledgerReferenceType: 'refund',
+          idempotencyOwner: input.idempotencyOwner, idempotencyKey: input.idempotencyKey,
+          payloadDigest: input.payloadDigest, counterpartEntries,
+        });
+        if (restoration.status !== 'created') throw new Error('FEE_REVERSAL_LOT_RESTORE_CONFLICT');
+      } else {
+        await this.createTransaction(client, {
+          id: transactionId, owner: input.idempotencyOwner,
+          scope: 'CREDIT_SETTLEMENT_REFUND_WITH_FEE_REVERSAL', key: input.idempotencyKey,
+          digest: input.payloadDigest, referenceType: 'service_fee_reversal', referenceId: input.orderId,
+          description: '算力成交退款与服务费冲正', now: input.assessedAt,
+          entries: [...counterpartEntries.map((entry) => ({ accountId: entry.accountId,
+            amount: entry.amountMicros, memo: entry.memo })),
+          { accountId: accounts.buyerAvailable, amount: reversal.reversedGrossCreditMicros, memo: '买方退款到账' }],
+        });
+      }
       const cumulativeBefore = BigInt(period.rows[0].net_settled_credit_micros);
       const cumulativeAfter = cumulativeBefore - input.grossCreditMicros;
       const reversalSegments: FeeSegment[] = reversal.allocations.map((allocation, ordinal) => {

@@ -1,5 +1,9 @@
 # KAI CloudPay Backend
 
+## 生产 API Profile
+
+生产必须显式设置 `MOBILE_API_PROFILE`。当前部署基线固定为 `inquiry_only`：只注册 KAI paired 身份、主体选择、法务页、上海鸿欢正式11项目录、买家询期和内网监控；支付、卡时、订单、上架、供应经营、运营、推送、算力、Vast、节点和返佣路由物理不存在，相关 worker 数量为零。下面记录的完整商城能力仅在未来独立审计并显式选择 `full_commerce` 后才可注册，不能由环境变量残留自动开启。
+
 `cloudpay-mobile` 的独立生产后端。移动端与后端按同一产品基线持续演进；所有资源、审核、卡时、交易、履约和账户状态以本服务的 PostgreSQL 记录为准。
 
 ## 当前基础能力
@@ -67,7 +71,7 @@ readiness 会逐项核对容器内迁移清单与数据库校验值；缺失迁�
 
 ## 生产容器与 Kubernetes
 
-发布前执行 `npm run release:bundle`。命令会先核对手机版与后端路由契约，再运行全量测试与生产编译，最后生成不含密钥、测试数据和依赖目录的部署交付包；交付包同时包含源码、编译产物、60 份数据库迁移（截至 `0060_admin_identity_rbac_sessions.sql`）、容器与 Kubernetes 配置以及逐文件摘要。
+发布前执行 `npm run release:bundle`。命令会先核对手机版与后端路由契约，再运行全量测试与生产编译，最后生成不含密钥、测试数据和依赖目录的部署交付包；交付包同时包含源码、编译产物、66 份数据库迁移（含两个已发布分支各自的 0060 迁移，最新为 `0065_credit_order_transition_closure.sql`）、容器与 Kubernetes 配置以及逐文件摘要。
 
 目标机解压后执行 `npm run release:verify`。这一个命令会核对逐文件摘要和迁移集、检查没有密钥文件、安装生产依赖、加载编译入口，并证明 systemd 与容器入口在配置缺失时都会拒绝启动。打包时还会运行 `npm run deployment:verify`，自动比对实际生产门禁、环境示例、Kubernetes 配置来源、工作负载、不可变镜像摘要，以及 ALB、Kubernetes 和上线验证脚本的路由范围。任一门禁未通过时不得继续切流。
 

@@ -38,7 +38,8 @@ test('local OTP retrieval stays behind the build-time local E2E flag', async () 
   assert.match(metro, /AuthSheet\.local-e2e\.tsx/u);
   assert.match(metro, /account-security\.local-e2e\.ts/u);
   assert.match(enabledRuntime, /\/__e2e\//u);
-  assert.match(enabledRuntime, /'x-kai-e2e-session': sessionToken/u);
+  assert.match(enabledRuntime, /'x-kai-e2e-session': effectiveSessionToken!/u);
+  assert.match(enabledRuntime, /stagingDemo \? await loadStagingPrincipalToken\(\) : sessionToken/u);
   assert.doesNotMatch(productionAuth, /\/__e2e\//u);
   assert.doesNotMatch(productionRuntime, /\/__e2e\//u);
   assert.doesNotMatch(productionAuth, /本地预览|验证码|otp\/request|otp\/verify/u);

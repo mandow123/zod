@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { PGlite, type Results, type Transaction } from '@electric-sql/pglite';
 import type { PoolClient } from 'pg';
@@ -10,6 +10,7 @@ import type { Database } from '../src/database.js';
 import { CreditOrderExpiryWorker } from '../src/credit-orders/expiry-worker.js';
 import { CreditSupplierSettlementWorker } from '../src/credit-orders/settlement-worker.js';
 import { PostgresCreditOrderStore } from '../src/credit-orders/store.js';
+import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
 import { encryptPii, secretHash } from '../src/account/crypto.js';
 
 function pgResult<T>(result: Results<T>) {
@@ -31,20 +32,10 @@ function adapter(pglite: PGlite): Database {
 
 async function fixture(capacity = '10') {
   const pglite = new PGlite();
-  for (const name of [
-    '0001_cloudpay_ledger.sql', '0015_credit_listing_audits.sql', '0016_trading_subjects.sql',
-    '0022_kai_credit_double_entry_ledger.sql', '0024_kai_credit_order_reservations.sql',
-    '0025_kai_credit_order_confirmation.sql', '0026_kai_credit_order_delivery_capture.sql',
-    '0027_kai_credit_order_delivery_issues.sql', '0028_kai_credit_order_delivery_versions.sql',
-    '0029_kai_credit_order_mutual_refunds.sql', '0030_kai_credit_supplier_settlements.sql',
-    '0031_kai_credit_order_dispute_adjudication.sql',
-    '0032_kai_credit_post_acceptance_refunds.sql',
-    '0033_kai_credit_post_acceptance_adjudication.sql',
-    '0034_kai_credit_partial_aftercare_remedies.sql',
-    '0039_compute_node_readiness.sql',
-    '0046_kai_credit_supplier_payouts.sql',
-    '0049_supplier_earnings_accounts.sql',
-  ]) await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
+  for (const name of (await readdir(new URL('../migrations', import.meta.url)))
+    .filter((name) => name.endsWith('.sql')).sort()) {
+    await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), 'utf8'));
+  }
   const database = adapter(pglite);
   const buyerUserId = randomUUID(); const supplierUserId = randomUUID(); const otherUserId = randomUUID();
   const reviewerOne = randomUUID(); const reviewerTwo = randomUUID();
@@ -55,6 +46,16 @@ async function fixture(capacity = '10') {
     ($1, 'buyer', '买方', 'member'), ($2, 'supplier', '提供方', 'supplier'), ($3, 'other', '其他用户', 'member'),
     ($4, 'reviewer-one', '资源审核员', 'operator'), ($5, 'reviewer-two', '价格审核员', 'operator')`,
   [buyerUserId, supplierUserId, otherUserId, reviewerOne, reviewerTwo]);
+  const feeScheduleId = randomUUID(); const feeSchedules = new PostgresSettlementFeeStore(database);
+  await feeSchedules.createDraftSchedule({ id: feeScheduleId, version: 'credit-order-trade-v1', operatorId: reviewerOne,
+    now: new Date(), requestId: 'credit-order-fee-draft-01', payloadDigest: `sha256:${'6'.repeat(64)}`, tiers: [
+      { ordinal: 0, lowerBoundMicros: 0n, upperBoundMicros: 100_000_000_000n, rateBps: 100 },
+      { ordinal: 1, lowerBoundMicros: 100_000_000_000n, upperBoundMicros: 1_000_000_000_000n, rateBps: 80 },
+      { ordinal: 2, lowerBoundMicros: 1_000_000_000_000n, upperBoundMicros: 10_000_000_000_000n, rateBps: 50 },
+      { ordinal: 3, lowerBoundMicros: 10_000_000_000_000n, upperBoundMicros: null, rateBps: 20 },
+    ] });
+  await feeSchedules.activateSchedule({ scheduleId: feeScheduleId, operatorId: reviewerTwo, now: new Date(),
+    requestId: 'credit-order-fee-approve-01', payloadDigest: `sha256:${'7'.repeat(64)}` });
   await database.query(`INSERT INTO trading_subjects(id, kind, display_name, owner_user_id) VALUES
     ($1, 'personal', '买方', $2), ($3, 'personal', '提供方', $4), ($5, 'personal', '其他用户', $6)`,
   [buyerSubjectId, buyerUserId, supplierSubjectId, supplierUserId, otherSubjectId, otherUserId]);
@@ -63,22 +64,46 @@ async function fixture(capacity = '10') {
   [buyerSubjectId, buyerUserId, supplierSubjectId, supplierUserId, otherSubjectId, otherUserId]);
   await database.query(`INSERT INTO supplier_profiles(id, created_by_user_id, subject_id, legal_name, credit_code, contact_name, status)
     VALUES ($1, $2, $1, '凯云算力有限公司', '91310101MA1ORDER01', '凯', 'approved')`, [supplierSubjectId, supplierUserId]);
-  await database.query(`INSERT INTO compute_resources(id, supplier_id, kind, product_code, region, specifications,
+  await database.query(`INSERT INTO compute_assets(id,supplier_id,management_mode,lifecycle_status,asset_identity_kind,asset_fingerprint)
+    VALUES ($1,$2,'self_managed','active','legacy_resource_id',$3)`,
+  [resourceId, supplierSubjectId, `legacy-resource:${resourceId}`]);
+  await database.query(`INSERT INTO compute_resources(id, supplier_id, asset_id, kind, product_code, region, specifications,
     capacity_total, capacity_unit, status, verification_digest, verified_at)
-    VALUES ($1, $2, 'gpu', 'H100-SXM-80G', '华东-上海', '{"memory":"80GB"}', $3, 'GPU时', 'verified', $4, now())`,
+    VALUES ($1, $2, $1, 'gpu', 'H100-SXM-80G', '华东-上海', '{"memory":"80GB"}', $3, 'GPU时', 'verified', $4, now())`,
   [resourceId, supplierSubjectId, capacity, `sha256:${'a'.repeat(64)}`]);
   const nodeId = randomUUID(); const bindingId = randomUUID(); const bootId = randomUUID();
+  const deploymentId = randomUUID(); const policyDigest = `sha256:${'e'.repeat(64)}`;
+  const runtimeDigest = `sha256:${'9'.repeat(64)}`;
+  await database.query(`INSERT INTO asset_deployments(id,asset_id,supplier_id,resource_id,generation,status,
+      expected_policy_digest,gpu_fingerprint_key_version,created_by_user_id)
+    VALUES ($1,$2,$3,$2,1,'claim_issued',$4,1,$5)`,
+  [deploymentId, resourceId, supplierSubjectId, policyDigest, supplierUserId]);
   await database.query(`INSERT INTO compute_nodes(id, supplier_id, node_public_key, node_key_fingerprint,
-      inventory_digest, status, last_heartbeat_at, heartbeat_boot_id, heartbeat_sequence,
-      heartbeat_payload_digest, heartbeat_signature)
-    VALUES ($1,$2,$3,$4,$5,'ready',now(),$6,1,$7,$8)`,
+      inventory_digest,status,deployment_id,expected_policy_digest,expected_runtime_digest,expected_agent_version,
+      runtime_digest,agent_version)
+    VALUES ($1,$2,$3,$4,$5,'checking',$6,$7,$8,'1.0.0',$8,'1.0.0')`,
   [nodeId, supplierSubjectId, `ed25519:${'A'.repeat(44)}`, `sha256:${'b'.repeat(64)}`,
-    `sha256:${'c'.repeat(64)}`, bootId, `sha256:${'d'.repeat(64)}`, `ed25519:${'B'.repeat(88)}`]);
+    `sha256:${'c'.repeat(64)}`, deploymentId, policyDigest, runtimeDigest]);
   await database.query(`INSERT INTO compute_resource_bindings(id, resource_id, node_id, status,
       resource_verification_digest, policy_digest, attested_policy_digest, inventory_digest, gpu_set_digest, confirmed_at)
-    VALUES ($1,$2,$3,'ready',$4,$5,$5,$6,$7,now())`,
-  [bindingId, resourceId, nodeId, `sha256:${'a'.repeat(64)}`, `sha256:${'e'.repeat(64)}`,
+    VALUES ($1,$2,$3,'checking',$4,$5,NULL,$6,$7,NULL)`,
+  [bindingId, resourceId, nodeId, `sha256:${'a'.repeat(64)}`, policyDigest,
     `sha256:${'c'.repeat(64)}`, `sha256:${'f'.repeat(64)}`]);
+  await database.query(`INSERT INTO compute_node_gpus(node_id,ordinal,fingerprint_key_version,gpu_uuid_fingerprint)
+    SELECT $1,ordinality-1,1,fingerprint FROM unnest($2::text[]) WITH ORDINALITY AS gpu(fingerprint,ordinality)`,
+  [nodeId, Array.from({ length: 8 }, (_, index) => (index + 1).toString(16).repeat(64))]);
+  await database.query(`UPDATE asset_deployments SET status='node_bound',node_id=$2,bound_at=now() WHERE id=$1`,
+    [deploymentId, nodeId]);
+  const heartbeatDigest = `sha256:${'d'.repeat(64)}`; const heartbeatSignature = `ed25519:${'B'.repeat(88)}`;
+  await database.query(`INSERT INTO compute_node_boots(node_id,boot_id,first_observed_at,last_observed_at,last_sequence,
+    last_payload_digest,last_signature) VALUES ($1,$2,now(),now(),1,$3,$4)`,
+  [nodeId, bootId, heartbeatDigest, heartbeatSignature]);
+  await database.query(`UPDATE compute_nodes SET status='ready',last_heartbeat_at=now(),heartbeat_observed_at=now(),
+    heartbeat_boot_id=$2,heartbeat_sequence=1,heartbeat_payload_digest=$3,heartbeat_signature=$4,
+    attested_policy_digest=$5,attested_runtime_digest=$6 WHERE id=$1`,
+  [nodeId, bootId, heartbeatDigest, heartbeatSignature, policyDigest, runtimeDigest]);
+  await database.query(`UPDATE compute_resource_bindings SET status='ready',attested_policy_digest=policy_digest,confirmed_at=now()
+    WHERE id=$1`, [bindingId]);
   const validUntil = new Date(Date.now() + 30 * 86_400_000);
   await database.query(`INSERT INTO offer_templates(id, supplier_id, resource_id, client_request_id, payload_digest,
       submission_version, title, service_mode, native_unit, minimum_quantity, suggested_price_cny_micros,
@@ -247,7 +272,8 @@ describe('KAI credit order reservations', () => {
     await assertRejectedWithoutHolds('credit-order-future-node-001');
 
     await f.database.query(`UPDATE compute_nodes SET last_heartbeat_at = now() WHERE id = $1`, [f.nodeId]);
-    await f.database.query(`UPDATE compute_resource_bindings SET attested_policy_digest = $2 WHERE id = $1`,
+    await f.database.query(`UPDATE compute_resource_bindings SET status='checking',attested_policy_digest = $2,
+      confirmed_at=NULL WHERE id = $1`,
       [f.bindingId, `sha256:${'9'.repeat(64)}`]);
     await assertRejectedWithoutHolds('credit-order-policy-drift-001');
 
@@ -684,7 +710,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.mutualRefundForSubject(f.otherSubjectId, created.order.id)).toBeNull();
     const attempts = await f.database.query<{ status: string }>(`SELECT status FROM kai_credit_order_deliveries WHERE order_id = $1`, [created.order.id]);
     expect(attempts.rows[0]?.status).toBe('refunded');
-    await expect(f.database.query(`UPDATE kai_credit_order_mutual_refunds SET credit_micros = 1 WHERE order_id = $1`,
+    await expect(f.database.query(`UPDATE kai_credit_order_mutual_refunds SET credit_micros = 10000 WHERE order_id = $1`,
       [created.order.id])).rejects.toThrow(/immutable/u);
     await f.database.close();
   });
@@ -759,10 +785,10 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'settled', order: { status: 'closed' } });
     expect(await f.store.settleSupplier(settlement)).toMatchObject({ status: 'replayed', order: { status: 'closed' } });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_070_000n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
-      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
+      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT_WITH_FEE' AND reference_id = $1`, [orderId]);
     expect(transactions.rows[0]?.count).toBe('1');
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, orderId)).toMatchObject({
       status: 'succeeded', creditMicros: 77_850_000n, triggeredBy: 'provider',
@@ -770,7 +796,7 @@ describe('KAI credit order reservations', () => {
     });
     expect(await f.store.supplierSettlementForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'succeeded' });
     expect(await f.store.supplierSettlementForSubject(f.otherSubjectId, orderId)).toBeNull();
-    await expect(f.database.query(`UPDATE kai_credit_supplier_settlements SET credit_micros = 1 WHERE order_id = $1`,
+    await expect(f.database.query(`UPDATE kai_credit_supplier_settlements SET credit_micros = 10000 WHERE order_id = $1`,
       [orderId])).rejects.toThrow(/immutable/u);
     await f.database.close();
   });
@@ -791,14 +817,14 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.getForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({ status: 'closed' });
     expect(await f.store.getForSubject(f.supplierSubjectId, newerOrderId)).toMatchObject({ status: 'accepted' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_850_000n, supplier_receivable: 77_850_000n,
+      supplier_earnings_available: 77_070_000n, supplier_receivable: 77_850_000n,
     });
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, dueOrderId)).toMatchObject({
       triggeredBy: 'system', settledAt: now,
     });
     expect(await f.store.supplierSettlementForSubject(f.supplierSubjectId, newerOrderId)).toBeNull();
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
-      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT'`);
+      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT_WITH_FEE'`);
     expect(transactions.rows[0]?.count).toBe('1');
     await f.database.close();
   });
@@ -819,10 +845,10 @@ describe('KAI credit order reservations', () => {
     expect([0, 1]).toContain(automated);
     expect(await f.store.getForSubject(f.supplierSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n,
+      supplier_earnings_available: 77_070_000n, supplier_receivable: 0n,
     });
     const transactions = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM kai_credit_transactions
-      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT' AND reference_id = $1`, [orderId]);
+      WHERE scope = 'CREDIT_SUPPLIER_SETTLEMENT_WITH_FEE' AND reference_id = $1`, [orderId]);
     expect(transactions.rows[0]?.count).toBe('1');
     await f.database.close();
   });
@@ -871,7 +897,7 @@ describe('KAI credit order reservations', () => {
       status: 'resolved', outcome: 'full_refund', creditMicros: 77_850_000n, decidedAt: now,
       order: { status: 'refunded' },
     });
-    await expect(f.database.query(`UPDATE kai_credit_order_dispute_decisions SET credit_micros = 1 WHERE order_id = $1`,
+    await expect(f.database.query(`UPDATE kai_credit_order_dispute_decisions SET credit_micros = 10000 WHERE order_id = $1`,
       [orderId])).rejects.toThrow(/immutable/u);
     await f.database.close();
   });
@@ -896,7 +922,7 @@ describe('KAI credit order reservations', () => {
       status: 'decided', outcome: 'resume_acceptance', order: { status: 'acceptance_pending' },
     });
     await expect(f.database.query(`UPDATE kai_credit_orders SET status = 'disputed' WHERE id = $1`, [orderId]))
-      .rejects.toThrow(/requires active delivery issue/u);
+      .rejects.toThrow(/requires active (?:delivery )?issue/u);
     expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 77_850_000n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({ supplier_receivable: 0n });
     const listing = await f.database.query<{ capacity_reserved: string; capacity_sold: string }>(`SELECT
@@ -986,7 +1012,7 @@ describe('KAI credit order reservations', () => {
       requestedAt, resolvedAt: approvedAt, order: { status: 'refunded' },
     });
     expect(await f.store.postAcceptanceRefundForSubject(f.otherSubjectId, orderId)).toBeNull();
-    await expect(f.database.query(`UPDATE kai_credit_order_post_acceptance_refunds SET credit_micros = 1
+    await expect(f.database.query(`UPDATE kai_credit_order_post_acceptance_refunds SET credit_micros = 10000
       WHERE order_id = $1`, [orderId])).rejects.toThrow(/immutable/u);
     await f.database.close();
   });
@@ -1037,7 +1063,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.settleDueSupplierOrders(new Date('2026-08-08T00:00:00.000Z'), 50)).toBe(1);
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 57_850_000n, supplier_receivable: 0n,
+      supplier_earnings_available: 57_270_000n, supplier_receivable: 0n,
     });
     const settlement = await f.store.supplierSettlementForSubject(f.supplierSubjectId, orderId);
     expect(settlement).toMatchObject({ creditMicros: 57_850_000n, status: 'succeeded' });
@@ -1133,7 +1159,7 @@ describe('KAI credit order reservations', () => {
     expect(await f.store.getForSubject(f.buyerSubjectId, orderId)).toMatchObject({ status: 'closed' });
     expect(await balances(f.database, f.buyerSubjectId)).toMatchObject({ available: 22_150_000n, reserved: 0n });
     expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-      supplier_earnings_available: 77_850_000n, supplier_receivable: 0n });
+      supplier_earnings_available: 77_070_000n, supplier_receivable: 0n });
     expect(await f.store.postAcceptanceRefundForSubject(f.buyerSubjectId, orderId)).toMatchObject({
       status: 'rejected', escalatedBySide: 'buyer', outcome: 'reject_refund',
     });
@@ -1170,7 +1196,7 @@ describe('KAI credit order reservations', () => {
       expect(request.status).toBe('invalid_state');
       expect(['settled', 'replayed']).toContain(settlement.status);
       expect(await balances(f.database, f.supplierSubjectId)).toMatchObject({
-        supplier_earnings_available: 77_850_000n, supplier_receivable: 0n });
+        supplier_earnings_available: 77_070_000n, supplier_receivable: 0n });
     }
     const recordCount = await f.database.query<{ count: string }>(`SELECT count(*)::text FROM
       kai_credit_order_post_acceptance_refunds WHERE order_id = $1`, [orderId]);

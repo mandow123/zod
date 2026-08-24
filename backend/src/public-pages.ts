@@ -20,7 +20,20 @@ function shell(input: Readonly<{
 <article class="card"><div class="eyebrow">${input.eyebrow}</div>${input.body}<p class="support">${input.support}</p></article></main></body></html>`;
 }
 
-function policyBody(kind: 'privacy' | 'terms', entity: string) {
+function policyBody(kind: 'privacy' | 'terms', entity: string, inquiryOnly: boolean) {
+  if (inquiryOnly && kind === 'terms') return `<h1>用户协议</h1><p>更新日期：2026年8月21日</p>
+  <div class="notice">本版本仅提供供应商报价资料查询与资源询期，不提供购买、支付、卡时冻结、订单、库存锁定或自动交付。</div>
+  <h2>服务范围</h2><p>KAI CloudPay 接收用户提交的时间、规格、数量和用途偏好，并由运营人员人工核实供应条件。目录价格仅供询价参考，不是最终报价或成交承诺。</p>
+  <h2>账户与主体</h2><p>用户通过 KAI 统一身份登录并选择本地业务主体。不得冒用他人身份、提交违法用途或绕过主体隔离。</p>
+  <h2>询期与后续确认</h2><p>提交询期不会创建订单，不会冻结或扣减卡时，也不会形成库存、价格、交付或履约承诺。任何后续报价、合同和交付均需另行确认。</p>
+  <h2>内容责任</h2><p>用户提交的需求和说明应真实、合法且不侵犯第三方权利。平台可为澄清需求联系用户并保留必要审计记录。</p>
+  <h2>注销</h2><p>可通过<a href="/account/delete">公开注销说明页</a>查看当前版本的账户删除申请方式。</p>`;
+  if (inquiryOnly) return `<h1>隐私政策</h1><p>更新日期：2026年8月21日</p>
+  <div class="notice">询期版本只处理完成统一身份、主体选择、目录查询和人工询期所必要的数据；不会出售个人信息。</div>
+  <h2>我们处理的数据</h2><ul><li>KAI 统一身份映射、协议同意和安全审计记录。</li><li>用户选择的业务主体，以及询期中的时间、数量、规格、用途和联系说明。</li><li>请求标识、必要的网络地址摘要和运行审计。</li></ul>
+  <h2>不在本版本处理的交易数据</h2><p>本版本不接收支付，不创建卡时账本、购买订单、库存预留或自动交付记录。</p>
+  <h2>共享与保存</h2><p>询期资料仅在人工核实资源条件和履行法定义务所需范围内处理。平台按必要期限保留询期、协议和审计记录，并实施访问控制、加密备份和主体隔离。</p>
+  <h2>你的权利</h2><p>可通过下方联系方式提出访问、更正或删除请求；账户删除方式见<a href="/account/delete">公开注销说明页</a>。</p>`;
   if (kind === 'terms') return `<h1>用户协议</h1><p>更新日期：2026年8月12日</p>
 <div class="notice">本协议适用于 KAI CloudPay 原生移动应用，由 ${entity} 提供服务。</div>
 <h2>服务范围</h2><p>CloudPay 提供算力需求发布、资源挂牌、订单、支付、交付、退款、争议举证、发票和账户管理。交易结果以服务端记录为准。</p>
@@ -38,7 +51,12 @@ function policyBody(kind: 'privacy' | 'terms', entity: string) {
 <h2>你的权利</h2><p>你可以查看登录设备、关闭推送、撤销其他设备会话、申请或撤回账户注销，并通过下方联系方式提出访问、更正或删除请求。</p>`;
 }
 
-function inquiryTermsBody(entity:string){return `<h1>资源询期规则</h1><p>更新日期：2026年8月18日</p>
+function inquiryTermsBody(entity:string,inquiryOnly:boolean){if(inquiryOnly)return `<h1>资源询期规则</h1><p>更新日期：2026年8月21日</p>
+<div class="notice">询期只用于向 ${entity} 提交时间、规格、数量和用途偏好，不是报价、订单、库存承诺、价格承诺或交付承诺。</div>
+<h2>提交与核实</h2><p>询期由平台运营人员人工核实。目录中的供应商资料和参考价格来自用户提供资料，未经 KAI 验真；实际资源主体、可用时间、规格、网络、存储、地域和合同条件均待后续确认。</p>
+<h2>参考金额</h2><p>参考卡时或月度金额只用于表达询价偏好。提交询期不会冻结、预留、扣减或支付任何卡时，也不会创建账本记录。</p>
+<h2>后续流程</h2><p>平台可就需求进行澄清或取消询期。本版本不提供报价确认、购买、订单或交付；如需继续，双方必须在后续独立流程中另行确认。</p>`;
+return `<h1>资源询期规则</h1><p>更新日期：2026年8月18日</p>
 <div class="notice">询期只用于向 ${entity} 提交时间、规格和用途偏好，不是订单、库存承诺或交付承诺。</div>
 <h2>提交与核实</h2><p>平台会将询期信息交由符合条件的供应方或运营人员核实。实际可用时间、设备形态、网络、存储和数据区域均以后续确认结果为准。</p>
 <h2>卡时上限</h2><p>用户填写的最大可接受卡时仅是询期偏好；提交询期不会冻结、预留或扣减任何卡时。</p>
@@ -61,9 +79,26 @@ submit.onclick=async()=>{if(busy)return;busy=true;submit.disabled=true;status.cl
 </script>`;
 }
 
+function inquiryOnlyDeletionBody() {
+  return `<h1>删除 CloudPay 账户</h1><p>本询期版本不提供短信验证码或网页直接注销接口。</p>
+  <div class="notice">请使用 KAI 统一身份所对应的账户，通过本页下方的支持邮箱或电话提交删除申请。运营人员完成身份核验后处理；询期、协议和安全审计记录会按法定义务保留或去标识化。</div>
+  <h2>申请时请提供</h2><ul><li>KAI 账户可核对的基本信息；</li><li>希望删除 CloudPay 本地映射账户的明确说明；</li><li>可用于回复处理结果的联系方式。</li></ul>
+  <p>请勿在邮件或电话中提供登录令牌、验证码、密码或其他秘密凭据。</p>`;
+}
+
 export async function registerPublicPages(app: FastifyInstance, config: RuntimeConfig) {
+  const inquiryOnly = config.mobileApiProfile === 'inquiry_only';
   const entity = escapeHtml(config.LEGAL_ENTITY_NAME, 'KAI CloudPay 运营主体（待生产配置）');
-  const support = `运营主体：${entity} · 支持邮箱：${escapeHtml(config.SUPPORT_EMAIL, '待生产配置')} · 支持电话：${escapeHtml(config.SUPPORT_PHONE, '待生产配置')}`;
+  const filing=(label:string,status:typeof config.ICP_FILING_STATUS,value:string|undefined)=>{
+    if(status==='issued')return `${label}：${escapeHtml(value,'编号待配置')}`;
+    if(status==='pending')return `${label}：办理中（尚无编号）`;
+    if(status==='not_obtained')return `${label}：尚未取得`;
+    if(status==='exempt_with_legal_evidence')return `${label}：已取得法务书面豁免依据`;
+    return `${label}：状态待生产配置`;
+  };
+  const classification=config.INTERNET_SERVICE_CLASSIFICATION_STATUS==='approved_with_legal_evidence'
+    ?'互联网服务分类：已取得法务书面依据':'互联网服务分类：尚待合资格法务确认';
+  const support = `运营主体：${entity} · 统一社会信用代码：${escapeHtml(config.UNIFIED_SOCIAL_CREDIT_CODE,'待生产配置')} · 支持邮箱：${escapeHtml(config.SUPPORT_EMAIL, '待生产配置')} · 支持电话：${escapeHtml(config.SUPPORT_PHONE, '待生产配置')} · ${filing('ICP备案',config.ICP_FILING_STATUS,config.ICP_FILING)} · ${filing('App备案',config.APP_FILING_STATUS,config.APP_FILING)} · ${classification}`;
   const page = (title: string, eyebrow: string, body: (nonce: string) => string) => {
     const nonce = randomBytes(18).toString('base64');
     const html = shell({ nonce, title, eyebrow, body: body(nonce), support });
@@ -75,8 +110,10 @@ export async function registerPublicPages(app: FastifyInstance, config: RuntimeC
     .header('Referrer-Policy', 'no-referrer')
     .type('text/html; charset=utf-8').send(rendered.html);
 
-  app.get('/privacy', async (_request, reply) => send(reply, page('隐私政策', 'PRIVACY', () => policyBody('privacy', entity))));
-  app.get('/terms', async (_request, reply) => send(reply, page('用户协议', 'TERMS', () => policyBody('terms', entity))));
-  app.get('/inquiry-terms', async (_request, reply) => send(reply, page('资源询期规则', 'INQUIRY TERMS', () => inquiryTermsBody(entity))));
-  app.get('/account/delete', async (_request, reply) => send(reply, page('删除账户', 'ACCOUNT DELETION', deletionBody)));
+  app.get('/privacy', async (_request, reply) => send(reply, page('隐私政策', 'PRIVACY', () => policyBody('privacy', entity, inquiryOnly))));
+  app.get('/terms', async (_request, reply) => send(reply, page('用户协议', 'TERMS', () => policyBody('terms', entity, inquiryOnly))));
+  app.get('/inquiry-terms', async (_request, reply) => send(reply, page('资源询期规则', 'INQUIRY TERMS', () => inquiryTermsBody(entity,inquiryOnly))));
+  app.get('/account/delete', async (_request, reply) => send(reply, page('删除账户', 'ACCOUNT DELETION', inquiryOnly
+    ? () => inquiryOnlyDeletionBody()
+    : deletionBody)));
 }

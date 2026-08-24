@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the KAI CloudPay local encrypted backup hourly
+
+[Timer]
+OnCalendar=*-*-* *:17:00
+Persistent=yes
+AccuracySec=1min
+RandomizedDelaySec=120
+Unit=cloudpay-mobile-backup.service
+
+[Install]
+WantedBy=timers.target

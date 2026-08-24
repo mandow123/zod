@@ -43,6 +43,7 @@ async function childExit(child: ReturnType<typeof spawn>) {
 const actualDigest = await sha256File(inputPath);
 if (actualDigest !== expectedDigest) throw new Error('RESTORE_ENCRYPTED_CHECKSUM_MISMATCH');
 const verified = await verifyEncryptedBackup(inputPath, config.BACKUP_ENCRYPTION_KEY);
+if (targetFingerprint === verified.header.databaseFingerprint) throw new Error('RESTORE_TARGET_MUST_BE_ISOLATED');
 if (process.env.RESTORE_CONFIRM_SOURCE_FINGERPRINT !== verified.header.databaseFingerprint) {
   throw new Error(`RESTORE_CONFIRM_SOURCE_FINGERPRINT must equal ${verified.header.databaseFingerprint}.`);
 }
@@ -82,6 +83,8 @@ try {
   const schema = await pool.query<{ version: string }>('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
   const schemaVersion = schema.rows[0]?.version ?? null;
   if (!schemaVersion || schemaVersion !== verified.header.schemaVersion) throw new Error('RESTORE_SCHEMA_VERSION_MISMATCH');
+  if(config.mobileApiProfile==='inquiry_only'&&schemaVersion!=='0065_credit_order_transition_closure.sql')
+    throw new Error('RESTORE_SCHEMA_0062_REQUIRED');
   const invariants = await pool.query<{
     listing_capacity_invalid: string; order_amount_invalid: string; duplicate_success_payment: string; refund_amount_invalid: string;
     kai_credit_transaction_unbalanced: string; kai_credit_account_negative: string;
@@ -322,6 +325,27 @@ try {
      VALUES ($1, NULL, 'system', 'DATABASE_RESTORE_VERIFIED', 'RESTORE_DRILL', $2, $3, $4::jsonb)`,
     [randomUUID(), drillId, actualDigest.slice(7), JSON.stringify({ artifactName: basename(inputPath), targetFingerprint, schemaVersion })],
   );
+  if(config.mobileApiProfile==='inquiry_only'){
+    const sourceAuditUrl=process.env.RESTORE_AUDIT_DATABASE_URL;
+    if(!sourceAuditUrl)throw new Error('RESTORE_AUDIT_DATABASE_URL_REQUIRED');
+    if(databaseFingerprint(sourceAuditUrl)!==verified.header.databaseFingerprint)
+      throw new Error('RESTORE_AUDIT_DATABASE_FINGERPRINT_MISMATCH');
+    const auditPool=new Pool({connectionString:sourceAuditUrl,ssl:config.databaseSsl?{rejectUnauthorized:true}:false});
+    try{
+      const auditSchema=await auditPool.query<{version:string}>('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
+      if(auditSchema.rows[0]?.version!=='0065_credit_order_transition_closure.sql')
+        throw new Error('RESTORE_AUDIT_DATABASE_SCHEMA_MISMATCH');
+      await auditPool.query('BEGIN');
+      await auditPool.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
+        verified_invariants,started_at,completed_at) VALUES($1,$2,$3,'succeeded',$4,$5::jsonb,$6,$6)`,
+      [drillId,basename(inputPath),targetFingerprint,schemaVersion,JSON.stringify(checks),completedAt]);
+      await auditPool.query(`INSERT INTO audit_events(id,actor_id,actor_kind,action,entity_type,entity_id,payload_digest,metadata)
+        VALUES($1,NULL,'system','DATABASE_RESTORE_VERIFIED','RESTORE_DRILL',$2,$3,$4::jsonb)`,
+      [randomUUID(),drillId,actualDigest.slice(7),JSON.stringify({artifactName:basename(inputPath),targetFingerprint,
+        schemaVersion,sourceDatabaseFingerprint:verified.header.databaseFingerprint,durability:'local_only'})]);
+      await auditPool.query('COMMIT');
+    }catch(error){await auditPool.query('ROLLBACK').catch(()=>undefined);throw error;}finally{await auditPool.end();}
+  }
   process.stdout.write(`${JSON.stringify({ ok: true, drillId, artifactName: basename(inputPath), targetFingerprint, schemaVersion, verifiedInvariants: checks })}\n`);
 } catch (error) {
   await pool.query(

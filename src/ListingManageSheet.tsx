@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   estimateLabel: { color: colors.muted, fontSize: 10 }, estimateValue: { color: colors.primary, fontSize: 18, fontWeight: '900', marginTop: 5 },
   estimateHint: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 7 },
   error: { marginTop: 13, padding: 12, borderRadius: 13, backgroundColor: '#FDECEC', flexDirection: 'row', gap: 7 }, errorText: { flex: 1, color: colors.red, fontSize: 11, lineHeight: 17 },
-  readOnly: { marginTop: 13, padding: 12, borderRadius: 13, backgroundColor: '#FFF8E7', flexDirection: 'row', gap: 7 }, readOnlyText: { flex: 1, color: colors.muted, fontSize: 11, lineHeight: 17 },
+  readOnly: { marginTop: 13, padding: 12, borderRadius: 13, backgroundColor: colors.primarySoft, flexDirection: 'row', gap: 7 }, readOnlyText: { flex: 1, color: colors.muted, fontSize: 11, lineHeight: 17 },
   primary: { minHeight: 52, marginTop: 18, borderRadius: 17, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   primaryText: { color: colors.surface, fontSize: 14, fontWeight: '900' }, disabled: { opacity: 0.55 },
   endButton: { minHeight: 48, marginTop: 9, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FDECEC' }, endText: { color: colors.red, fontSize: 13, fontWeight: '800' },

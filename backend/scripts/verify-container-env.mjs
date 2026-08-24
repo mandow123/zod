@@ -13,7 +13,7 @@ const deploymentFailures = Object.entries(deployment)
 const blockers = [...new Set([
   ...deploymentFailures,
   ...config.readiness.releaseBlockers,
-  ...config.readiness.capabilities.computeProvider.missing,
+  ...(config.mobileApiProfile === 'full_commerce' ? config.readiness.capabilities.computeProvider.missing : []),
 ])];
 
 if (blockers.length > 0) {

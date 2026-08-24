@@ -4,6 +4,7 @@ import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { CreditTopupService } from './service.js';
 import { assertDirectCommerceChannel } from '../distribution.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
@@ -19,7 +20,7 @@ function headers(request: FastifyRequest) {
 
 export async function registerCreditTopupRoutes(app: FastifyInstance, accounts: AccountService, topups: CreditTopupService) {
   app.post('/mobile/v1/credits/topups', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     assertDirectCommerceChannel(request);
     const body = parse(z.object({
       amountCents: z.number().int().min(100).max(10_000_000),
@@ -32,13 +33,13 @@ export async function registerCreditTopupRoutes(app: FastifyInstance, accounts: 
   });
 
   app.get('/mobile/v1/credits/topups', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const query = parse(z.object({ limit: z.coerce.number().int().min(1).max(100).optional() }), request.query);
     return { ok: true, topups: await topups.list(principal, query.limit) };
   });
 
   app.get('/mobile/v1/credits/topups/:topupId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ topupId: z.string().uuid() }), request.params);
     return { ok: true, topup: await topups.get(principal, parameters.topupId) };
   });

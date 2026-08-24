@@ -70,7 +70,18 @@ describe('KAI credit double-entry ledger', () => {
     const subjects = {
       current: async () => ({ subjectId, userId, kind: 'personal', displayName: '卡时用户', subjectStatus: 'active', role: 'owner', permissions: ['credits.read'] }),
     } as unknown as SubjectAccess;
-    const service = new CreditLedgerService(store, subjects);
+    const service = new CreditLedgerService(store, subjects, { snapshot: async (selectedSubjectId) => {
+      const result = await database.query<{ amount: string }>(`SELECT COALESCE(sum(e.amount_micros)
+        FILTER(WHERE t.status='posted'),0)::text amount FROM kai_credit_accounts a
+        LEFT JOIN kai_credit_entries e ON e.account_id=a.id LEFT JOIN kai_credit_transactions t
+        ON t.id=e.transaction_id WHERE a.subject_id=$1 AND a.account_kind='available' GROUP BY a.id`,
+      [selectedSubjectId]);
+      const amount = BigInt(result.rows[0]?.amount ?? '0');
+      return { accounts: await store.ensureSubjectAccounts(selectedSubjectId), lots: {
+        ledgerAvailableMicros: amount, allLotAvailableMicros: 0n,
+        unexpiredLotAvailableMicros: 0n, expiredPendingSweepMicros: 0n,
+        unrestrictedAvailableMicros: amount, nearestExpiry: null } };
+    } });
     const principal: AccountPrincipal = { userId, sessionId: 'credit-session', role: 'member' };
     expect(await service.balance(principal)).toMatchObject({ available: '0.00', reserved: '0.00', total: '0.00' });
 

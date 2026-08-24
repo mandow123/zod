@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
 import { AppError } from '../errors.js';
 import type { ListingAuditService } from './service.js';
+import { authenticateMobileRequest } from '../account/request-auth.js';
 
 const uuid = z.string().uuid();
 const serviceMode = z.enum(['dedicated', 'shared', 'slice', 'node', 'reserved']);
@@ -48,23 +49,23 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   app.get('/mobile/v1/market/listings', async (request) => {
     const query = parse(z.object({ limit: z.coerce.number().int().min(1).max(50).optional() }), request.query);
     const authenticated = request.headers.authorization
-      ? await accounts.authenticate(request.headers.authorization)
+      ? await authenticateMobileRequest(accounts, request)
       : null;
     return { ok: true, listings: await listings.publicListings(query.limit, authenticated?.principal) };
   });
 
   app.get('/mobile/v1/provider/offers', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, offers: await listings.supplierOffers(principal) };
   });
 
   app.get('/mobile/v1/provider/listings', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, listings: await listings.supplierListings(principal) };
   });
 
   app.get('/mobile/v1/provider/listings/availability', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const base = { offerId: uuid };
     const query = parse(z.discriminatedUnion('startMode', [
       z.object({ ...base, startMode: z.literal('immediate'), durationDays: z.coerce.number().int().min(1).max(366) }).strict(),
@@ -74,25 +75,25 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.get('/mobile/v1/provider/offer-drafts', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     return { ok: true, drafts: await listings.wizardDrafts(principal) };
   });
 
   app.get('/mobile/v1/provider/offer-drafts/:draftId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ draftId: uuid }), request.params);
     return { ok: true, draft: await listings.wizardDraft(principal, parameters.draftId) };
   });
 
   app.post('/mobile/v1/provider/offer-drafts', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const body = parse(z.object({ resourceId: uuid }).strict(), request.body);
     const result = await listings.createWizardDraft(principal, body.resourceId, requestKey(request), context(request));
     return reply.status(result.replayed ? 200 : 201).send({ ok: true, ...result });
   });
 
   app.put('/mobile/v1/provider/offer-drafts/:draftId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ draftId: uuid }), request.params);
     const body = parse(z.object({
       expectedVersion: z.number().int().positive(), currentStep: wizardStep, payload: wizardPayload,
@@ -101,14 +102,14 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.delete('/mobile/v1/provider/offer-drafts/:draftId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ draftId: uuid }), request.params);
     const body = parse(z.object({ expectedVersion: z.number().int().positive() }).strict(), request.body);
     return { ok: true, ...(await listings.abandonWizardDraft(principal, parameters.draftId, body.expectedVersion, context(request))) };
   });
 
   app.post('/mobile/v1/provider/offer-drafts/:draftId/submit', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ draftId: uuid }), request.params);
     const body = parse(z.object({ expectedVersion: z.number().int().positive() }).strict(), request.body);
     const result = await listings.submitWizardDraft(principal, parameters.draftId, body.expectedVersion, requestKey(request), context(request));
@@ -116,26 +117,26 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.get('/mobile/v1/provider/offers/:offerId', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     return { ok: true, offer: await listings.supplierOffer(principal, parameters.offerId) };
   });
 
   app.post('/mobile/v1/provider/offers/:offerId/revision', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     const result = await listings.createOfferRevision(principal, parameters.offerId, requestKey(request), context(request));
     return reply.status(result.replayed ? 200 : 201).send({ ok: true, ...result });
   });
 
   app.get('/mobile/v1/provider/offers/:offerId/revision', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     return { ok: true, draft: await listings.offerRevision(principal, parameters.offerId) };
   });
 
   app.put('/mobile/v1/provider/offers/:offerId/revision', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     const body = parse(z.object({
       expectedVersion: z.number().int().positive(), currentStep: wizardStep, payload: wizardPayload,
@@ -144,7 +145,7 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.post('/mobile/v1/provider/offers/:offerId/revision/submit', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     const body = parse(z.object({ expectedVersion: z.number().int().positive() }).strict(), request.body);
     const result = await listings.submitOfferRevision(
@@ -154,7 +155,7 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.post('/mobile/v1/provider/offers/:offerId/reaudit', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid }), request.params);
     const body = parse(z.object({ expectedVersion: z.number().int().positive() }).strict(), request.body);
     const result = await listings.resubmitExpiredOffer(principal, parameters.offerId, body.expectedVersion, context(request));
@@ -162,7 +163,7 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.post('/mobile/v1/operator/offers/:offerId/audits/:kind/decision', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ offerId: uuid, kind: z.enum(['resource', 'price']) }), request.params);
     const body = parse(z.object({
       decision: z.enum(['approve', 'changes_requested', 'reject']),
@@ -183,7 +184,7 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.post('/mobile/v1/provider/listings', async (request, reply) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const base = { offerId: uuid, capacityTotal: z.string().trim().min(1).max(40) };
     const body = parse(z.discriminatedUnion('startMode', [
       z.object({ ...base, startMode: z.literal('immediate'), durationDays: z.number().int().min(1).max(366) }).strict(),
@@ -194,7 +195,7 @@ export async function registerListingAuditRoutes(app: FastifyInstance, accounts:
   });
 
   app.put('/mobile/v1/provider/listings/:listingId/status', async (request) => {
-    const { principal } = await accounts.authenticate(request.headers.authorization);
+    const { principal } = await authenticateMobileRequest(accounts, request);
     const parameters = parse(z.object({ listingId: uuid }), request.params);
     const body = parse(z.object({ status: z.enum(['active', 'paused', 'withdrawn']) }).strict(), request.body);
     return { ok: true, ...(await listings.setListingStatus(principal, parameters.listingId, body.status, context(request))) };

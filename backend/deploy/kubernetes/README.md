@@ -1,25 +1,21 @@
-# Kubernetes 部署说明
+# 非当前生产入口：Kubernetes 参考模板
+
+> 这不是 `cloudpay.kai.com` 当前上线门禁。当前唯一生产契约见 `deploy/direct-ubuntu/README.md`。
+
+# Kubernetes 部署说明（参考）
 
 这些清单是生产基线，不包含任何真实密钥。镜像字段故意使用不可拉取的域名和全零摘要，发布流水线必须替换为已扫描、已签名镜像的真实 `@sha256:` 摘要；禁止改成 `latest` 或其他可变标签。
+
+本清单固定使用 `MOBILE_API_PROFILE=inquiry_only`。该 profile 只启动 KAI 配对身份、主体选择、上海鸿欢正式目录、买家询期、法务页与内部监控；支付、卡时、订单、上架、供应经营、运营、推送、节点和返佣能力不注册路由，也不构造 worker。
 
 ## Secret 清单
 
 `cloudpay-backend-secrets` 必须由云密钥管理服务或 External Secrets 创建，不要提交 YAML 明文。至少提供：
 
 - `DATABASE_URL`
-- `ACCESS_TOKEN_SECRET`、`REFRESH_TOKEN_PEPPER`、`OTP_PEPPER`、`PII_ENCRYPTION_KEY`、`AUDIT_PEPPER`、`CURSOR_SECRET`
-- `KAI_OIDC_CLIENT_ID`、`KAI_OIDC_CLIENT_SECRET`、`KAI_OIDC_FLOW_PEPPER`、`KAI_OIDC_SUBJECT_PEPPER`
-- `KAI_OIDC_TRANSACTION_ENCRYPTION_KEY`、`KAI_OIDC_APP_REDIRECT_URIS`
-- `SMS_ACCESS_KEY_ID`、`SMS_ACCESS_KEY_SECRET`、`SMS_SIGN_NAME`、`SMS_TEMPLATE_CODE`
-- `ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`、`ALIPAY_PUBLIC_KEY`、`ALIPAY_SELLER_ID`、`TOPUP_ALIPAY_NOTIFY_URL`
-- `WECHAT_APP_ID`、`WECHAT_MCH_ID`、`WECHAT_API_V3_KEY`、`WECHAT_PRIVATE_KEY`
-- `WECHAT_MERCHANT_CERT_SERIAL`、`WECHAT_PLATFORM_CERT_SERIAL`、`WECHAT_PLATFORM_CERTIFICATE`
-- `TOPUP_WECHAT_NOTIFY_URL`
-- `PUSH_CREDENTIALS_JSON`
+- `PII_ENCRYPTION_KEY`、`AUDIT_PEPPER`、`CURSOR_SECRET`（生产不得配置已退役的本地 HS256/refresh/OTP 凭据）
+- `KAI_OIDC_SUBJECT_PEPPER`
 - `OBJECT_STORAGE_ENDPOINT`、`OBJECT_STORAGE_REGION`、`OBJECT_STORAGE_BUCKET`、`OBJECT_STORAGE_ACCESS_KEY`、`OBJECT_STORAGE_SECRET_KEY`
-- `CLAMAV_HOST`
-- `COMPUTE_PROVIDER_TOKEN`
-- `NODE_GPU_FINGERPRINT_PEPPER`、`NODE_CLAIM_TOKEN_PEPPER`、`NODE_CLAIM_TOKEN_ENCRYPTION_KEY`
 - `METRICS_BEARER_TOKEN`
 - `BACKUP_ENCRYPTION_KEY`、`BACKUP_KEY_ID`
 - `BACKUP_S3_ENDPOINT`、`BACKUP_S3_REGION`、`BACKUP_S3_BUCKET`、`BACKUP_S3_ACCESS_KEY`、`BACKUP_S3_SECRET_KEY`
@@ -47,11 +43,13 @@ Secrets 或同等受控流程创建，并至少提供：
 必须精确对应 `admin.kai.com` 和 `admin-api.kai.com`。监控应从集群内访问
 `cloudpay-backend.cloudpay.svc/internal/metrics`，该路径没有暴露在任何 Ingress。
 
-统一身份必须在 `auth.kai.com` 登记独立的 CloudPay mobile broker confidential client，回调精确为 `https://cloudpay.kai.com/mobile/v1/auth/kai/callback`；不得复用主站 client。`KAI_OIDC_APP_REDIRECT_URIS` 当前只允许 `kaicloudpay://auth/kai/callback`。`KAI_OIDC_SUBJECT_PEPPER` 是 issuer+sub 的长期稳定映射键，不能按普通轮换节奏直接替换；如需轮换，先部署同时重算现有 `subject_hash` 的迁移。`KAI_OIDC_FLOW_PEPPER` 与事务加密密钥可按短期凭据轮换流程更换，但必须彼此独立。任何这些配置缺失时生产进程和 readiness 均失败关闭。
+短信、支付宝、微信、推送、恶意文件扫描、算力 sidecar、节点接入、Vast 和返佣配置不属于 inquiry-only 上线依赖；即使环境中误填，也不会实例化对应服务或 worker。只有未来经独立审计切换到 `full_commerce` 时，才按完整商城门禁重新配置这些渠道。
 
-算力履约的非敏感配置由 `cloudpay-backend-config` 提供：`COMPUTE_PROVIDER=sidecar-v1`、`COMPUTE_PROVIDER_URL`、`COMPUTE_ALLOCATED_ACCELERATOR_COUNT=1`、`COMPUTE_NODE_ACCELERATOR_COUNT=8` 和 `NODE_SUPPORTED_AGENT_VERSIONS=1.0.0`。每项资源优先使用验真通过的 `specifications.gpuCount` 作为槽位上限；该变量只为缺少结构化字段的旧实机提供受控回退，本节点固定为 8 张 H100，不得按挂牌数量或产品名称扩大。示例 URL 是集群私有 DNS 契约，部署时可以替换为实际的私网 HTTPS 地址，但禁止填写公网地址或降级为 HTTP。`COMPUTE_PROVIDER_TOKEN` 只能由 Secret 注入，必须与 H100 sidecar 使用的 bearer token 一致且至少 32 个字符；`NODE_GPU_FINGERPRINT_PEPPER`、`NODE_CLAIM_TOKEN_PEPPER` 与 `NODE_CLAIM_TOKEN_ENCRYPTION_KEY` 必须分别生成独立的生产密钥并由 Secret 注入。以上令牌和密钥不得写入 ConfigMap、镜像或仓库。
+Zod App 以公共 client `xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K` 直接连接 `https://auth.kai.com/api/auth`，固定回调为 `https://cloud.kai.com/zod/oauth2redirect/kai`，APK 不包含 secret。资源 API 要求 `Authorization` 中的 opaque access token 与 `X-KAI-ID-Token` 成对出现：后端以 JWKS 验 ID token 的 EdDSA、issuer、Zod audience、期限及 `at_hash`，再用当前 access token 实时调用 userinfo 并强制两者 `sub` 相同。任何一步失败均在业务事务前返回 401；ID token 不能单独授权或作为 Bearer。`KAI_OIDC_SUBJECT_PEPPER` 是 issuer+sub 的长期稳定映射键，不能按普通轮换节奏直接替换；如需轮换，必须先完成数据库哈希迁移。旧 `KAI_OIDC_CLIENT_SECRET` broker 只为非生产兼容保留，不属于正式登录依赖。
 
-容器入口会在 API 进程启动前执行完整生产配置门禁。任何必填项、法务资料、材料存储、安全扫描、备份、推送、真实卡时充值渠道或算力 sidecar 配置缺失时，容器直接退出，不会以半可用状态等待流量。门禁只检查配置合同；开放流量前还必须由运维验证私网 TLS、令牌一致性和 H100 主机证明。
+ConfigMap 中残留的算力 sidecar 非敏感字段仅用于保留未来 `full_commerce` 配置模板，在 inquiry-only profile 下不参与 readiness、服务实例化或 worker 启动，也不表示已有真实算力履约能力。
+
+容器入口会在 API 进程启动前执行 inquiry-only 生产配置门禁。专用 PostgreSQL、0065、账号安全、KAI paired 身份、公开 HTTPS、真实法务配置、对象存储、监控、备份恢复或正式供应商目录任一不完整时，容器或 readiness 失败关闭；支付、短信、推送、算力、Vast、节点、broker 与返佣不会被误列为依赖。
 
 ## 发布顺序
 
@@ -61,11 +59,15 @@ Secrets 或同等受控流程创建，并至少提供：
    独立管理员 Web 摘要。
 3. 创建或更新后端 Secret 与 ConfigMap；首次部署仍保持 `ADMIN_AUTH_ENABLED=false`。
 4. 使用 `kubectl create -f migrate-job.yaml` 创建一次性迁移任务，并等待成功。
-5. 应用 `app.yaml`，等待三个后端副本全部 readiness 成功。
-6. 应用 `admin-app.yaml`，等待两个 Web 副本通过 `/healthz` readiness，并核对两个管理员 Ingress 的 TLS host 与后端服务边界。
-7. 确认 Prometheus 已抓取管理员指标后应用 `admin-monitoring.yaml`，并验证规则加载成功。
-8. 应用 `backup-cronjob.yaml`，手动触发一次备份并确认 `backup_runs` 成功。
-9. 从不可变备份恢复到隔离空库，完成首次 `restore_drills` 记录后才开放正式流量。
+5. 应用 `app.yaml`，只等待 Pod 进程通过 startup/liveness；此时 readiness 必须保持关闭，不能绕过。
+6. 应用 `backup-cronjob.yaml`，手动触发一次备份并确认对象键、大小、摘要和0065版本均完整。
+7. 使用同一份有效备份恢复到数据库指纹不同的隔离空库，确认0065及全部账本不变量为零。
+8. 通过临时 Secret 向同镜像的一次性受控 Job 注入 paired KAI 测试令牌，运行 `npm run production:readiness:record`。Job 的探针地址指向指定 API Pod 的私网地址；任务结束立即删除临时 Secret 与 Job，不把令牌写入清单、日志或长期环境。
+9. 确认对象存储 Put/Head/Get/Delete/删除确认、真实身份 `/me`→同意→主体选择→正式询期→取消以及交易账本零变化证据已写入，再等待三个副本全部 readiness 成功，最后开放 Ingress 流量。
+10. 应用 `admin-app.yaml`，等待两个 Web 副本通过 `/healthz` readiness，并核对两个管理员 Ingress 的 TLS host 与后端服务边界；管理员 API 仍保持关闭。
+11. 确认 Prometheus 已抓取管理员指标后应用 `admin-monitoring.yaml`，并验证规则加载成功。
+
+对象存储证据15分钟、KAI paired 成功链证据30分钟后自动过期。常规发布必须在窗口内完成流量验证；持续运行后的告警不应通过伪造审计行消除，而应重新执行受控 Job。未登录 `401` 只证明路由受保护，不能替代真实测试身份的成功链。
 
 此时管理员 API Ingress 必须仍指向主 Service `cloudpay-backend`，主 ConfigMap 中
 `ADMIN_AUTH_ENABLED=false`，因此 `/admin/v1` 失败关闭。`admin-api-canary.yaml` 不属于阶段 A

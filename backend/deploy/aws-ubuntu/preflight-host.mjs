@@ -164,6 +164,13 @@ async function main() {
     }
   } else check('production_environment_permissions', false, environmentDetail);
 
+  check('inquiry_only_profile_locked', environment.MOBILE_API_PROFILE === 'inquiry_only'
+    && environment.HONGHUAN_SUPPLIER_CATALOG_MODE === 'inquiry'
+    && environment.LEGACY_CREATOR_COMMISSION_MODE === 'off'
+    && environment.STREAMER_REWARDS_MODE === 'off'
+    && environment.INVITE_REWARDS_MODE === 'off',
+  `profile=${environment.MOBILE_API_PROFILE ?? 'missing'}, catalog=${environment.HONGHUAN_SUPPLIER_CATALOG_MODE ?? 'missing'}, rewards=${environment.STREAMER_REWARDS_MODE ?? 'missing'}/${environment.INVITE_REWARDS_MODE ?? 'missing'}`);
+
   const productionGate = run(nodePath, ['scripts/verify-production-env.mjs'], {
     cwd: releaseRoot,
     env: { PATH: process.env.PATH ?? '', ...environment },

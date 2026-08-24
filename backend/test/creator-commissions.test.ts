@@ -23,12 +23,12 @@ async function migrate(p:PGlite){for(const name of(await readdir(new URL('../mig
 
 describe('creator commission contract',()=>{
   it('fails closed unless the signed-link secret and strict policy are both valid',()=>{
-    const valid=loadConfig({CREATOR_REFERRAL_SIGNING_SECRET:'s'.repeat(32),CREATOR_COMMISSION_POLICY_JSON:JSON.stringify({
+    const valid=loadConfig({LEGACY_CREATOR_COMMISSION_MODE:'drain',CREATOR_REFERRAL_SIGNING_SECRET:'s'.repeat(32),CREATOR_COMMISSION_POLICY_JSON:JSON.stringify({
       version:'creator-v1',commissionBasisPoints:1000,attributionTtlDays:30,refundObservationDays:7,
     })});
     expect(valid.readiness.capabilities.creatorCommissions.available).toBe(true);
     expect(valid.creatorCommissionPolicy).toMatchObject({version:'creator-v1',commissionBasisPoints:1000});
-    const invalid=loadConfig({CREATOR_REFERRAL_SIGNING_SECRET:'short',CREATOR_COMMISSION_POLICY_JSON:'{}'});
+    const invalid=loadConfig({LEGACY_CREATOR_COMMISSION_MODE:'drain',CREATOR_REFERRAL_SIGNING_SECRET:'short',CREATOR_COMMISSION_POLICY_JSON:'{}'});
     expect(invalid.readiness.capabilities.creatorCommissions.available).toBe(false);
     expect(invalid.creatorCommissionPolicy).toBeNull();
   });

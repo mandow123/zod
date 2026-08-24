@@ -12,6 +12,7 @@
     "/mobile/v1/*",
     "/privacy",
     "/terms",
+    "/inquiry-terms",
     "/account/delete"
   ],
   "mustRemainOnExistingTarget": [
@@ -19,4 +20,3 @@
     "/api/*"
   ]
 }
-

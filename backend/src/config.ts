@@ -2,12 +2,17 @@ import { z } from 'zod';
 import { isAbsolute } from 'node:path';
 import { isAdminRoleCode, type AdminRoleCode } from './admin/permissions.js';
 import { kaiCreditCommerceCapability } from './commerce/capabilities.js';
+import {
+  loadQixiangCheckoutKey, loadQixiangMerchantKey, qixiangCheckoutKeyPath, qixiangMerchantKeyPath,
+} from './payment/qixiang-credential.js';
 
 const optionalText = z.string().trim().optional().transform((value) => value || undefined);
 const optionalUntrimmedText = z.string().optional().transform((value) => value === '' ? undefined : value);
 
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  MOBILE_API_PROFILE: optionalText,
+  LOCAL_E2E: z.enum(['true', 'false']).default('false'),
   HOST: z.string().trim().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4100),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:4100'),
@@ -42,6 +47,25 @@ const environmentSchema = z.object({
   WECHAT_REFUND_NOTIFY_URL: optionalText,
   TOPUP_WECHAT_NOTIFY_URL: optionalText,
   WECHAT_PLATFORM_CERTIFICATE: optionalText,
+  QIXIANG_TOPUP_MODE: optionalText,
+  QIXIANG_RECOVERY_MODE: optionalText,
+  QIXIANG_PID: optionalText,
+  QIXIANG_APPROVED_MAX_CENTS: optionalText,
+  QIXIANG_CHECKOUT_KEY_ID: optionalText,
+  QIXIANG_CHECKOUT_CIPHER_VERSION: optionalText,
+  QIXIANG_NOTIFY_URL: optionalText,
+  QIXIANG_RETURN_URL: optionalText,
+  QIXIANG_KEY_ROTATION_EVIDENCE_REF: optionalText,
+  QIXIANG_OLD_KEY_REVOCATION_EVIDENCE_REF: optionalText,
+  QIXIANG_MERCHANT_ENTITY_EVIDENCE_REF: optionalText,
+  QIXIANG_DOMAIN_APP_SCENE_EVIDENCE_REF: optionalText,
+  QIXIANG_SERVICE_CATEGORY_EVIDENCE_REF: optionalText,
+  QIXIANG_REFUND_API_EVIDENCE_REF: optionalText,
+  QIXIANG_REAL_FULFILLMENT_EVIDENCE_REF: optionalText,
+  QIXIANG_RECONCILIATION_EVIDENCE_REF: optionalText,
+  QIXIANG_APPROVED_MAX_EVIDENCE_REF: optionalText,
+  QIXIANG_LOT_ACCOUNTING_EVIDENCE_REF: optionalText,
+  CREDENTIALS_DIRECTORY: optionalText,
   PUSH_PROVIDER: optionalText,
   PUSH_CREDENTIALS_JSON: optionalText,
   OBJECT_STORAGE_PROVIDER: optionalText,
@@ -72,7 +96,13 @@ const environmentSchema = z.object({
   TERMS_URL: optionalText,
   INQUIRY_TERMS_URL: optionalText,
   ICP_FILING: optionalText,
+  ICP_FILING_STATUS: z.enum(['not_obtained', 'pending', 'issued', 'exempt_with_legal_evidence']).optional(),
+  ICP_FILING_EVIDENCE_REF: optionalText,
   APP_FILING: optionalText,
+  APP_FILING_STATUS: z.enum(['not_obtained', 'pending', 'issued', 'exempt_with_legal_evidence']).optional(),
+  APP_FILING_EVIDENCE_REF: optionalText,
+  INTERNET_SERVICE_CLASSIFICATION_STATUS: z.enum(['not_assessed', 'approved_with_legal_evidence']).optional(),
+  INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF: optionalText,
   COMPUTE_PROVIDER: optionalText,
   COMPUTE_PROVIDER_URL: optionalText,
   COMPUTE_PROVIDER_TOKEN: optionalText,
@@ -111,11 +141,22 @@ const environmentSchema = z.object({
   ADMIN_SESSION_ROTATION_SECONDS: optionalUntrimmedText,
   ADMIN_SESSION_PREVIOUS_TOKEN_GRACE_SECONDS: optionalUntrimmedText,
   ADMIN_REAUTH_FRESHNESS_SECONDS: optionalUntrimmedText,
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT: optionalText,
+  KAI_RESOURCE_ACCESS_TOKEN_AUDIENCE: optionalText,
+  KAI_RESOURCE_ACCESS_TOKEN_REQUIRED_SCOPE: optionalText,
   VAST_API_URL: z.string().url().default('https://console.vast.ai'),
   VAST_API_KEY: optionalText,
   VAST_PRICING_POLICY_JSON: optionalText,
   CREATOR_REFERRAL_SIGNING_SECRET: optionalText,
   CREATOR_COMMISSION_POLICY_JSON: optionalText,
+  LEGACY_CREATOR_COMMISSION_MODE: optionalText,
+  STREAMER_REWARDS_MODE: optionalText,
+  STREAMER_REFERRAL_SIGNING_SECRET: optionalText,
+  STREAMER_REWARD_POLICY_JSON: optionalText,
+  INVITE_REWARDS_MODE: optionalText,
+  INVITE_REFERRAL_SIGNING_SECRET: optionalText,
+  INVITE_REWARD_POLICY_JSON: optionalText,
+  HONGHUAN_SUPPLIER_CATALOG_MODE: optionalText,
 });
 
 const vastPricingPolicySchema = z.object({
@@ -135,6 +176,41 @@ const creatorCommissionPolicySchema = z.object({
   attributionTtlDays: z.number().int().min(1).max(90),
   refundObservationDays: z.number().int().min(1).max(30),
 }).strict();
+
+const streamerRewardPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  basisPoints: z.number().int().min(1).max(300),
+  attributionTtlDays: z.number().int().min(1).max(90),
+  refundObservationDays: z.number().int().min(1).max(30),
+}).strict();
+
+const inviteRewardPolicySchema = z.object({
+  version: z.string().trim().min(1).max(80),
+  basisPoints: z.number().int().min(1).max(300),
+  attributionTtlDays: z.number().int().min(1).max(30),
+  firstOrderQualificationDays: z.number().int().min(1).max(90),
+  refundObservationDays: z.number().int().min(1).max(30),
+}).strict();
+
+type RewardMode = 'off' | 'shadow' | 'on';
+type HonghuanSupplierCatalogMode = 'off'|'read_only'|'inquiry';
+type QixiangTopupMode = 'off'|'shadow'|'on';
+type QixiangRecoveryMode = 'off'|'on';
+export type MobileApiProfile = 'inquiry_only' | 'full_commerce';
+
+function rewardMode(value: string | undefined): RewardMode {
+  return value === 'shadow' || value === 'on' ? value : 'off';
+}
+
+function honghuanSupplierCatalogMode(value:string|undefined):HonghuanSupplierCatalogMode{
+  return value==='read_only'||value==='inquiry'?value:'off';
+}
+
+function qixiangTopupMode(value:string|undefined):QixiangTopupMode{
+  return value==='shadow'||value==='on'?value:'off';
+}
+
+function qixiangRecoveryMode(value:string|undefined):QixiangRecoveryMode{return value==='on'?'on':'off';}
 
 type Capability = Readonly<{ available: boolean; missing: string[] }>;
 
@@ -543,11 +619,8 @@ function pushCapability(environment: Record<string, string | undefined>, parsed:
   return mergeCapability(base, invalid);
 }
 
-function secretCapability(environment: Record<string, string | undefined>): Capability {
+function accountSecurityCapability(environment: Record<string, string | undefined>): Capability {
   const requirements: Array<[string, number]> = [
-    ['ACCESS_TOKEN_SECRET', 64],
-    ['REFRESH_TOKEN_PEPPER', 32],
-    ['OTP_PEPPER', 32],
     ['AUDIT_PEPPER', 32],
     ['CURSOR_SECRET', 32],
   ];
@@ -562,14 +635,41 @@ function secretCapability(environment: Record<string, string | undefined>): Capa
   return { available: missing.length === 0, missing };
 }
 
+function legacyLocalAuthCapability(environment: Record<string, string | undefined>): Capability {
+  const requirements: Array<[string, number]> = [
+    ['ACCESS_TOKEN_SECRET', 64],
+    ['REFRESH_TOKEN_PEPPER', 32],
+    ['OTP_PEPPER', 32],
+  ];
+  const missing = requirements.flatMap(([key, minimum]) => {
+    const length = environment[key]?.trim().length ?? 0;
+    return length >= minimum ? [] : [`${key}(>=${minimum} chars)`];
+  });
+  return { available: missing.length === 0, missing };
+}
+
 export type RuntimeConfig = ReturnType<typeof loadConfig>;
 
 export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | undefined>) {
   const parsed = environmentSchema.parse(input);
+  const profileValid = parsed.MOBILE_API_PROFILE === 'inquiry_only' || parsed.MOBILE_API_PROFILE === 'full_commerce';
+  const profileConfigurationBlockers = [
+    ...(parsed.MOBILE_API_PROFILE !== undefined && !profileValid
+      ? ['MOBILE_API_PROFILE(inquiry_only|full_commerce)'] : []),
+    ...(parsed.NODE_ENV === 'production' && parsed.MOBILE_API_PROFILE === undefined
+      ? ['MOBILE_API_PROFILE(required in production)'] : []),
+  ];
+  const mobileApiProfile: MobileApiProfile = parsed.MOBILE_API_PROFILE === 'inquiry_only'
+    ? 'inquiry_only'
+    : 'full_commerce';
+  const inquiryOnly = mobileApiProfile === 'inquiry_only';
   const environment = { ...input };
   const adminConfiguration = adminAuthConfiguration(environment, parsed);
   const database = capability(environment, ['DATABASE_URL']);
-  const tokenSecurity = secretCapability(environment);
+  const accountSecurity = accountSecurityCapability(environment);
+  const legacyLocalAuth = parsed.NODE_ENV === 'test' && parsed.LOCAL_E2E === 'true'
+    ? legacyLocalAuthCapability(environment)
+    : { available: false, missing: ['LOCAL_E2E(disabled)'] } as const;
   const publicHttps = new URL(parsed.PUBLIC_ORIGIN).protocol === 'https:';
   const sms = capability(environment, [
     'SMS_PROVIDER', 'SMS_ACCESS_KEY_ID', 'SMS_ACCESS_KEY_SECRET', 'SMS_SIGN_NAME', 'SMS_TEMPLATE_CODE',
@@ -591,6 +691,69 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...(parsed.TOPUP_WECHAT_NOTIFY_URL && parsed.TOPUP_WECHAT_NOTIFY_URL !== expectedWechatTopupNotify
       ? ['TOPUP_WECHAT_NOTIFY_URL(exact public route)'] : []),
   ]);
+  const requestedQixiangTopupMode=qixiangTopupMode(parsed.QIXIANG_TOPUP_MODE);
+  const qixiangMode:QixiangTopupMode=inquiryOnly?'off':requestedQixiangTopupMode;
+  const requestedQixiangRecoveryMode=qixiangRecoveryMode(parsed.QIXIANG_RECOVERY_MODE
+    ??(requestedQixiangTopupMode==='on'?'on':undefined));
+  const qixiangRecoveryModeValue:QixiangRecoveryMode=inquiryOnly?'off':requestedQixiangRecoveryMode;
+  const qixiangApprovedMax=parsed.QIXIANG_APPROVED_MAX_CENTS&&/^\d+$/u.test(parsed.QIXIANG_APPROVED_MAX_CENTS)
+    ?Number(parsed.QIXIANG_APPROVED_MAX_CENTS):null;
+  const qixiangExpectedNotify='https://cloudpay.kai.com/mobile/v1/credits/topups/qixiang/notify';
+  const qixiangExpectedReturn='https://cloudpay.kai.com/payments/qixiang/return';
+  let qixiangMerchantCredentialAvailable=false;
+  let qixiangCheckoutCredentialAvailable=false;
+  if((qixiangMode==='on'||qixiangRecoveryModeValue==='on')&&parsed.CREDENTIALS_DIRECTORY){
+    try{
+      loadQixiangMerchantKey(qixiangMerchantKeyPath({credentialDirectory:parsed.CREDENTIALS_DIRECTORY}));
+      qixiangMerchantCredentialAvailable=true;
+    }catch{/* Readiness remains fail-closed without exposing file or secret details. */}
+    try{
+      const checkoutKey=loadQixiangCheckoutKey(qixiangCheckoutKeyPath({credentialDirectory:parsed.CREDENTIALS_DIRECTORY}));
+      qixiangCheckoutCredentialAvailable=true;
+      checkoutKey.fill(0);
+    }catch{/* Readiness remains fail-closed without exposing file or secret details. */}
+  }
+  const qixiangBlockers=qixiangMode!=='on'?[]:[
+    ...(parsed.QIXIANG_PID==='4611'?[]:['QIXIANG_MERCHANT_ENTITY_MATCH']),
+    ...(parsed.QIXIANG_KEY_ROTATION_EVIDENCE_REF?[]:['QIXIANG_KEY_ROTATED']),
+    ...(parsed.QIXIANG_OLD_KEY_REVOCATION_EVIDENCE_REF?[]:['QIXIANG_OLD_KEY_REVOKED']),
+    ...(parsed.QIXIANG_MERCHANT_ENTITY_EVIDENCE_REF?[]:['QIXIANG_MERCHANT_ENTITY_MATCH']),
+    ...(parsed.QIXIANG_DOMAIN_APP_SCENE_EVIDENCE_REF?[]:['QIXIANG_DOMAIN_APP_SCENE_APPROVED']),
+    ...(parsed.QIXIANG_SERVICE_CATEGORY_EVIDENCE_REF?[]:['QIXIANG_SERVICE_CATEGORY_APPROVED']),
+    ...(parsed.QIXIANG_REFUND_API_EVIDENCE_REF?[]:['QIXIANG_REFUND_API_CONFIRMED']),
+    ...(parsed.QIXIANG_REAL_FULFILLMENT_EVIDENCE_REF?[]:['QIXIANG_REAL_FULFILLMENT']),
+    ...(parsed.QIXIANG_RECONCILIATION_EVIDENCE_REF?[]:['QIXIANG_RECONCILIATION']),
+    ...(parsed.QIXIANG_APPROVED_MAX_EVIDENCE_REF&&qixiangApprovedMax!==null
+      &&Number.isSafeInteger(qixiangApprovedMax)&&qixiangApprovedMax>=100&&qixiangApprovedMax<=4_999_999
+      ?[]:['QIXIANG_APPROVED_MAX_UNVERIFIED']),
+    ...(parsed.QIXIANG_LOT_ACCOUNTING_EVIDENCE_REF?[]:['QIXIANG_LOT_ACCOUNTING']),
+    ...(qixiangMerchantCredentialAvailable?[]:['QIXIANG_MERCHANT_CREDENTIAL_UNAVAILABLE']),
+    ...(qixiangCheckoutCredentialAvailable?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+    ...(parsed.QIXIANG_CHECKOUT_KEY_ID&&/^[a-z0-9][a-z0-9._-]{7,63}$/u.test(parsed.QIXIANG_CHECKOUT_KEY_ID)
+      &&parsed.QIXIANG_CHECKOUT_CIPHER_VERSION==='1'?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+    ...(parsed.QIXIANG_NOTIFY_URL===qixiangExpectedNotify&&parsed.QIXIANG_RETURN_URL===qixiangExpectedReturn
+      ?[]:['QIXIANG_NOTIFY_RETURN_MISMATCH']),
+  ];
+  const qixiangTopups={mode:qixiangMode,available:qixiangMode==='on'&&qixiangBlockers.length===0,
+    rails:qixiangMode==='on'?['qixiang_alipay'] as const:[] as const,
+    minAmountCents:qixiangMode==='on'?100:null,
+    maxAmountCents:qixiangMode==='on'&&qixiangBlockers.length===0?qixiangApprovedMax:null,
+    conversion:qixiangMode==='on'?{numerator:1000 as const,denominator:1002 as const,
+      rounding:'floor' as const,precision:2 as const}:null,
+    lotValidityDays:364 as const,
+    checkout:qixiangMode==='on'?{kind:'external_browser' as const,allowedOrigin:'https://api.payqixiang.cn' as const,
+      allowedPathPrefix:'/pay/submit/' as const}:null,
+    blockers:[...new Set(qixiangBlockers)]} as const;
+  const qixiangRecoveryBlockers=qixiangRecoveryModeValue==='off'?[]:[
+    ...(parsed.QIXIANG_PID==='4611'?[]:['QIXIANG_MERCHANT_ENTITY_MATCH']),
+    ...(qixiangMerchantCredentialAvailable?[]:['QIXIANG_MERCHANT_CREDENTIAL_UNAVAILABLE']),
+    ...(qixiangCheckoutCredentialAvailable?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+    ...(parsed.QIXIANG_CHECKOUT_KEY_ID&&/^[a-z0-9][a-z0-9._-]{7,63}$/u.test(parsed.QIXIANG_CHECKOUT_KEY_ID)
+      &&parsed.QIXIANG_CHECKOUT_CIPHER_VERSION==='1'?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+  ];
+  const qixiangRecovery={mode:qixiangRecoveryModeValue,
+    available:qixiangRecoveryModeValue==='on'&&qixiangRecoveryBlockers.length===0,
+    blockers:[...new Set(qixiangRecoveryBlockers)]} as const;
   const computeProviderBase = capability(environment, [
     'COMPUTE_PROVIDER', 'COMPUTE_PROVIDER_URL', 'COMPUTE_PROVIDER_TOKEN', 'COMPUTE_ALLOCATED_ACCELERATOR_COUNT',
     'COMPUTE_NODE_ACCELERATOR_COUNT',
@@ -614,8 +777,12 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   const nodeClaimKey = parsed.NODE_CLAIM_TOKEN_ENCRYPTION_KEY?.trim();
   const enrollmentSecrets = [parsed.NODE_GPU_FINGERPRINT_PEPPER, parsed.NODE_CLAIM_TOKEN_PEPPER, nodeClaimKey]
     .filter((value): value is string => Boolean(value));
-  const otherSecuritySecrets = [parsed.ACCESS_TOKEN_SECRET, parsed.REFRESH_TOKEN_PEPPER, parsed.OTP_PEPPER,
-    parsed.PII_ENCRYPTION_KEY, parsed.AUDIT_PEPPER, parsed.CURSOR_SECRET, parsed.COMPUTE_PROVIDER_TOKEN]
+  const otherSecuritySecrets = [
+    ...(parsed.NODE_ENV === 'test' && parsed.LOCAL_E2E === 'true'
+      ? [parsed.ACCESS_TOKEN_SECRET, parsed.REFRESH_TOKEN_PEPPER, parsed.OTP_PEPPER]
+      : []),
+    parsed.PII_ENCRYPTION_KEY, parsed.AUDIT_PEPPER, parsed.CURSOR_SECRET, parsed.COMPUTE_PROVIDER_TOKEN,
+  ]
     .filter((value): value is string => Boolean(value));
   const nodeEnrollment = mergeCapability(nodeEnrollmentBase, [
     ...(parsed.NODE_GPU_FINGERPRINT_PEPPER && parsed.NODE_GPU_FINGERPRINT_PEPPER.length < 32
@@ -664,6 +831,20 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       (value) => value !== 'kaicloudpay://auth/kai/callback',
     ) ? ['KAI_OIDC_APP_REDIRECT_URIS(registered exact app redirects)'] : []),
   ]);
+  const kaiResourceAccessBase = capability(environment, [
+    'KAI_OIDC_SUBJECT_PEPPER',
+    'KAI_RESOURCE_ACCESS_TOKEN_FORMAT',
+  ]);
+  const kaiResourceFormat = parsed.KAI_RESOURCE_ACCESS_TOKEN_FORMAT;
+  const kaiResourceAccess = mergeCapability(kaiResourceAccessBase, [
+    ...(kaiResourceFormat && kaiResourceFormat !== 'opaque'
+      ? ['KAI_RESOURCE_ACCESS_TOKEN_FORMAT(opaque paired-token contract)'] : []),
+    ...(parsed.KAI_OIDC_SUBJECT_PEPPER && parsed.KAI_OIDC_SUBJECT_PEPPER.length < 32
+      ? ['KAI_OIDC_SUBJECT_PEPPER(>=32 chars; stable identity key)'] : []),
+    ...(parsed.KAI_OIDC_FLOW_PEPPER && parsed.KAI_OIDC_SUBJECT_PEPPER
+      && parsed.KAI_OIDC_FLOW_PEPPER === parsed.KAI_OIDC_SUBJECT_PEPPER
+      ? ['KAI_OIDC_SUBJECT_PEPPER(independent from flow pepper)'] : []),
+  ]);
   let vastPricingPolicy: z.infer<typeof vastPricingPolicySchema> | null = null;
   const vastInvalid: string[] = [];
   if (parsed.VAST_PRICING_POLICY_JSON) {
@@ -687,15 +868,82 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       else creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid creator commission policy)');
     } catch { creatorCommissionInvalid.push('CREATOR_COMMISSION_POLICY_JSON(valid JSON)'); }
   }
-  const creatorCommissions = mergeCapability(capability(environment,[
+  const legacyCreatorCommissionMode = !inquiryOnly && parsed.LEGACY_CREATOR_COMMISSION_MODE === 'drain' ? 'drain' : 'off';
+  const legacyCreatorRequirements = mergeCapability(capability(environment,[
     'CREATOR_REFERRAL_SIGNING_SECRET','CREATOR_COMMISSION_POLICY_JSON',
   ]), [
     ...creatorCommissionInvalid,
     ...(parsed.CREATOR_REFERRAL_SIGNING_SECRET && parsed.CREATOR_REFERRAL_SIGNING_SECRET.length < 32
       ? ['CREATOR_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
   ]);
+  const creatorCommissions = {
+    available: legacyCreatorCommissionMode === 'drain' && legacyCreatorRequirements.available,
+    mode: legacyCreatorCommissionMode,
+    missing: legacyCreatorCommissionMode === 'drain' ? legacyCreatorRequirements.missing : [],
+  } as const;
+  const legacyCreatorMode = {
+    available: creatorCommissions.available,
+    mode: legacyCreatorCommissionMode,
+    missing: creatorCommissions.missing,
+  } as const;
+
+  let streamerRewardPolicy: z.infer<typeof streamerRewardPolicySchema> | null = null;
+  const streamerRewardInvalid: string[] = [];
+  if (parsed.STREAMER_REWARD_POLICY_JSON) {
+    try {
+      const result = streamerRewardPolicySchema.safeParse(JSON.parse(parsed.STREAMER_REWARD_POLICY_JSON));
+      if (result.success) streamerRewardPolicy = result.data;
+      else streamerRewardInvalid.push('STREAMER_REWARD_POLICY_JSON(valid strict streamer policy)');
+    } catch { streamerRewardInvalid.push('STREAMER_REWARD_POLICY_JSON(valid JSON)'); }
+  }
+  let inviteRewardPolicy: z.infer<typeof inviteRewardPolicySchema> | null = null;
+  const inviteRewardInvalid: string[] = [];
+  if (parsed.INVITE_REWARD_POLICY_JSON) {
+    try {
+      const result = inviteRewardPolicySchema.safeParse(JSON.parse(parsed.INVITE_REWARD_POLICY_JSON));
+      if (result.success) inviteRewardPolicy = result.data;
+      else inviteRewardInvalid.push('INVITE_REWARD_POLICY_JSON(valid strict invite policy)');
+    } catch { inviteRewardInvalid.push('INVITE_REWARD_POLICY_JSON(valid JSON)'); }
+  }
+  const streamerRewardsMode = inquiryOnly ? 'off' : rewardMode(parsed.STREAMER_REWARDS_MODE);
+  const inviteRewardsMode = inquiryOnly ? 'off' : rewardMode(parsed.INVITE_REWARDS_MODE);
+  const equalRewardSecrets = Boolean(parsed.STREAMER_REFERRAL_SIGNING_SECRET
+    && parsed.INVITE_REFERRAL_SIGNING_SECRET
+    && parsed.STREAMER_REFERRAL_SIGNING_SECRET === parsed.INVITE_REFERRAL_SIGNING_SECRET);
+  const streamerRequirements = mergeCapability(capability(environment,[
+    'STREAMER_REFERRAL_SIGNING_SECRET','STREAMER_REWARD_POLICY_JSON',
+  ]), [
+    ...streamerRewardInvalid,
+    ...(parsed.STREAMER_REFERRAL_SIGNING_SECRET && parsed.STREAMER_REFERRAL_SIGNING_SECRET.length < 32
+      ? ['STREAMER_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
+    ...(equalRewardSecrets ? ['STREAMER_REFERRAL_SIGNING_SECRET(independent from invite secret)'] : []),
+    ...(streamerRewardsMode === 'off' ? [] : [
+      'STREAMER_REWARDS_RUNTIME_INTEGRATION(pending atomic commerce claim and final-net producer)',
+    ]),
+  ]);
+  const inviteRequirements = mergeCapability(capability(environment,[
+    'INVITE_REFERRAL_SIGNING_SECRET','INVITE_REWARD_POLICY_JSON',
+  ]), [
+    ...inviteRewardInvalid,
+    ...(parsed.INVITE_REFERRAL_SIGNING_SECRET && parsed.INVITE_REFERRAL_SIGNING_SECRET.length < 32
+      ? ['INVITE_REFERRAL_SIGNING_SECRET(>=32 chars)'] : []),
+    ...(equalRewardSecrets ? ['INVITE_REFERRAL_SIGNING_SECRET(independent from streamer secret)'] : []),
+    ...(inviteRewardsMode === 'off' ? [] : [
+      'INVITE_REWARDS_RUNTIME_INTEGRATION(pending atomic commerce claim and final-net producer)',
+    ]),
+  ]);
+  const streamerRewards = {
+    available: streamerRewardsMode !== 'off' && streamerRequirements.available,
+    mode: streamerRewardsMode,
+    missing: streamerRewardsMode === 'off' ? [] : streamerRequirements.missing,
+  } as const;
+  const inviteRewards = {
+    available: inviteRewardsMode !== 'off' && inviteRequirements.available,
+    mode: inviteRewardsMode,
+    missing: inviteRewardsMode === 'off' ? [] : inviteRequirements.missing,
+  } as const;
   const creditCommerce = kaiCreditCommerceCapability({
-    verifiedTopupProviderAvailable: alipayTopup.available || wechat.available,
+    verifiedTopupProviderAvailable: alipayTopup.available || wechat.available || qixiangTopups.available,
     computeProviderAvailable: computeFulfillment.available,
   });
   const push = pushCapability(environment, parsed);
@@ -716,37 +964,76 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     parsed.CLAMAV_PORT && (!Number.isInteger(clamavPort) || clamavPort < 1 || clamavPort > 65535)
       ? ['CLAMAV_PORT(1-65535)']
       : []);
-  const legal = capability(environment, [
+  const legalBase = capability(environment, [
     'LEGAL_ENTITY_NAME', 'UNIFIED_SOCIAL_CREDIT_CODE', 'SUPPORT_EMAIL', 'SUPPORT_PHONE',
-    'PRIVACY_POLICY_URL', 'TERMS_URL', 'INQUIRY_TERMS_URL', 'ICP_FILING', 'APP_FILING',
+    'PRIVACY_POLICY_URL', 'TERMS_URL', 'INQUIRY_TERMS_URL', 'ICP_FILING_STATUS', 'APP_FILING_STATUS',
+    'INTERNET_SERVICE_CLASSIFICATION_STATUS',
   ]);
+  const filingInvariant=(prefix:'ICP'|'APP',status:typeof parsed.ICP_FILING_STATUS,filing:string|undefined,
+    evidenceRef:string|undefined)=>[
+      ...(status==='issued'&&(!filing||!evidenceRef)?[`${prefix}_FILING(issued requires number and evidenceRef)`]:[]),
+      ...(status==='pending'&&(filing||!evidenceRef)?[`${prefix}_FILING(pending requires empty number and evidenceRef)`]:[]),
+      ...(status==='not_obtained'&&(filing||evidenceRef)?[`${prefix}_FILING(not_obtained requires empty number and evidenceRef)`]:[]),
+      ...(status==='exempt_with_legal_evidence'&&(filing||!evidenceRef)
+        ?[`${prefix}_FILING(exempt requires empty number and legal evidenceRef)`]:[]),
+    ];
+  const legal = {
+    ...mergeCapability(legalBase, [
+      ...filingInvariant('ICP',parsed.ICP_FILING_STATUS,parsed.ICP_FILING,parsed.ICP_FILING_EVIDENCE_REF),
+      ...filingInvariant('APP',parsed.APP_FILING_STATUS,parsed.APP_FILING,parsed.APP_FILING_EVIDENCE_REF),
+      ...(parsed.INTERNET_SERVICE_CLASSIFICATION_STATUS==='approved_with_legal_evidence'
+        &&!parsed.INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF
+        ?['INTERNET_SERVICE_CLASSIFICATION(approved requires legal evidenceRef)']:[]),
+      ...(parsed.INTERNET_SERVICE_CLASSIFICATION_STATUS==='not_assessed'
+        &&parsed.INTERNET_SERVICE_CLASSIFICATION_EVIDENCE_REF
+        ?['INTERNET_SERVICE_CLASSIFICATION(not_assessed requires empty evidenceRef)']:[]),
+    ]),
+    publicReleaseBlockers: [
+      ...(['issued','exempt_with_legal_evidence'].includes(parsed.ICP_FILING_STATUS??'')?[]:['ICP_FILING_NOT_APPROVED']),
+      ...(['issued','exempt_with_legal_evidence'].includes(parsed.APP_FILING_STATUS??'')?[]:['APP_FILING_NOT_APPROVED']),
+      ...(parsed.INTERNET_SERVICE_CLASSIFICATION_STATUS==='approved_with_legal_evidence'
+        ?[]:['INTERNET_SERVICE_CLASSIFICATION_REQUIRED']),
+    ],
+  } as const;
   const metricsBase = capability(environment, ['METRICS_BEARER_TOKEN']);
   const observability = mergeCapability(metricsBase,
     parsed.METRICS_BEARER_TOKEN && parsed.METRICS_BEARER_TOKEN.length < 32
       ? ['METRICS_BEARER_TOKEN(>=32 chars)']
       : []);
-  const backupBase = capability(environment, [
-    'BACKUP_ENCRYPTION_KEY', 'BACKUP_KEY_ID', 'BACKUP_LOCAL_DIRECTORY', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION',
-    'BACKUP_S3_BUCKET', 'BACKUP_S3_ACCESS_KEY', 'BACKUP_S3_SECRET_KEY',
-  ]);
+  const localBackupBase = capability(environment, ['BACKUP_ENCRYPTION_KEY', 'BACKUP_KEY_ID', 'BACKUP_LOCAL_DIRECTORY']);
   const backupKey = parsed.BACKUP_ENCRYPTION_KEY?.trim();
   const backupEndpointProtocol = parsed.BACKUP_S3_ENDPOINT
     ? (() => { try { return new URL(parsed.BACKUP_S3_ENDPOINT).protocol; } catch { return 'invalid:'; } })()
     : null;
-  const backup = mergeCapability(backupBase, [
+  const localBackup = mergeCapability(localBackupBase, [
     ...(backupKey && Buffer.from(backupKey, 'base64').length !== 32 ? ['BACKUP_ENCRYPTION_KEY(base64 32 bytes)'] : []),
     ...(parsed.BACKUP_KEY_ID && !/^[A-Za-z0-9._-]{4,64}$/u.test(parsed.BACKUP_KEY_ID) ? ['BACKUP_KEY_ID(4-64 safe chars)'] : []),
     ...(parsed.BACKUP_LOCAL_DIRECTORY && !isAbsolute(parsed.BACKUP_LOCAL_DIRECTORY) ? ['BACKUP_LOCAL_DIRECTORY(absolute path)'] : []),
+  ]);
+  const offsiteBackup = mergeCapability(localBackup, [
+    ...capability(environment, ['BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_BUCKET',
+      'BACKUP_S3_ACCESS_KEY', 'BACKUP_S3_SECRET_KEY']).missing,
     ...(backupEndpointProtocol && backupEndpointProtocol !== 'https:' && parsed.NODE_ENV === 'production' ? ['BACKUP_S3_ENDPOINT(HTTPS)'] : []),
   ]);
+  const backup = inquiryOnly ? localBackup : offsiteBackup;
   const coreBlockers = [
+    ...profileConfigurationBlockers,
     ...database.missing,
-    ...tokenSecurity.missing,
+    ...accountSecurity.missing,
+    ...(parsed.NODE_ENV === 'production' && parsed.LOCAL_E2E === 'true'
+      ? ['LOCAL_E2E(production forbidden)']
+      : []),
     ...(publicHttps || parsed.NODE_ENV !== 'production' ? [] : ['PUBLIC_ORIGIN(HTTPS)']),
-    ...(parsed.NODE_ENV === 'production' ? kaiOidc.missing : []),
+    ...(parsed.NODE_ENV === 'production' ? kaiResourceAccess.missing : []),
     ...(adminConfiguration.adminAuth.enabled ? adminConfiguration.adminAuth.missing : []),
   ];
-  const serviceBlockers = [
+  const serviceBlockers = inquiryOnly ? [
+    ...coreBlockers,
+    ...(parsed.TRUST_PROXY_HOPS === 1 ? [] : ['TRUST_PROXY_HOPS(exactly 1 for private socket proxy)']),
+    ...observability.missing,
+    ...backup.missing,
+    ...legal.missing,
+  ] : [
     ...coreBlockers,
     ...sms.missing,
     ...push.missing,
@@ -756,11 +1043,29 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...backup.missing,
     ...legal.missing,
   ];
-  const commerceBlockers = [...serviceBlockers, ...creditCommerce.blockers, ...nodeEnrollment.missing];
+  const requestedRewardBlockers = [
+    ...(streamerRewardsMode === 'off' ? [] : streamerRewards.missing),
+    ...(inviteRewardsMode === 'off' ? [] : inviteRewards.missing),
+    ...(legacyCreatorCommissionMode === 'drain' ? legacyCreatorMode.missing : []),
+  ];
+  const honghuanMode=honghuanSupplierCatalogMode(parsed.HONGHUAN_SUPPLIER_CATALOG_MODE);
+  const honghuanSupplierCatalog={mode:honghuanMode,available:honghuanMode!=='off',missing:[]} as const;
+  const commerceBlockers = inquiryOnly ? [
+    ...serviceBlockers,
+    ...(honghuanMode === 'inquiry' ? [] : ['HONGHUAN_SUPPLIER_CATALOG_MODE(inquiry)']),
+    ...legal.publicReleaseBlockers,
+  ] : [
+    ...serviceBlockers, ...creditCommerce.blockers, ...qixiangTopups.blockers, ...qixiangRecovery.blockers,
+    ...nodeEnrollment.missing, ...requestedRewardBlockers,
+    ...(honghuanMode==='off'?[]:honghuanSupplierCatalog.missing),
+    ...legal.publicReleaseBlockers,
+  ];
 
   return {
     ...parsed,
+    mobileApiProfile,
     databaseSsl: parsed.DATABASE_SSL === 'true',
+    localE2E: parsed.LOCAL_E2E === 'true',
     trustedProxy: parsed.TRUST_PROXY_HOPS === 0 ? false : parsed.TRUST_PROXY_HOPS,
     objectStorageForcePathStyle: parsed.OBJECT_STORAGE_FORCE_PATH_STYLE === 'true',
     backupS3ForcePathStyle: parsed.BACKUP_S3_FORCE_PATH_STYLE === 'true',
@@ -775,17 +1080,30 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     adminAuthTtls: adminConfiguration.adminAuthTtls,
     vastPricingPolicy,
     creatorCommissionPolicy,
+    legacyCreatorCommissionMode,
+    streamerRewardsMode,
+    inviteRewardsMode,
+    streamerRewardPolicy,
+    inviteRewardPolicy,
+    qixiangTopupMode:qixiangMode,
+    qixiangRecoveryMode:qixiangRecoveryModeValue,
+    qixiangApprovedMaxCents:qixiangApprovedMax,
+    honghuanSupplierCatalogMode:honghuanMode,
     readiness: {
       coreReady: coreBlockers.length === 0,
       serviceReady: serviceBlockers.length === 0,
+      startupReady: (inquiryOnly ? serviceBlockers : commerceBlockers).length === 0,
       releaseReady: commerceBlockers.length === 0,
       coreBlockers: [...new Set(coreBlockers)],
       serviceBlockers: [...new Set(serviceBlockers)],
+      startupBlockers: [...new Set(inquiryOnly ? serviceBlockers : commerceBlockers)],
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
-        database, tokenSecurity, kaiOidc, adminAuth: adminConfiguration.adminAuth,
-        sms, alipay: alipayTopup, wechat, push, objectStorage, malwareScanning, observability, backup, legal,
-        publicHttps, creditCommerce, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
+        database, accountSecurity, legacyLocalAuth, kaiOidc, kaiResourceAccess, sms, alipay: alipayTopup, wechat, push,
+        objectStorage, malwareScanning, observability, backup, localBackup, offsiteBackup, legal,
+        publicHttps, creditCommerce, qixiangTopups, qixiangRecovery, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
+        legacyCreatorMode, streamerRewards, inviteRewards, honghuanSupplierCatalog,
+        adminAuth: adminConfiguration.adminAuth,
       },
     },
   } as const;

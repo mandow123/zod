@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   heroActionStale: { backgroundColor: colors.amber },
   heroActionText: { color: colors.surface, fontSize: 14, fontWeight: '900' },
   metrics: { flexDirection: 'row', gap: 9, marginVertical: 18 }, metric: { flex: 1, minHeight: 100, padding: 13, justifyContent: 'space-between' },
-  syncNotice: { marginBottom: 12, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, borderColor: '#F0D79A', backgroundColor: '#FFF9E9' },
+  syncNotice: { marginBottom: 12, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, borderColor: '#C9DCF6', backgroundColor: '#F8FBFF' },
   syncNoticeCopy: { flex: 1 }, syncNoticeTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' }, syncNoticeText: { color: colors.muted, fontSize: 10, marginTop: 3 },
   metricValue: { color: colors.ink, fontSize: 25, fontWeight: '900' }, alertValue: { color: colors.red }, metricLabel: { color: colors.muted, fontSize: 10 },
   sectionTitle: { color: colors.ink, fontSize: 21, fontWeight: '900', marginBottom: 12 }, roadmap: { paddingHorizontal: 16, paddingVertical: 7 },

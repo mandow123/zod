@@ -1,7 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../credits/types.js';
+import { CreditLotAllocator } from '../credits/lot-allocator.js';
 import type { VastExternalOrderStatus, VastLaunchConfiguration, VastOffer } from './types.js';
 
 export type VastQuoteRecord = Readonly<{
@@ -86,9 +87,11 @@ const quoteColumns = `id,buyer_subject_id,provider_offer_id::text,configuration,
 const orderColumns = `id,order_number,buyer_subject_id,created_by_user_id,quote_id,client_request_id,payload_digest,
   provider_offer_id::text,provider_request_key::text,provider_contract_id::text,configuration,status,
   total_credit_micros::text,failure_code,reconciliation_deadline_at,provisioning_at,failed_at,created_at,updated_at`;
+const lotDigest = (value: string) => /^(?:[0-9a-f]{64}|[0-9a-f]{128})$/u.test(value)
+  ? value : createHash('sha256').update(value).digest('hex');
 
 export class PostgresVastMarketStore implements VastMarketStore {
-  constructor(private readonly database: Database) {}
+  constructor(private readonly database: Database, private readonly lots = new CreditLotAllocator()) {}
 
   async createQuote(input: VastQuoteRecord) {
     const result = await this.database.query<QuoteRow>(`INSERT INTO vast_external_quotes(id,buyer_subject_id,
@@ -149,21 +152,20 @@ export class PostgresVastMarketStore implements VastMarketStore {
         if (quote?.status === 'active') await client.query(`UPDATE vast_external_quotes SET status='expired' WHERE id=$1`, [quote.id]);
         return { status: 'quote_unavailable' };
       }
-      const accounts = await ensureBuyerAccounts(client,input.buyerSubjectId);
-      const balance = await client.query<{ amount: string }>(`SELECT COALESCE(sum(e.amount_micros)
-        FILTER(WHERE t.status='posted'),0)::text AS amount FROM kai_credit_entries e
-        JOIN kai_credit_transactions t ON t.id=e.transaction_id WHERE e.account_id=$1`, [accounts.available]);
+      await ensureBuyerAccounts(client,input.buyerSubjectId);
       const total = BigInt(quote.total_credit_micros);
-      if (BigInt(balance.rows[0]?.amount ?? '0') < total) return { status: 'insufficient_credits' };
       const transactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,
-        payload_digest,reference_type,reference_id,description,status) VALUES($1,$2,'VAST_ORDER_RESERVE',$3,$4,
-        'order_reservation',$5,'Vast.ai 算力订单预留卡时','pending')`,
-      [transactionId,`subject:${input.buyerSubjectId}`,`vast-order-reserve:${input.id}`,input.payloadDigest,input.id]);
-      await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
-        ($1,$2,$3,$4,'Vast.ai 算力订单预留'),($5,$2,$6,$7,'Vast.ai 算力订单预留')`,
-      [randomUUID(),transactionId,accounts.available,(-total).toString(),randomUUID(),accounts.reserved,total.toString()]);
-      await client.query(`UPDATE kai_credit_transactions SET status='posted',posted_at=$2 WHERE id=$1`, [transactionId,input.now]);
+      const serviceEndsAt = new Date(input.now.getTime() + quote.duration_hours * 60 * 60 * 1000);
+      const reservation = await this.lots.reserveExpiringFefo(client, {
+        subjectId: input.buyerSubjectId, referenceType: 'vast_order', referenceId: input.id,
+        scope: 'VAST_ORDER_RESERVE', amountMicros: total, serviceEndsAt, now: input.now,
+        transactionId, idempotencyOwner: `subject:${input.buyerSubjectId}`,
+        idempotencyKey: `vast-order-reserve:${input.id}`, payloadDigest: lotDigest(input.payloadDigest),
+      });
+      if (reservation.status === 'insufficient_credits' || reservation.status === 'expiry_coverage_insufficient') {
+        return { status: 'insufficient_credits' };
+      }
+      if (reservation.status === 'conflict') throw new Error('VAST_ORDER_LOT_RESERVATION_CONFLICT');
       const inserted = await client.query<OrderRow>(`INSERT INTO vast_external_orders(id,order_number,buyer_subject_id,
         created_by_user_id,quote_id,client_request_id,payload_digest,provider_source,provider_offer_id,
         provider_request_key,configuration,status,total_credit_micros,reservation_transaction_id,reconciliation_deadline_at)
@@ -190,8 +192,9 @@ export class PostgresVastMarketStore implements VastMarketStore {
 
   async markProvisioning(orderId: string, providerContractId: string, now: Date) {
     return this.database.transaction(async (client) => {
-      const orders = await client.query<OrderRow & { capture_transaction_id: string | null }>(`SELECT ${orderColumns},
-        capture_transaction_id::text FROM vast_external_orders WHERE id=$1 FOR UPDATE`, [orderId]);
+      const orders = await client.query<OrderRow & { capture_transaction_id: string | null;
+        reservation_transaction_id: string }>(`SELECT ${orderColumns}, capture_transaction_id::text,
+        reservation_transaction_id::text FROM vast_external_orders WHERE id=$1 FOR UPDATE`, [orderId]);
       const order = orders.rows[0];
       if (!order) throw new Error('VAST_ORDER_NOT_FOUND');
       if (order.status === 'provisioning') {
@@ -203,18 +206,17 @@ export class PostgresVastMarketStore implements VastMarketStore {
       if (!['reserved','pending_reconciliation'].includes(order.status) || order.provider_contract_id) {
         throw new Error('VAST_ORDER_PROVIDER_CONTRACT_CONFLICT');
       }
-      const accounts = await ensureBuyerAccounts(client,order.buyer_subject_id);
       const captureTransactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,
-        payload_digest,reference_type,reference_id,description,status) VALUES($1,$2,'VAST_ORDER_CAPTURE',$3,$4,
-        'order_capture',$5,'Vast.ai 算力订单扣除卡时','pending')`,
-      [captureTransactionId,`subject:${order.buyer_subject_id}`,`vast-order-capture:${order.id}`,order.payload_digest,order.id]);
-      await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
-        ($1,$2,$3,$4,'Vast.ai 算力订单扣除'),($5,$2,$6,$7,'Vast.ai 外部算力清算')`,
-      [randomUUID(),captureTransactionId,accounts.reserved,(-BigInt(order.total_credit_micros)).toString(),randomUUID(),
-        KAI_CREDIT_PLATFORM_ACCOUNTS.clearing,order.total_credit_micros]);
-      await client.query(`UPDATE kai_credit_transactions SET status='posted',posted_at=$2 WHERE id=$1`,
-        [captureTransactionId,now]);
+      const captured = await this.lots.resolveReservation(client, {
+        subjectId: order.buyer_subject_id, referenceType: 'vast_order', referenceId: order.id,
+        reservationTransactionId: order.reservation_transaction_id,
+        totalReservedMicros: BigInt(order.total_credit_micros), capturedMicros: BigInt(order.total_credit_micros),
+        now, transactionId: captureTransactionId, scope: 'VAST_ORDER_CAPTURE', ledgerReferenceType: 'order_capture',
+        idempotencyOwner: `subject:${order.buyer_subject_id}`, idempotencyKey: `vast-order-capture:${order.id}`,
+        payloadDigest: lotDigest(order.payload_digest), counterpartEntries: [{ accountId: KAI_CREDIT_PLATFORM_ACCOUNTS.clearing,
+          amountMicros: BigInt(order.total_credit_micros), memo: 'Vast.ai 外部算力清算' }],
+      });
+      if (captured.status === 'conflict') throw new Error('VAST_ORDER_LOT_CAPTURE_CONFLICT');
       const result = await client.query<OrderRow>(`UPDATE vast_external_orders SET status='provisioning',
         provider_contract_id=$2,capture_transaction_id=$3,provisioning_at=$4,failure_code=NULL,updated_at=$4
         WHERE id=$1 RETURNING ${orderColumns}`, [order.id,providerContractId,captureTransactionId,now]);
@@ -227,22 +229,22 @@ export class PostgresVastMarketStore implements VastMarketStore {
 
   async failAndRelease(orderId: string, failureCode: string, now: Date) {
     return this.database.transaction(async (client) => {
-      const orders = await client.query<OrderRow>(`SELECT ${orderColumns} FROM vast_external_orders WHERE id=$1 FOR UPDATE`, [orderId]);
+      const orders = await client.query<OrderRow & { reservation_transaction_id: string }>(`SELECT ${orderColumns},
+        reservation_transaction_id::text FROM vast_external_orders WHERE id=$1 FOR UPDATE`, [orderId]);
       const order = orders.rows[0];
       if (!order) throw new Error('VAST_ORDER_NOT_FOUND');
       if (order.status === 'failed') return mapOrder(order);
       if (order.status === 'provisioning') throw new Error('VAST_ORDER_ALREADY_PROVISIONING');
-      const accounts = await ensureBuyerAccounts(client,order.buyer_subject_id);
       const transactionId = randomUUID();
-      await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,
-        payload_digest,reference_type,reference_id,description,status) VALUES($1,$2,'VAST_ORDER_RELEASE',$3,$4,
-        'order_release',$5,'Vast.ai 算力订单释放卡时','pending')`,
-      [transactionId,`subject:${order.buyer_subject_id}`,`vast-order-release:${order.id}`,order.payload_digest,order.id]);
-      await client.query(`INSERT INTO kai_credit_entries(id,transaction_id,account_id,amount_micros,memo) VALUES
-        ($1,$2,$3,$4,'Vast.ai 算力订单释放'),($5,$2,$6,$7,'Vast.ai 算力订单释放')`,
-      [randomUUID(),transactionId,accounts.available,order.total_credit_micros,randomUUID(),accounts.reserved,
-        (-BigInt(order.total_credit_micros)).toString()]);
-      await client.query(`UPDATE kai_credit_transactions SET status='posted',posted_at=$2 WHERE id=$1`, [transactionId,now]);
+      const released = await this.lots.resolveReservation(client, {
+        subjectId: order.buyer_subject_id, referenceType: 'vast_order', referenceId: order.id,
+        reservationTransactionId: order.reservation_transaction_id,
+        totalReservedMicros: BigInt(order.total_credit_micros), capturedMicros: 0n, now, transactionId,
+        scope: 'VAST_ORDER_RELEASE', ledgerReferenceType: 'order_release',
+        idempotencyOwner: `subject:${order.buyer_subject_id}`, idempotencyKey: `vast-order-release:${order.id}`,
+        payloadDigest: lotDigest(order.payload_digest), counterpartEntries: [],
+      });
+      if (released.status === 'conflict') throw new Error('VAST_ORDER_LOT_RELEASE_CONFLICT');
       const result = await client.query<OrderRow>(`UPDATE vast_external_orders SET status='failed',failure_code=$2,
         release_transaction_id=$3,failed_at=$4,updated_at=$4 WHERE id=$1 RETURNING ${orderColumns}`,
       [order.id,failureCode,transactionId,now]);

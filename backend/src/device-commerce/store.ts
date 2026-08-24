@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
 import { KAI_CREDIT_PLATFORM_ACCOUNTS } from '../credits/types.js';
+import { CreditLotAllocator } from '../credits/lot-allocator.js';
 import { planSettlementFee, shanghaiPeriodStart } from '../settlement-fees/engine.js';
 import type { FeeTier } from '../settlement-fees/types.js';
 import type { DeviceAsset, DeviceOrder, DeviceOrderStatus, DeviceProduct } from './types.js';
@@ -51,7 +52,7 @@ export type DeviceSettlementResult = {status:'updated'|'replayed';settlement:{or
   settlementTransactionId:string|null;settledAt:Date|null}}|{status:'conflict'|'not_found'|'invalid_state'}|{status:'not_due';availableAt:Date};
 
 export class PostgresDeviceCommerceStore {
-  constructor(private readonly database:Database) {}
+  constructor(private readonly database:Database, private readonly lots = new CreditLotAllocator()) {}
   async listProducts(){ const r=await this.database.query<ProductRow>(`SELECT ${productColumns} FROM physical_device_products ORDER BY created_at,id`); return r.rows.map(product); }
   async getProduct(id:string){ const r=await this.database.query<ProductRow>(`SELECT ${productColumns} FROM physical_device_products WHERE id=$1`,[id]); return r.rows[0]?product(r.rows[0]):null; }
   async activationReadiness(productId:string,supplierSubjectId:string){
@@ -95,8 +96,10 @@ export class PostgresDeviceCommerceStore {
       if(!address.rows[0])return{status:'address_unavailable'};
       if(item.supplierSubjectId===input.buyerSubjectId) return {status:'self_purchase'};
       if(item.inventoryTotal-item.inventoryReserved-item.inventorySold<input.quantity) return {status:'insufficient_stock'};
-      const accounts=await this.ensureBuyerAccounts(client,input.buyerSubjectId); const balances=await this.balance(client,accounts.available);
-      const gross=item.unitCreditMicros*BigInt(input.quantity); if(balances<gross) return {status:'insufficient_credits'};
+      const accounts=await this.ensureBuyerAccounts(client,input.buyerSubjectId);
+      const balances=await this.lots.snapshot(client,input.buyerSubjectId,input.now);
+      const gross=item.unitCreditMicros*BigInt(input.quantity);
+      if(balances.unrestrictedAvailableMicros<gross) return {status:'insufficient_credits'};
       const tx=randomUUID(); await client.query(`INSERT INTO kai_credit_transactions(id,idempotency_owner,scope,idempotency_key,payload_digest,
         reference_type,reference_id,description,status) VALUES($1,$2,'DEVICE_ORDER_RESERVATION',$3,$4,'order_reservation',$5,$6,'pending')`,
       [tx,`subject:${input.buyerSubjectId}`,`device-order-reserve:${input.id}`,input.payloadDigest,input.id,`设备订单 ${input.orderNumber} 卡时预留`]);
@@ -297,8 +300,6 @@ export class PostgresDeviceCommerceStore {
     const r=await client.query<{id:string}>(`SELECT id FROM kai_credit_accounts WHERE subject_id=$1 AND account_kind='supplier_receivable' FOR UPDATE`,[supplier]);if(!r.rows[0])throw new Error('DEVICE_SUPPLIER_ACCOUNT_MISSING');return{buyerReserved:buyerAcc.reserved,supplierReceivable:r.rows[0].id};}
   private async ensureSupplierAccounts(client:PoolClient,supplier:string){for(const kind of ['supplier_earnings_available','supplier_receivable'])await client.query(`INSERT INTO kai_credit_accounts(id,owner_kind,subject_id,code,account_kind,allow_negative)
     VALUES($1,'subject',$2,$3,$4,false) ON CONFLICT(subject_id,account_kind) WHERE subject_id IS NOT NULL DO NOTHING`,[randomUUID(),supplier,`subject:${supplier}:${kind}`,kind]);const r=await client.query<{id:string;account_kind:string}>(`SELECT id,account_kind FROM kai_credit_accounts WHERE subject_id=$1 AND account_kind IN ('supplier_earnings_available','supplier_receivable') ORDER BY id FOR UPDATE`,[supplier]);const supplierEarnings=r.rows.find(x=>x.account_kind==='supplier_earnings_available')?.id,receivable=r.rows.find(x=>x.account_kind==='supplier_receivable')?.id;if(!supplierEarnings||!receivable)throw new Error('DEVICE_SETTLEMENT_ACCOUNTS_MISSING');return{supplierEarnings,receivable};}
-  private async balance(client:PoolClient,id:string){const r=await client.query<{amount:string}>(`SELECT COALESCE(sum(e.amount_micros) FILTER(WHERE t.status='posted'),0)::text amount FROM kai_credit_accounts a
-    LEFT JOIN kai_credit_entries e ON e.account_id=a.id LEFT JOIN kai_credit_transactions t ON t.id=e.transaction_id WHERE a.id=$1 GROUP BY a.id`,[id]);return BigInt(r.rows[0]?.amount??'0');}
   private saveAction(client:PoolClient,input:Parameters<PostgresDeviceCommerceStore['action']>[0],result:string){return client.query(`INSERT INTO physical_device_order_actions(actor_id,client_request_id,order_id,action,payload_digest,result_status)
     VALUES($1,$2,$3,$4,$5,$6)`,[input.actorId,input.clientRequestId,input.orderId,input.action,input.payloadDigest,result]).then(()=>undefined);}
 }

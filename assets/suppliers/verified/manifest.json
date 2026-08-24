@@ -1,0 +1,959 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-23T19:05:15.036Z",
+  "policy": "Fresh fetch only; HTTPS public-network pages and assets; every bundled mapping additionally requires visual approval.",
+  "fetchedIds": [
+    "supplier-quote-20260817-002",
+    "supplier-quote-20260817-003",
+    "supplier-quote-20260817-004",
+    "supplier-quote-20260817-009",
+    "supplier-quote-20260817-018",
+    "supplier-quote-20260817-066",
+    "supplier-quote-20260817-067",
+    "supplier-quote-20260817-070",
+    "supplier-quote-20260817-071",
+    "supplier-quote-20260817-072",
+    "supplier-quote-20260817-073",
+    "supplier-quote-20260817-074",
+    "supplier-quote-20260817-075",
+    "supplier-quote-20260817-076",
+    "supplier-quote-20260817-077",
+    "supplier-quote-20260817-078",
+    "supplier-quote-20260817-079",
+    "supplier-quote-20260817-080",
+    "supplier-quote-20260817-081",
+    "supplier-quote-20260817-083",
+    "supplier-quote-20260817-084",
+    "supplier-quote-20260817-085",
+    "supplier-quote-20260817-086",
+    "supplier-quote-20260817-087",
+    "supplier-quote-20260817-088",
+    "supplier-quote-20260817-090",
+    "supplier-quote-20260817-092",
+    "supplier-quote-20260817-096",
+    "supplier-quote-20260817-097",
+    "supplier-quote-20260817-098",
+    "supplier-quote-20260817-100"
+  ],
+  "approvedIds": [],
+  "results": [
+    {
+      "supplierId": "supplier-quote-20260817-001",
+      "legalName": "阿里巴巴云计算有限公司",
+      "status": "manual_review_rejected",
+      "fetchedAt": "2026-08-23T19:04:51.682Z",
+      "relativePath": null,
+      "manualReviewReason": "visually_corrupted_or_not_recognizable",
+      "officialPage": {
+        "requestUrl": "https://www.aliyun.com/",
+        "finalUrl": "https://www.aliyun.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "9b3861e9d288175db798b5f23fb00ffe79639fea94ff6e896c787b388f813629"
+      },
+      "asset": {
+        "requestUrl": "https://img.alicdn.com/tfs/TB1_ZXuNcfpK1RjSZFOXXa6nFXa-32-32.ico",
+        "finalUrl": "https://img.alicdn.com/tfs/TB1_ZXuNcfpK1RjSZFOXXa6nFXa-32-32.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "a79cc4c0c10ae94fb5d6a56daf3f187b869e32f20a5bba1eaddad36ac3e21328",
+        "pngSha256": "c0484d0bdf14bd71d1fae977749b7af60f116d7fb93aee19977ffc6996c6d6c2",
+        "bytes": 569,
+        "width": 32,
+        "height": 32
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-002",
+      "legalName": "腾讯云计算(北京)有限责任公司",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:51.733Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-002.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://cloud.tencent.com/",
+        "finalUrl": "https://cloud.tencent.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "ec3c5ba75ffec39e502042ddb2d82edfc708df66893e12feeae0818d7c5a48e5"
+      },
+      "asset": {
+        "requestUrl": "https://cloudcache.tencent-cloud.com/qcloud/favicon.ico?t=201902181234",
+        "finalUrl": "https://cloudcache.tencent-cloud.com/qcloud/favicon.ico?t=201902181234",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "5171df10b79863d76d591705e52b93b4c5295e64d874e41fca5ecac351f5f45e",
+        "pngSha256": "5fd576ec40a7682780b2ef3b83f51cf2de41b960cc351c9a40edf951c8a797dd",
+        "bytes": 1190,
+        "width": 32,
+        "height": 32
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-003",
+      "legalName": "华为云计算技术有限公司",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:51.604Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-003.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.huaweicloud.com/",
+        "finalUrl": "https://www.huaweicloud.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "a29e5a682c80ad2abcafa249dde42f20e821fbcab675dc28156a12fed66bc0aa"
+      },
+      "asset": {
+        "requestUrl": "https://www.huaweicloud.com/favicon.ico",
+        "finalUrl": "https://www.huaweicloud.com/favicon.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "f8c39aa1c89bbac2b120a0efc70b6f1240bca9bb61a98ae2cab05d21910bcb15",
+        "pngSha256": "f31c592819a4cd259ce648cfd8838826860391c52fd02a92f0f953a241a07a8a",
+        "bytes": 11253,
+        "width": 96,
+        "height": 96
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-004",
+      "legalName": "优刻得科技股份有限公司",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:51.603Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-004.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.ucloud.cn/",
+        "finalUrl": "https://www.ucloud.cn/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "76dfa84d635f4c5e422db281233ed53b99a37caa6e0a1b1629bc922e24341d26"
+      },
+      "asset": {
+        "requestUrl": "https://www.ucloud.cn/favicon.ico",
+        "finalUrl": "https://www.ucloud.cn/favicon.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "99f49275c5f15cb7400e8b69cbfddcc35a21d583905ec09ca03f5e0fd31e2b3d",
+        "pngSha256": "c0790ed70caf81dc7f90b9c4838f69577e8956d1476cb7eb32857f4eb8d6f4fe",
+        "bytes": 2669,
+        "width": 48,
+        "height": 48
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-009",
+      "legalName": "潞晨科技有限公司",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:51.909Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-009.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.luchentech.com/",
+        "finalUrl": "https://www.luchentech.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "08410a67dfb74c645255721975e2a77e3c7c0e313c9c10e58729cbfcb17febd9"
+      },
+      "asset": {
+        "requestUrl": "https://www.luchentech.com/favicon.ico",
+        "finalUrl": "https://www.luchentech.com/favicon.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "6d72098779458ff04ab227a71c4efd409bef8cef141075e6bc4f58d662ff6982",
+        "pngSha256": "c707e87948a723800135bbfa84630c87a5217b6466d917be214d1a0838d07382",
+        "bytes": 3032,
+        "width": 64,
+        "height": 64
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-018",
+      "legalName": "杭州恒源云科技有限公司",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:51.897Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-018.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.gpushare.com/",
+        "finalUrl": "https://www.gpushare.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "3c4dd332ddb706884388b5fa7841396697f2fb9e182f4652263fcc241f394588"
+      },
+      "asset": {
+        "requestUrl": "https://www.gpushare.com/favicon.ico",
+        "finalUrl": "https://www.gpushare.com/favicon.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "7907d4988358f4e621aa05961f2173cfc69fc2792a242512443567933c0d6c5b",
+        "pngSha256": "b45e2090a9bab04927aa3262ef60be2d82cbd359096c7395f104237a817519e3",
+        "bytes": 1520,
+        "width": 32,
+        "height": 32
+      },
+      "provenance": "same_origin_declared_favicon"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-066",
+      "legalName": "Amazon Web Services (AWS)",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:52.461Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-066.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://aws.amazon.com/",
+        "finalUrl": "https://aws.amazon.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "b0159df7bf787bd63c0892b8276bc7cfa91a93422f001a3effa34a29f3ec8743"
+      },
+      "asset": {
+        "requestUrl": "https://a0.awsstatic.com/libra-css/images/site/touch-icon-ipad-144-smile.png",
+        "finalUrl": "https://a0.awsstatic.com/libra-css/images/site/touch-icon-ipad-144-smile.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "f80d3ec6c5b2adee55267ecfcf2fc4131aa8551a546b7a1971b5e465c05c2403",
+        "pngSha256": "5e01451a5b0fc81f6b721f6da9a424b8f029b279dc6cdfb895fd8b39b14e4f9f",
+        "bytes": 3628,
+        "width": 144,
+        "height": 144
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-067",
+      "legalName": "Microsoft Azure",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:52.794Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-067.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://azure.microsoft.com/",
+        "finalUrl": "https://azure.microsoft.com/en-us",
+        "redirects": [
+          "https://azure.microsoft.com/en-us"
+        ],
+        "contentType": "text/html",
+        "sha256": "aeab330dce411f8d298e6146be8e4a3f7d34a3bedfbbaa9bc6e0a64f9cad22f2"
+      },
+      "asset": {
+        "requestUrl": "https://azure.microsoft.com/favicon.ico?v2",
+        "finalUrl": "https://azure.microsoft.com/favicon.ico?v2",
+        "redirects": [],
+        "contentType": "image/vnd.microsoft.icon",
+        "rawSha256": "90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21",
+        "pngSha256": "d6b62b5e0a134a5cfa17cc78cd7d6f2ee5fa5e8c0277f69b031a82f9f6208970",
+        "bytes": 829,
+        "width": 128,
+        "height": 128
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-068",
+      "legalName": "Google Cloud (GCP)",
+      "status": "unavailable",
+      "error": "fetch failed"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-069",
+      "legalName": "CoreWeave Inc",
+      "status": "unavailable",
+      "error": "HTTP_403"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-070",
+      "legalName": "Lambda Labs Inc",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:53.355Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-070.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://lambda.ai/",
+        "finalUrl": "https://lambda.ai/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "e50c23d6a215fdc861cebe82377163208e738ddeb018c42fff46b00487661d56"
+      },
+      "asset": {
+        "requestUrl": "https://lambda.ai/hubfs/raw_assets/33/public/@projects/Lambda%20Marketing%20Website/lambda-theme/assets/static/img/apple-touch-icon-180x180.png",
+        "finalUrl": "https://lambda.ai/hubfs/raw_assets/33/public/@projects/Lambda%20Marketing%20Website/lambda-theme/assets/static/img/apple-touch-icon-180x180.png",
+        "redirects": [],
+        "contentType": "image/webp",
+        "rawSha256": "4d104dd27ad8154ad92352613f02179bfb8f6d349ef2bc70f01f596615203e8d",
+        "pngSha256": "3a6ac449c0e715bd2039750604b06d91b29cfb8dec6e077b85be7ae137d6053a",
+        "bytes": 4415,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-071",
+      "legalName": "RunPod Inc",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:04:53.183Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-071.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.runpod.io/",
+        "finalUrl": "https://www.runpod.io/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "37c414a7d0529041ee42224a3aa86ea9e2c45da99706c3203d7a9a0db9bfb2c0"
+      },
+      "asset": {
+        "requestUrl": "https://cdn.prod.website-files.com/69ce570adca53340abab8376/69e08b4ced16e020149fc61d_favicon_www_runpod_io_256x256.png",
+        "finalUrl": "https://cdn.prod.website-files.com/69ce570adca53340abab8376/69e08b4ced16e020149fc61d_favicon_www_runpod_io_256x256.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "633d808bb55ef6e093c91a6ab1c0aad340f83ba71fb66fd72245d39f9c53418a",
+        "pngSha256": "00f3c1d0a80842fc324c198343402ac901f6c44f98d595a500d4473e876e7c60",
+        "bytes": 5028,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-072",
+      "legalName": "Vast.ai",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:02.623Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-072.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://vast.ai/",
+        "finalUrl": "https://vast.ai/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "e8bf5b8f524e01b8ad6b1cecdcb4067e480586c306749f4f473bb1da2459b8bc"
+      },
+      "asset": {
+        "requestUrl": "https://vast.ai/icon.png",
+        "finalUrl": "https://vast.ai/icon.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "d07ec54f17f26b5c7882f0ba3cdaef4f58f5ecc02d951d053bbad61ab04ef0aa",
+        "pngSha256": "e2afb40910d16d147bd4b9abeaccb2d69fe728c4443a30ed8ffd992de935c184",
+        "bytes": 7548,
+        "width": 192,
+        "height": 192
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-073",
+      "legalName": "Spheron Network",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:02.668Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-073.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.spheron.network/",
+        "finalUrl": "https://www.spheron.network/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "72ac5241553f65047822e025b55936387eea117c07c010e29bf6a0635fb98f19"
+      },
+      "asset": {
+        "requestUrl": "https://www.spheron.network/favicon.ico",
+        "finalUrl": "https://www.spheron.network/favicon.ico",
+        "redirects": [],
+        "contentType": "image/vnd.microsoft.icon",
+        "rawSha256": "a784990c359e5762cd8a7d237d5870b2acabf53af4a517acfd6cc264231d21c0",
+        "pngSha256": "109012b6cf7a09dcc66750db55e27a50bdf56aac1d245e03e47fe718bee737d7",
+        "bytes": 1421,
+        "width": 48,
+        "height": 48
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-074",
+      "legalName": "Nebius Group N.V",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:04.024Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-074.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://nebius.com/",
+        "finalUrl": "https://nebius.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "777bc1f59908819e002d757a68ceda19caa3782506251f64be8f9cf0986458df"
+      },
+      "asset": {
+        "requestUrl": "https://nebius.com/favicon/apple-touch-icon.png",
+        "finalUrl": "https://nebius.com/favicon/apple-touch-icon.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "a1069a947b65451f0fe1ae23dac24b9eab4e17b9cd761c368faebc46a2807ae6",
+        "pngSha256": "0d4e20b08e0e653d527ab1c0853863c7b4020c77294c153cac61502586787185",
+        "bytes": 3232,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-075",
+      "legalName": "FluidStack",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:02.721Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-075.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.fluidstack.io/",
+        "finalUrl": "https://fluidstack.io/",
+        "redirects": [
+          "https://fluidstack.io/"
+        ],
+        "contentType": "text/html",
+        "sha256": "d51994dc103397eabf4a1db8ae7269977bbed7830990e0104c806478507ce4b3"
+      },
+      "asset": {
+        "requestUrl": "https://fluidstack.io/favicon.ico?favicon.0x3dzn~oxb6tn.ico",
+        "finalUrl": "https://fluidstack.io/favicon.ico?favicon.0x3dzn~oxb6tn.ico",
+        "redirects": [],
+        "contentType": "image/vnd.microsoft.icon",
+        "rawSha256": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932",
+        "pngSha256": "7cf7390cf119dcfd24b21ac8719dbe9854c32ef33666b1f6e03c5167ed8adfe1",
+        "bytes": 8305,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-076",
+      "legalName": "JarvisLabs AI",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:02.449Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-076.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://jarvislabs.ai/",
+        "finalUrl": "https://jarvislabs.ai/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "7ae4f92c321727f4522702236fd72f5dd74525ca599a89871b1c63834c875ea9"
+      },
+      "asset": {
+        "requestUrl": "https://jarvislabs.ai/img/jarvislabs-app-icon.png?v=4",
+        "finalUrl": "https://jarvislabs.ai/img/jarvislabs-app-icon.png?v=4",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "724cb4be89e6fccfad7f38bb73549c73dfb836dc2ce0f1956c95c5ceeac8d2ea",
+        "pngSha256": "ae57b041bf49193ed166fbc808d62a24bc3a714beba3661b3b121079f3d81c24",
+        "bytes": 138021,
+        "width": 512,
+        "height": 512
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-077",
+      "legalName": "Theta EdgeCloud",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:03.123Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-077.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.thetaedgecloud.com/",
+        "finalUrl": "https://www.thetaedgecloud.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "2064245e42f25f7f13afcae1c7cb93d641a928b398e7f05576f6da50f351cb64"
+      },
+      "asset": {
+        "requestUrl": "https://www.thetaedgecloud.com/logo192.png",
+        "finalUrl": "https://www.thetaedgecloud.com/logo192.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "cc70afa5ae87c3f3891071d13bd3eb43a086e0e02d3e11cee30531ce48eb0e60",
+        "pngSha256": "c6c0fde82d5d96ef59a15f2fec4bee4a3bea9251f418a9650997a583c7094057",
+        "bytes": 19396,
+        "width": 192,
+        "height": 192
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-078",
+      "legalName": "Hyperstack",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:05.648Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-078.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.hyperstack.cloud/",
+        "finalUrl": "https://www.hyperstack.cloud/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "25cb5dbf79f208372b44985c35f883b06887dc92502e6264c4e8d1cabc0d83df"
+      },
+      "asset": {
+        "requestUrl": "https://www.hyperstack.cloud/hubfs/hyperstack_2025/hyperstack_Fav_Icon.webp",
+        "finalUrl": "https://www.hyperstack.cloud/hubfs/hyperstack_2025/hyperstack_Fav_Icon.webp",
+        "redirects": [],
+        "contentType": "image/webp",
+        "rawSha256": "8ad592664c4a0a93684daa06b9c2651be563c46badc136f6488683fe70111029",
+        "pngSha256": "47b55d6698187fdb780c54b9e751b68c860f81ff5cb83b6f485d429119b1c397",
+        "bytes": 2656,
+        "width": 48,
+        "height": 48
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-079",
+      "legalName": "Impossible Cloud",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:05.347Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-079.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.impossiblecloud.com/",
+        "finalUrl": "https://www.impossiblecloud.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "b331e396faedca2094c94f0c059447df7e53d8e9f43c31413304a9ca0d4cd974"
+      },
+      "asset": {
+        "requestUrl": "https://cdn.prod.website-files.com/68c131eb11585667f0c266dc/68e3de664c550002b9995e2c_Impossible%20Cloud%20Settings.png",
+        "finalUrl": "https://cdn.prod.website-files.com/68c131eb11585667f0c266dc/68e3de664c550002b9995e2c_Impossible%20Cloud%20Settings.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "98e32160662938593faf609f966213dfa69ff4c4473adcbf1c55931af401c546",
+        "pngSha256": "1d14c46c8d720ffcbf79e5c37f6c875bd59be5c15210b777ee0a9a4696c9bc25",
+        "bytes": 51377,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-080",
+      "legalName": "Oblivus Cloud",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:06.317Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-080.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://oblivus.com/",
+        "finalUrl": "https://oblivus.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "0bd0bec1d32f56de163ac09f803dd5383a2d4db507c1446713ac0989fcf80df8"
+      },
+      "asset": {
+        "requestUrl": "https://oblivus.com/assets/img/meta/favicon.webp",
+        "finalUrl": "https://oblivus.com/assets/img/meta/favicon.webp",
+        "redirects": [],
+        "contentType": "image/webp",
+        "rawSha256": "8143ead1ca37357974377bbd022b6cbd5e66d1bfb06902f2bc4aa541f92a7a71",
+        "pngSha256": "130602140bac5c2caeacd46ad6c66b23a35dd5cb66c33422f284fc84f6047a1d",
+        "bytes": 74051,
+        "width": 480,
+        "height": 480
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-081",
+      "legalName": "Latitude.sh",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:04.337Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-081.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.latitude.sh/",
+        "finalUrl": "https://www.latitude.sh/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "52bd499e1b5d172d170bf85356727024126679e855cdabe1bcf53916607ac3dd"
+      },
+      "asset": {
+        "requestUrl": "https://www.latitude.sh/apple-touch-icon.png",
+        "finalUrl": "https://www.latitude.sh/apple-touch-icon.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "7b9854ec53d664677a8ff86669150cb36aebb15b4efda131b8f9f7c6306769f2",
+        "pngSha256": "94276b6522596d39c273fbddf77bf56ac73f2b4ba31c945421c8f135be2028fb",
+        "bytes": 5194,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-082",
+      "legalName": "Thunder Compute",
+      "status": "unavailable",
+      "error": "https://www.thundercompute.com/apple-icon.svg:HTTP_404 | https://www.thundercompute.com/icon.svg:Command failed: /usr/bin/sips -s format png /var/folders/z6/gmxj3mpd13b_t31zmt06zkqw0000gn/T/kai-supplier-icons-frxLkx/supplier-quote-20260817-082.raw --out /var/folders/z6/gmxj3mpd13b_t31zmt06zkqw0000gn/T/kai-supplier-icons-frxLkx/supplier-quote-20260817-082.png\nError: Cannot extract image from file.\nError 13: an unknown error occurred\nTry 'sips --help' for help using this tool\n | https://www.thunde"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-083",
+      "legalName": "Crusoe Energy",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:05.447Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-083.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.crusoe.ai/",
+        "finalUrl": "https://www.crusoe.ai/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "816cddc10f7a5815849d5eea0299a17dc843032dad4aa842631fa34d95186a53"
+      },
+      "asset": {
+        "requestUrl": "https://cdn.prod.website-files.com/6855c1aa175582ee23e0aa19/68934b7ef165ad996914d921_Webclip.png",
+        "finalUrl": "https://cdn.prod.website-files.com/6855c1aa175582ee23e0aa19/68934b7ef165ad996914d921_Webclip.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "adb285ac92ad3066d12f12e914aa7e4ce3a5af4361aa503f930038bb3ec251c6",
+        "pngSha256": "c5292e1b0a3078097e8cf66482c9eea7139536fbb2f7c674be20b127842fc3bd",
+        "bytes": 13034,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-084",
+      "legalName": "Gcore",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:09.928Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-084.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://gcore.com/",
+        "finalUrl": "https://gcore.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "bf7964ae741239cc1ce16610e6b998833c44d356a27dfd53d114afdb7b5a52b0"
+      },
+      "asset": {
+        "requestUrl": "https://gcore.com/assets/favicon/favicon-194x194.png",
+        "finalUrl": "https://gcore.com/assets/favicon/favicon-194x194.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "dd65f3d44b37a64cb79d78af233851db41aafd58ea4ceafa5b0d890aef1ab6ab",
+        "pngSha256": "905c897079fada291b5583d1aa3984e253e7e968316c9be0e6c426e36b6bc06f",
+        "bytes": 7940,
+        "width": 194,
+        "height": 194
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-085",
+      "legalName": "OVHcloud",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:10.601Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-085.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.ovhcloud.com/",
+        "finalUrl": "https://www.ovhcloud.com/en/",
+        "redirects": [
+          "https://www.ovhcloud.com/en/"
+        ],
+        "contentType": "text/html",
+        "sha256": "4de414471a5511223f943106b3f42fc1df69f655e688726b28c32c8efddf89d1"
+      },
+      "asset": {
+        "requestUrl": "https://www.ovhcloud.com/favicon.ico",
+        "finalUrl": "https://www.ovhcloud.com/favicon.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "e5e493e663c475420b72a01ba310bdb59844594c55f573ca2a715c9f5b2e6aaf",
+        "pngSha256": "b40fe4bc6aedd542fc114d69e7c9dcf2701a68d606dfe8f2193a9698d1368f96",
+        "bytes": 1014,
+        "width": 32,
+        "height": 32
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-086",
+      "legalName": "Hetzner",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:09.641Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-086.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.hetzner.com/",
+        "finalUrl": "https://www.hetzner.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "b640ea7159c15fc6a5683a81d687033a9c453a2ab6806f54962c11e62b07076b"
+      },
+      "asset": {
+        "requestUrl": "https://www.hetzner.com/_resources/themes/hetzner/images/favicons/android-icon-192x192.png",
+        "finalUrl": "https://www.hetzner.com/_resources/themes/hetzner/images/favicons/android-icon-192x192.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "897187cc02d363f3685e74a7b517d8e0e3f1e382ab1c42c9e00771969294f242",
+        "pngSha256": "7a877445a01d5916fbf487453ebdf6846907775b5476be03ec5f7d3db092e34b",
+        "bytes": 1646,
+        "width": 192,
+        "height": 192
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-087",
+      "legalName": "Equinix",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:08.911Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-087.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.equinix.com/",
+        "finalUrl": "https://www.equinix.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "948cb3b41a22abdf60a17b102d90e83e06cd906b0b2e600cd90eb8db38168308"
+      },
+      "asset": {
+        "requestUrl": "https://www.equinix.com/etc.clientlibs/eqxcorp/clientlibs/clientlibs-resources/resources/favicon-228.png",
+        "finalUrl": "https://www.equinix.com/etc.clientlibs/eqxcorp/clientlibs/clientlibs-resources/resources/favicon-228.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "a26851caf64bea2262456020c54bc7d9feec79e41fbaeb06427e09e8a395c3f5",
+        "pngSha256": "f208f0ee0314a63e85b6cb004d48b813a50d1a3e3e0e67cd168098131a54f688",
+        "bytes": 3768,
+        "width": 228,
+        "height": 228
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-088",
+      "legalName": "DigitalOcean",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:09.714Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-088.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.digitalocean.com/",
+        "finalUrl": "https://www.digitalocean.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "8f3e62b33e3ce478f97e042050c22733f879f59b3a84f7e190570c36c6d2f5ad"
+      },
+      "asset": {
+        "requestUrl": "https://www.digitalocean.com/_next/static/media/apple-touch-icon.9537f22a.png",
+        "finalUrl": "https://www.digitalocean.com/_next/static/media/apple-touch-icon.9537f22a.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "6cc0fbb307c7fa878642b68b5ebdd6babf55ed19d015bb33d98c6cf78381be29",
+        "pngSha256": "f1abb294469d11110b70fe7465be55d66c6ecf05d7052ae81702b5bd3d616985",
+        "bytes": 4344,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-089",
+      "legalName": "Vultr",
+      "status": "unavailable",
+      "error": "HTTP_403"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-090",
+      "legalName": "Linode (Akamai)",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:11.357Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-090.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.linode.com/",
+        "finalUrl": "https://www.linode.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "c13d1b9a6523a20e1421a6c3c18400ada47891e2013184807b66994c5fb60c37"
+      },
+      "asset": {
+        "requestUrl": "https://assets.linode.com/icons/favicon-194x194.png",
+        "finalUrl": "https://assets.linode.com/icons/favicon-194x194.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "868678eca1b4522da26e8d385442c0f14fad539365d4545e4b43437c30347902",
+        "pngSha256": "c1ef033faee61517c46367782589bd41eb3a68902766294ad642ad7b795f0daa",
+        "bytes": 5421,
+        "width": 194,
+        "height": 194
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-091",
+      "legalName": "Scaleway",
+      "status": "unavailable",
+      "error": "HTTP_403"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-092",
+      "legalName": "Paperspace",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:11.606Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-092.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.paperspace.com/",
+        "finalUrl": "https://www.paperspace.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "b68a96650a09ba702b4ac618d000aaea1bdd852211f137eca54bfe01af3ae354"
+      },
+      "asset": {
+        "requestUrl": "https://cdn.prod.website-files.com/5db99670374d1d829291af4f/66e9b9e0cd2da80a84ae9ba7_DO_Bug_Black_Circle_256_256.webp",
+        "finalUrl": "https://cdn.prod.website-files.com/5db99670374d1d829291af4f/66e9b9e0cd2da80a84ae9ba7_DO_Bug_Black_Circle_256_256.webp",
+        "redirects": [],
+        "contentType": "image/webp",
+        "rawSha256": "fc596d8ce46ea426e4b6b0d27229a2a352e9f1f0483fb2aca542ad0f9948d4ce",
+        "pngSha256": "e16e5b62c071638d4f6c6b988d913a4740885d628f3a5c9e99e1ca137eed4fa6",
+        "bytes": 8756,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-093",
+      "legalName": "Genesis Cloud",
+      "status": "unavailable",
+      "error": "HTTP_404"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-095",
+      "legalName": "Nimbix",
+      "status": "unavailable",
+      "error": "fetch failed"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-096",
+      "legalName": "Sabey Data Centers",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:12.757Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-096.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://sabeydatacenters.com/",
+        "finalUrl": "https://sabeydatacenters.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "beb0db25460f15baa6256d3bbae0fec1202c113136b5f398d29082c7d4b17653"
+      },
+      "asset": {
+        "requestUrl": "https://sabeydatacenters.com/dist/img/meta/logo-mark-48x48.ico",
+        "finalUrl": "https://sabeydatacenters.com/dist/img/meta/logo-mark-48x48.ico",
+        "redirects": [],
+        "contentType": "image/x-icon",
+        "rawSha256": "206cf8da153059003b07d1acfd7f4aba467a7981b195a0d39cfc30edb561fee5",
+        "pngSha256": "7325b4dfec3d0fc519e2d4442b7a4b5b639c59071e7c364bf0dd9a409f466e3b",
+        "bytes": 22065,
+        "width": 256,
+        "height": 256
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-097",
+      "legalName": "Civo",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:14.338Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-097.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.civo.com/",
+        "finalUrl": "https://www.civo.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "a12ce179b968965e14558800941fd2368765120d1f69118d338cf3e6acfff905"
+      },
+      "asset": {
+        "requestUrl": "https://www.civo.com/assets-rebrand/favicons/apple-touch-icon.png",
+        "finalUrl": "https://www.civo.com/assets-rebrand/favicons/apple-touch-icon.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "17c516ac111f20a29fa3a57f9e13857b0f51ba5b607fe11e2ca949babb1e09f3",
+        "pngSha256": "fc34c803020c5f08d53d99adc7832f3da6bbbaf429d3490bbc157b1a3582ed16",
+        "bytes": 3025,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-098",
+      "legalName": "CloudSigma",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:15.036Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-098.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.cloudsigma.com/",
+        "finalUrl": "https://www.cloudsigma.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "e26f6f80b52e009a280ad2c3c104540cca0b7af8baa20dcd277d1ceaaeb1caa1"
+      },
+      "asset": {
+        "requestUrl": "https://www.cloudsigma.com/images/favicon.ico",
+        "finalUrl": "https://www.cloudsigma.com/images/favicon.ico",
+        "redirects": [],
+        "contentType": "image/vnd.microsoft.icon",
+        "rawSha256": "2897ade256db825b2fdc6b4f9022a42c449b9272f1580c35480efc7aef3c869e",
+        "pngSha256": "af9c3b9317f57c241d8b8ea31239a3a7bc96ef7c3253181288c15edd1c6b111f",
+        "bytes": 29059,
+        "width": 150,
+        "height": 150
+      },
+      "provenance": "referenced_by_official_https_page"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-099",
+      "legalName": "UpCloud",
+      "status": "unavailable",
+      "error": "HTTP_403"
+    },
+    {
+      "supplierId": "supplier-quote-20260817-100",
+      "legalName": "Exoscale",
+      "status": "fetched_pending_visual_review",
+      "fetchedAt": "2026-08-23T19:05:13.877Z",
+      "relativePath": "assets/suppliers/verified/supplier-quote-20260817-100.png",
+      "manualReviewReason": null,
+      "officialPage": {
+        "requestUrl": "https://www.exoscale.com/",
+        "finalUrl": "https://www.exoscale.com/",
+        "redirects": [],
+        "contentType": "text/html",
+        "sha256": "c93993d0811e669b2a326a41537d355fff28013130f104620cb62f6a8031b3b4"
+      },
+      "asset": {
+        "requestUrl": "https://www.exoscale.com/static/apple-touch-icon-180x180.png",
+        "finalUrl": "https://www.exoscale.com/static/apple-touch-icon-180x180.png",
+        "redirects": [],
+        "contentType": "image/png",
+        "rawSha256": "6bfd21350a1958f7a0c633ccbbe1933f76997cc0561f0c33ee24be0f57251a0a",
+        "pngSha256": "5e7e9ecc8a65d10cae87649c15ac17b7b6fa2f14f2bd4c8b2e5045c2d6ba6c85",
+        "bytes": 1673,
+        "width": 180,
+        "height": 180
+      },
+      "provenance": "referenced_by_official_https_page"
+    }
+  ]
+}

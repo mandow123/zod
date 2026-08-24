@@ -27,6 +27,7 @@ import { ResourceEvidenceService } from './resource-evidence/service.js';
 import { ResourceEvidenceScanStore } from './resource-evidence/scan-store.js';
 import { CreditLedgerService } from './credits/service.js';
 import { PostgresCreditLedgerStore } from './credits/store.js';
+import { PostgresCreditBalanceSnapshotReader } from './credits/lot-allocator.js';
 import { createPaymentProviders } from './payment/providers.js';
 import { CreditTopupService } from './topups/service.js';
 import { PostgresCreditTopupStore } from './topups/store.js';
@@ -44,6 +45,7 @@ import { NodeEnrollmentStore } from './node-enrollment/store.js';
 import { NodeEnrollmentService } from './node-enrollment/service.js';
 import { PostgresKaiIdentityStore } from './account/kai-identity-store.js';
 import { KaiOidcBroker } from './account/kai-oidc.js';
+import { createKaiResourceAccessAuthenticator } from './account/kai-access.js';
 import { PostgresCreditPayoutStore } from './payouts/store.js';
 import { CreditPayoutService } from './payouts/service.js';
 import { PostgresDeviceCommerceStore } from './device-commerce/store.js';
@@ -78,90 +80,125 @@ import { PostgresAdminP0Store } from './admin/p0-store.js';
 import { AdminP0Service } from './admin/p0-service.js';
 import { KaiOidcClient } from './identity/kai-oidc-client.js';
 import { KaiIdTokenVerifier } from './identity/kai-id-token-verifier.js';
+import { PostgresSupplierInquiryCatalogStore } from './supplier-inquiry-catalog/store.js';
+import { SupplierInquiryCatalogService } from './supplier-inquiry-catalog/service.js';
+import { PostgresSupplierQuoteDirectoryStore } from './supplier-quote-directory/store.js';
+import { SupplierQuoteDirectoryService } from './supplier-quote-directory/service.js';
+import { QixiangProvider } from './payment/qixiang-provider.js';
+import {
+  loadQixiangCheckoutKey, loadQixiangGatePublicKey, loadQixiangGateReceipt, loadQixiangMerchantKey,
+  qixiangCheckoutKeyPath, qixiangGatePublicKeyPath, qixiangMerchantKeyPath,
+} from './payment/qixiang-credential.js';
+import { PostgresQixiangEvidenceStore, QixiangEvidenceService } from './topups/qixiang-evidence.js';
+import { PostgresQixiangTopupStore } from './topups/qixiang-store.js';
+import { QixiangTopupService } from './topups/qixiang-service.js';
+import { QixiangQueryWorker } from './topups/qixiang-worker.js';
+import { CreditLotExpiryWorker, PostgresCreditLotExpiryStore } from './credits/lot-expiry-worker.js';
+import { PostgresQixiangRefundStore } from './topups/qixiang-refund-store.js';
+import { QixiangRefundService } from './topups/qixiang-refund-service.js';
+import { qixiangDatabaseGateState, QixiangProductionGate } from './topups/qixiang-production-gate.js';
+import { mobileRuntimePolicy } from './runtime-profile.js';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
   throw new Error(`Production configuration is unsafe: ${config.readiness.coreBlockers.join(', ')}`);
 }
+const runtimePolicy = mobileRuntimePolicy(config.mobileApiProfile);
+const commerceRuntime = runtimePolicy.commerceServicesEnabled;
 
 const database = createDatabase(config);
 const adminAuthSettings = adminAuthRuntimeSettings(config);
-const privateObjects = createPrivateObjectStore(config);
-const malwareScanner = createMalwareScanner(config);
-const paymentProviders = createPaymentProviders(config);
+const privateObjects = commerceRuntime ? createPrivateObjectStore(config) : null;
+const malwareScanner = commerceRuntime ? createMalwareScanner(config) : null;
+const paymentProviders = commerceRuntime ? createPaymentProviders(config) : new Map();
 const accountStore = database ? new PostgresAccountStore(database) : undefined;
-const marketStore = database ? new PostgresMarketStore(database) : undefined;
-const listingStore = database ? new PostgresListingAuditStore(database) : undefined;
-const accountService = accountStore && config.readiness.capabilities.tokenSecurity.available
-  ? new AccountService(accountStore, createSmsProvider(config) ?? new UnavailableSmsProvider(), config)
+const marketStore = commerceRuntime && database ? new PostgresMarketStore(database) : undefined;
+const listingStore = commerceRuntime && database ? new PostgresListingAuditStore(database) : undefined;
+const kaiIdentityStore = database ? new PostgresKaiIdentityStore(database) : undefined;
+const resourceAccessAuthenticator = kaiIdentityStore
+  ? createKaiResourceAccessAuthenticator(config, kaiIdentityStore)
   : undefined;
-const kaiOidc = database && accountService && config.readiness.capabilities.kaiOidc.available
-  ? new KaiOidcBroker(new PostgresKaiIdentityStore(database), accountService, config)
+const accountService = accountStore && config.readiness.capabilities.accountSecurity.available
+  ? new AccountService(accountStore, commerceRuntime
+    ? createSmsProvider(config) ?? new UnavailableSmsProvider()
+    : new UnavailableSmsProvider(), config,
+    () => new Date(), resourceAccessAuthenticator ?? undefined)
   : undefined;
-const subjectService = database && accountStore && config.readiness.capabilities.tokenSecurity.available
+const kaiOidc = commerceRuntime && config.NODE_ENV !== 'production' && kaiIdentityStore && accountService
+  && config.readiness.capabilities.kaiOidc.available
+  ? new KaiOidcBroker(kaiIdentityStore, accountService, config)
+  : undefined;
+const subjectService = database && accountStore && config.readiness.capabilities.accountSecurity.available
   ? new SubjectService(new PostgresSubjectStore(database), accountStore, config, listingStore)
   : undefined;
-const marketService = marketStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const marketService = marketStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new MarketService(marketStore, accountStore, config, subjectService)
   : undefined;
-const listingAuditService = listingStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const listingAuditService = listingStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new ListingAuditService(listingStore, accountStore, config, subjectService)
   : undefined;
-const notificationService = database && accountStore && config.readiness.capabilities.tokenSecurity.available
+const notificationService = commerceRuntime && database && accountStore && config.readiness.capabilities.accountSecurity.available
   ? new NotificationService(new PostgresNotificationStore(database), accountStore, config)
   : undefined;
-const pushProvider = createPushProvider(config);
+const pushProvider = commerceRuntime ? createPushProvider(config) : null;
 const operationsService = database && config.readiness.capabilities.observability.available
   ? new OperationsService(new PostgresOperationsStore(database), config)
   : undefined;
-const resourceEvidenceService = database && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const resourceEvidenceService = commerceRuntime && database && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new ResourceEvidenceService(new ResourceEvidenceStore(database), accountStore, subjectService, privateObjects, config)
   : undefined;
-const creditLedgerService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
-  ? new CreditLedgerService(new PostgresCreditLedgerStore(database), subjectService)
+const creditLedgerService = commerceRuntime && database && subjectService && config.readiness.capabilities.accountSecurity.available
+  ? new CreditLedgerService(new PostgresCreditLedgerStore(database), subjectService,
+    new PostgresCreditBalanceSnapshotReader(database))
   : undefined;
-const creditTopupStore = database ? new PostgresCreditTopupStore(database) : undefined;
-const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditTopupStore = commerceRuntime && database ? new PostgresCreditTopupStore(database) : undefined;
+const creditTopupService = creditTopupStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditTopupService(creditTopupStore, accountStore, subjectService, paymentProviders, config)
   : undefined;
-const topupReversalService = database && config.readiness.capabilities.tokenSecurity.available
+const topupReversalService = commerceRuntime && database && config.readiness.capabilities.accountSecurity.available
   ? new TopupReversalService(new PostgresTopupReversalStore(database), config)
   : undefined;
-const creditPayoutService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditPayoutService = commerceRuntime && database && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditPayoutService(new PostgresCreditPayoutStore(database), subjectService, config)
   : undefined;
-const deviceCommerceStore = database ? new PostgresDeviceCommerceStore(database) : undefined;
-const deviceCommerceService = deviceCommerceStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const deviceCommerceStore = commerceRuntime && database ? new PostgresDeviceCommerceStore(database) : undefined;
+const deviceCommerceService = deviceCommerceStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new DeviceCommerceService(deviceCommerceStore, subjectService, config)
   : undefined;
-const shippingAddressService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const shippingAddressService = commerceRuntime && database && subjectService && config.readiness.capabilities.accountSecurity.available
   && config.PII_ENCRYPTION_KEY && config.AUDIT_PEPPER
   ? new ShippingAddressService(new PostgresShippingAddressStore(database), subjectService, config)
   : undefined;
-const creditOrderStore = database ? new PostgresCreditOrderStore(database) : undefined;
-const fulfillmentStore = database ? new PostgresFulfillmentStore(database) : undefined;
-const computeProvider = createComputeProvider(config);
-const fulfillmentService = fulfillmentStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditOrderStore = commerceRuntime && database ? new PostgresCreditOrderStore(database) : undefined;
+const fulfillmentStore = commerceRuntime && database ? new PostgresFulfillmentStore(database) : undefined;
+const computeProvider = commerceRuntime ? createComputeProvider(config) : null;
+const fulfillmentService = fulfillmentStore && subjectService && computeProvider
+  && config.readiness.capabilities.accountSecurity.available
   ? new FulfillmentService(fulfillmentStore, subjectService, computeProvider, config)
   : undefined;
-const creditOrderService = creditOrderStore && subjectService && config.readiness.capabilities.tokenSecurity.available
+const creditOrderService = creditOrderStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new CreditOrderService(creditOrderStore, subjectService, config, undefined, fulfillmentService)
   : undefined;
 const assetPortfolioService = marketStore && deviceCommerceStore && creditOrderStore && subjectService
-  && config.readiness.capabilities.tokenSecurity.available
+  && config.readiness.capabilities.accountSecurity.available
   ? new AssetPortfolioService(marketStore, deviceCommerceStore, creditOrderStore, subjectService)
   : undefined;
-const vastProvider = createVastAiProvider(config);
-const vastMarketService = database && subjectService && config.readiness.capabilities.tokenSecurity.available
+const vastProvider = commerceRuntime ? createVastAiProvider(config) : null;
+const vastMarketService = commerceRuntime && database && subjectService && vastProvider
+  && config.readiness.capabilities.accountSecurity.available
   ? new VastMarketService(new PostgresVastMarketStore(database),subjectService,vastProvider,config.vastPricingPolicy)
   : undefined;
-const creatorCommissionStore=database?new PostgresCreatorCommissionStore(database):undefined;
-const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+const creatorCommissionStore=commerceRuntime&&database?new PostgresCreatorCommissionStore(database):undefined;
+const creatorCommissionService=creatorCommissionStore&&subjectService&&config.readiness.capabilities.accountSecurity.available
   &&config.readiness.capabilities.creatorCommissions.available&&config.CREATOR_REFERRAL_SIGNING_SECRET
   ?new CreatorCommissionService(creatorCommissionStore,subjectService,
-    new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,config.PUBLIC_ORIGIN)
+    new FirstPartyAttributionProvider(config.CREATOR_REFERRAL_SIGNING_SECRET),config.creatorCommissionPolicy,
+    config.PUBLIC_ORIGIN,()=>new Date(),config.legacyCreatorCommissionMode)
   :undefined;
-const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.tokenSecurity.available
+const resourceInquiryService=database&&subjectService&&config.readiness.capabilities.accountSecurity.available
   ?new ResourceInquiryService(new PostgresResourceInquiryStore(database),subjectService,config):undefined;
 const adminSessionStore = database && adminAuthSettings
   ? new PostgresAdminSessionStore(database, {
@@ -184,7 +221,45 @@ const adminAuthService = database && adminAuthSettings && adminSessionStore
   ) : undefined;
 const adminP0Service = database && adminAuthSettings
   ? new AdminP0Service(new PostgresAdminP0Store(database)) : undefined;
-const nodeEnrollmentService = database && accountStore && subjectService
+const supplierInquiryCatalogService=database&&config.CURSOR_SECRET
+  ?new SupplierInquiryCatalogService(new PostgresSupplierInquiryCatalogStore(database),
+    config.honghuanSupplierCatalogMode,config.CURSOR_SECRET):undefined;
+const supplierQuoteDirectoryService=database
+  ?new SupplierQuoteDirectoryService(new PostgresSupplierQuoteDirectoryStore(database)):undefined;
+const qixiangRuntime=commerceRuntime&&database&&subjectService&&config.qixiangRecoveryMode==='on'
+  &&config.readiness.capabilities.qixiangRecovery.available&&config.CREDENTIALS_DIRECTORY&&config.AUDIT_PEPPER
+  ?(()=>{const merchantKey=loadQixiangMerchantKey(qixiangMerchantKeyPath({credentialDirectory:config.CREDENTIALS_DIRECTORY}));
+    const checkoutKey=loadQixiangCheckoutKey(qixiangCheckoutKeyPath({credentialDirectory:config.CREDENTIALS_DIRECTORY}));
+    const productionGate=config.NODE_ENV==='production'?new QixiangProductionGate({
+      receipt:loadQixiangGateReceipt('/var/lib/kai-cloudpay-public-gates/qixiang-production-gate.json'),
+      verificationPublicKeyPem:loadQixiangGatePublicKey(qixiangGatePublicKeyPath(config.CREDENTIALS_DIRECTORY)),
+      environment:process.env,merchantKey,checkoutKey,
+      releaseManifestSha256:createHash('sha256').update(readFileSync(join(process.cwd(),'RELEASE-MANIFEST.json'))).digest('hex'),
+      receiptLoader:()=>loadQixiangGateReceipt('/var/lib/kai-cloudpay-public-gates/qixiang-production-gate.json'),
+      databaseStateLoader:()=>qixiangDatabaseGateState((text,values)=>database.query(text,values)),
+    }):undefined;
+    const provider=new QixiangProvider(merchantKey,config.AUDIT_PEPPER!);
+    const store=new PostgresQixiangTopupStore(database);
+    const evidence=new QixiangEvidenceService(new PostgresQixiangEvidenceStore(database),config);
+    return{checkoutKey,provider,store,productionGate,service:new QixiangTopupService(store,subjectService,provider,evidence,checkoutKey,config,
+      ()=>new Date(),productionGate),refundService:new QixiangRefundService(new PostgresQixiangRefundStore(database),provider,config,
+      ()=>new Date(),productionGate)};})()
+  :undefined;
+const qixiangStartupGate=qixiangRuntime?.productionGate?await qixiangRuntime.productionGate.requireStartup():null;
+const qixiangBootstrapCanary=qixiangStartupGate?.phase==='bootstrap_canary';
+const qixiangBootstrapCanaryTopupId=qixiangBootstrapCanary?qixiangStartupGate.canaryTopupId:null;
+let runtimeWorkerLogger:WorkerLogger|null=null;
+const creditLotExpiryLogger:WorkerLogger={info:(fields,message)=>runtimeWorkerLogger?.info(fields,message),
+  error:(fields,message)=>runtimeWorkerLogger?.error(fields,message)};
+const creditLotExpiryWorker=commerceRuntime&&database
+  ?new CreditLotExpiryWorker(new PostgresCreditLotExpiryStore(database),creditLotExpiryLogger):undefined;
+const qixiangQueryLogger:WorkerLogger={info:(fields,message)=>runtimeWorkerLogger?.info(fields,message),
+  error:(fields,message)=>runtimeWorkerLogger?.error(fields,message)};
+const qixiangQueryWorker=qixiangRuntime
+  ?new QixiangQueryWorker(qixiangRuntime.store,qixiangRuntime.provider,config.AUDIT_PEPPER!,qixiangQueryLogger,
+    15_000,()=>new Date(),qixiangBootstrapCanaryTopupId)
+  :undefined;
+const nodeEnrollmentService = commerceRuntime && database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER
   ? new NodeEnrollmentService(new NodeEnrollmentStore(database,
     config.NODE_GPU_FINGERPRINT_PEPPER!, config.NODE_CLAIM_TOKEN_PEPPER!, config.NODE_CLAIM_TOKEN_ENCRYPTION_KEY!,
@@ -219,69 +294,78 @@ const app = await buildApp({
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
   ...(vastMarketService ? { vastMarketService } : {}),
   ...(creatorCommissionService ? { creatorCommissionService } : {}),
+  ...(supplierInquiryCatalogService ? { supplierInquiryCatalogService } : {}),
+  ...(supplierQuoteDirectoryService ? { supplierQuoteDirectoryService } : {}),
   ...(resourceInquiryService ? { resourceInquiryService } : {}),
   ...(adminAuthService && adminAuthSettings ? {
     adminAuthService,
     adminAuthSettings,
     ...(adminP0Service ? { adminP0Service } : {}),
   } : {}),
+  ...(qixiangRuntime ? { qixiangTopupService:qixiangRuntime.service } : {}),
+  ...(qixiangRuntime ? { qixiangRefundService:qixiangRuntime.refundService } : {}),
+  ...(qixiangBootstrapCanary?{qixiangBootstrapCanary:true,qixiangBootstrapCanaryTopupId}:{}),
+  ...(creditLotExpiryWorker?{creditLotExpiryHealth:()=>creditLotExpiryWorker.health()}:{}),
+  ...(qixiangQueryWorker?{qixiangQueryWorkerHealth:()=>qixiangQueryWorker.health()}:{}),
+  ...(qixiangRuntime?{qixiangNewTopupsAvailable:async()=>config.qixiangTopupMode==='on'
+    &&(Boolean(qixiangBootstrapCanary)||Boolean(creditLotExpiryWorker?.health().ready))
+    &&Boolean((await qixiangQueryWorker?.health())?.ready)}:{}),
 });
+runtimeWorkerLogger=app.log as WorkerLogger;
 const adminSessionMaintenance = adminSessionStore
   ? new AdminSessionMaintenance(adminSessionStore, {
     logger: { error: (event) => app.log.error(event, 'administrator session registry cleanup failed') },
   }) : undefined;
-const vastReconciliationWorker = vastMarketService && vastProvider.available
+const vastReconciliationWorker = commerceRuntime && vastMarketService && vastProvider?.available
   ? new VastReconciliationWorker(vastMarketService,app.log as WorkerLogger)
   : undefined;
-const creatorCommissionWorker=creatorCommissionStore&&config.creatorCommissionPolicy
-  &&config.readiness.capabilities.creatorCommissions.available
+const creatorCommissionWorker=commerceRuntime&&creatorCommissionStore&&config.creatorCommissionPolicy
+  &&config.legacyCreatorCommissionMode==='drain'&&config.readiness.capabilities.creatorCommissions.available
   ?new CreatorCommissionWorker(creatorCommissionStore,config.creatorCommissionPolicy.refundObservationDays,app.log as WorkerLogger)
   :undefined;
-const resourceInquiryExpiryWorker=resourceInquiryService
+const resourceInquiryExpiryWorker=commerceRuntime&&resourceInquiryService
   ?new ResourceInquiryExpiryWorker(resourceInquiryService,app.log as WorkerLogger):undefined;
-const topupRecoveryWorker = database && creditTopupStore && paymentProviders.size > 0
+const topupRecoveryWorker = commerceRuntime && database && creditTopupStore && paymentProviders.size > 0
   ? new TopupRecoveryWorker(new PostgresTopupRecoveryStore(database), creditTopupStore, paymentProviders, app.log as WorkerLogger)
   : undefined;
-const creditOrderExpiryWorker = creditOrderStore
+const creditOrderExpiryWorker = commerceRuntime && creditOrderStore
   ? new CreditOrderExpiryWorker(creditOrderStore, app.log as WorkerLogger)
   : undefined;
-const creditSupplierSettlementWorker = creditOrderStore
+const creditSupplierSettlementWorker = commerceRuntime && creditOrderStore
   ? new CreditSupplierSettlementWorker(creditOrderStore, app.log as WorkerLogger)
   : undefined;
-const fulfillmentExpiryWorker = fulfillmentService && computeProvider.available
+const fulfillmentExpiryWorker = commerceRuntime && fulfillmentService && computeProvider?.available
   ? new FulfillmentExpiryWorker(fulfillmentService, app.log as WorkerLogger)
   : undefined;
-const deviceOrderExpiryWorker = deviceCommerceStore
+const deviceOrderExpiryWorker = commerceRuntime && deviceCommerceStore
   ? new DeviceOrderExpiryWorker(deviceCommerceStore, app.log as WorkerLogger)
   : undefined;
-const deviceSettlementWorker = deviceCommerceStore
+const deviceSettlementWorker = commerceRuntime && deviceCommerceStore
   ? new DeviceSettlementWorker(deviceCommerceStore, app.log as WorkerLogger)
   : undefined;
-const resourceEvidenceWorker = database && privateObjects && malwareScanner
+const resourceEvidenceWorker = commerceRuntime && database && privateObjects && malwareScanner
   ? new EvidenceScanWorker(new ResourceEvidenceScanStore(database), privateObjects, malwareScanner, app.log as WorkerLogger)
   : undefined;
-const pushWorker = database && pushProvider && config.readiness.capabilities.tokenSecurity.available
+const pushWorker = commerceRuntime && database && pushProvider && config.readiness.capabilities.accountSecurity.available
   ? (() => {
       const store = new PostgresPushOutboxStore(database);
       return new PushOutboxWorker(store, new PushProcessor(store, pushProvider, config), app.log as WorkerLogger);
     })()
   : undefined;
-const accountDeletionWorker = database && config.readiness.capabilities.tokenSecurity.available
+const accountDeletionWorker = commerceRuntime && database && config.readiness.capabilities.accountSecurity.available
   ? new AccountDeletionWorker(new PostgresAccountDeletionStore(database, config), app.log as WorkerLogger)
   : undefined;
-pushWorker?.start();
-vastReconciliationWorker?.start();
-creatorCommissionWorker?.start();
-resourceInquiryExpiryWorker?.start();
-accountDeletionWorker?.start();
-resourceEvidenceWorker?.start();
-topupRecoveryWorker?.start();
-creditOrderExpiryWorker?.start();
-creditSupplierSettlementWorker?.start();
-fulfillmentExpiryWorker?.start();
-deviceOrderExpiryWorker?.start();
-deviceSettlementWorker?.start();
 adminSessionMaintenance?.start();
+if (commerceRuntime) {
+  if(!qixiangBootstrapCanary){
+    pushWorker?.start();vastReconciliationWorker?.start();creatorCommissionWorker?.start();
+    resourceInquiryExpiryWorker?.start();accountDeletionWorker?.start();resourceEvidenceWorker?.start();
+    topupRecoveryWorker?.start();creditOrderExpiryWorker?.start();creditSupplierSettlementWorker?.start();
+    fulfillmentExpiryWorker?.start();deviceOrderExpiryWorker?.start();deviceSettlementWorker?.start();
+  }
+  qixiangQueryWorker?.start();
+  if(!qixiangBootstrapCanary)creditLotExpiryWorker?.start();
+}
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'graceful shutdown');
@@ -295,6 +379,9 @@ const shutdown = async (signal: string) => {
   await deviceOrderExpiryWorker?.stop();
   await deviceSettlementWorker?.stop();
   adminSessionMaintenance?.stop();
+  await qixiangQueryWorker?.stop();
+  await creditLotExpiryWorker?.stop();
+  qixiangRuntime?.checkoutKey.fill(0);
   vastReconciliationWorker?.stop();
   creatorCommissionWorker?.stop();
   resourceInquiryExpiryWorker?.stop();

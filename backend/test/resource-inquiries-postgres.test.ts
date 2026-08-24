@@ -17,7 +17,7 @@ function adapter(pglite:PGlite):Database{return{health:async()=>true,schemaReadi
   transaction:async<T>(work:(client:PoolClient)=>Promise<T>)=>pglite.transaction(async(transaction:Transaction)=>work({
     query:async(text:string,values?:unknown[])=>pgResult(await transaction.query(text,values))}as unknown as PoolClient)),
   close:()=>pglite.close()}as unknown as Database;}
-async function migrate(pglite:PGlite){for(const name of ['0001_cloudpay_ledger.sql','0016_trading_subjects.sql','0022_kai_credit_double_entry_ledger.sql','0058_resource_inquiries.sql','0059_resource_inquiry_operations.sql'])
+async function migrate(pglite:PGlite){for(const name of ['0001_cloudpay_ledger.sql','0016_trading_subjects.sql','0022_kai_credit_double_entry_ledger.sql','0058_resource_inquiries.sql','0059_resource_inquiry_operations.sql','0062_honghuan_supplier_inquiry_catalog.sql'])
   await pglite.exec(await readFile(fileURLToPath(new URL(`../migrations/${name}`,import.meta.url)),'utf8'));}
 const headers=['序号','公司名称','企业性质','机房所在地','可提供GPU型号','H100单卡时租(元)','H100单卡包月(元)',
   'H200单卡时租(元)','H200单卡包月(元)','B300单卡时租(元)','B300单卡包月(元)','合约要求','网络配置','现货状态','SLA','备注'];

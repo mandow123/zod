@@ -1,0 +1,33 @@
+[Unit]
+Description=Remotely revoke the KAI probe refresh family before deleting its machine-encrypted credential
+Conflicts=cloudpay-mobile-paired-probe.timer cloudpay-mobile-paired-probe.service
+Before=cloudpay-mobile-paired-probe.timer cloudpay-mobile-paired-probe.service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai-cloudpay-probe
+Group=kai-cloudpay-probe
+WorkingDirectory=/opt/kai-cloudpay/current
+RuntimeDirectory=kai-cloudpay-probe
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+LoadCredentialEncrypted=kai-refresh-state:/etc/credstore.encrypted/kai-cloudpay-inquiry-refresh-state
+ExecStartPre=+/usr/bin/node scripts/persist-kai-probe-refresh.mjs --recover
+ExecStartPre=+/usr/bin/node scripts/prepare-kai-probe-revocation.mjs
+ExecStart=/usr/bin/node scripts/revoke-kai-probe-family.mjs
+ExecStartPost=+/usr/bin/node scripts/finalize-kai-probe-revocation.mjs
+ExecStopPost=+/usr/bin/node scripts/persist-kai-probe-refresh.mjs --commit
+TimeoutStartSec=60
+Restart=on-failure
+RestartPreventExitStatus=78
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/etc/credstore.encrypted
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

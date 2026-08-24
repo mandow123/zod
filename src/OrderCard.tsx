@@ -6,24 +6,26 @@ import { colors } from './theme';
 import { creditAmount } from './format';
 
 const statusCopy: Record<CloudPayOrder['status'], { label: string; color: string; background: string }> = {
-  reserved: { label: '已锁定', color: colors.amber, background: '#FFF4D4' },
+  reserved: { label: '已锁定', color: colors.amber, background: colors.primarySoft },
   confirmed: { label: '已确认', color: colors.green, background: colors.greenSoft },
   provisioning: { label: '开通中', color: '#2563A7', background: '#EAF3FF' },
   ready: { label: '可连接', color: '#2563A7', background: '#EAF3FF' },
   in_service: { label: '使用中', color: colors.green, background: colors.greenSoft },
-  acceptance_pending: { label: '待验收', color: colors.amber, background: '#FFF4D4' },
+  acceptance_pending: { label: '待验收', color: colors.amber, background: colors.primarySoft },
   disputed: { label: '处理中', color: colors.red, background: '#FDECEC' },
   accepted: { label: '已验收', color: colors.green, background: colors.greenSoft },
-  release_pending: { label: '待释放', color: colors.amber, background: '#FFF4D4' },
-  refund_pending: { label: '退款中', color: colors.amber, background: '#FFF4D4' },
+  release_pending: { label: '待释放', color: colors.amber, background: colors.primarySoft },
+  refund_pending: { label: '退款中', color: colors.amber, background: colors.primarySoft },
   closed: { label: '已完成', color: colors.muted, background: colors.canvas },
   cancelled: { label: '已取消', color: colors.muted, background: colors.canvas },
   expired: { label: '已失效', color: colors.muted, background: colors.canvas },
   refunded: { label: '已退款', color: colors.green, background: colors.greenSoft },
 };
 
-export function OrderCard({ order, onPress }: Readonly<{ order: CloudPayOrder; onPress: () => void }>) {
-  const status = statusForOrder(order);
+export function OrderCard({ order, onPress, statusLabel }: Readonly<{
+  order: CloudPayOrder; onPress: () => void; statusLabel?: string;
+}>) {
+  const status = { ...statusForOrder(order), ...(statusLabel ? { label: statusLabel } : {}) };
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`查看订单 ${order.orderNumber}`}>
       <Card style={styles.card}>

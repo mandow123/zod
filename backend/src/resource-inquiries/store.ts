@@ -15,45 +15,128 @@ type CandidateRow = QueryResultRow & {
 
 type InquiryRow = QueryResultRow & {
   id: string; inquiry_number: string; subject_id: string; requested_by_user_id: string; status: InquiryStatus;
-  starts_at: Date; ends_at: Date; time_zone: string; confirm_by: Date; gpu_count: number; billing_mode: InquiryBillingMode;
+  starts_at: Date; ends_at: Date; time_zone: string; confirm_by: Date; gpu_count: number|null; billing_mode: InquiryBillingMode;
   allow_substitutes: boolean; max_credit_micros: string; use_case: InquiryUseCase; description: string;
   environment: InquiryEnvironment; network: InquiryNetwork; storage_gib: number; data_region: string;
   terms_version: string; privacy_version: string; inquiry_version: string; accepted_at: Date;
   supplier_subject_id: string | null; cancelled_at: Date | null; capacity_confirmed_at: Date | null;
   expired_at: Date | null; status_message: string | null; version: number; created_at: Date; updated_at: Date;
-  candidate_id: string; model: CatalogCandidate['model']; card_type: string; wide_region: string; modes: string[];
-  candidate_status: 'inquiry_required'; source_observed_at: Date; verified_at: Date | null;
+  candidate_id: string | null; model: CatalogCandidate['model'] | null; card_type: string | null; wide_region: string | null;
+  modes: string[] | null;candidate_status: 'inquiry_required' | null; source_observed_at: Date | null; verified_at: Date | null;
   candidate_supplier_subject_id: string | null; candidate_created_at: Date;
+  supplier_catalog_item_id:string|null;supplier_catalog_version:number|null;requested_quantity:number|null;
+  supplier_snapshot:Record<string,unknown>|null;
+  resource_snapshot:Record<string,unknown>|null;reference_price_snapshot:Record<string,unknown>|null;
+  source_snapshot:Record<string,unknown>|null;
   client_request_id: string; payload_digest: string; cancel_idempotency_key: string | null; cancel_payload_digest: string | null;
 };
 
 type ClarificationRow = QueryResultRow & { id: string; message: string;
   message_kind: InquiryClarification['kind']; created_at: Date; payload_digest?: string };
+type FormalResourceRow=QueryResultRow&{id:string;canonical_id:string;version:number;catalog_kind:'hourly_gpu'|'contract_monthly';
+  title:string;legal_review_required:boolean;spec_snapshot:NonNullable<InquiryRecord['supplierResource']>['specifications'];
+  quantity_unit:'instance'|'server';quantity_min:number;quantity_max:number;quantity_allowed_values:number[]|null;
+  billing_mode:InquiryBillingMode;gpu_count:number|null;reference_hourly_minor:string|null;reference_daily_minor:string|null;
+  reference_monthly_minor:string|null;valid_until:Date;source_observed_at:string|Date;supplier_id:'supplier-shanghai-honghuan';
+  legal_name:'上海鸿欢网络科技有限公司';display_name:'上海鸿欢';
+  disclosure_status:'platform_imported_unverified';logo_https_url:string;logo_version:string;
+  logo_source_sha256:string;logo_authorization_status:string;logo_provenance:string;publication_directive_ref:string;
+  supplier_authorization_evidence_ref:string|null;quote_evidence_sha256:string;quote_evidence_storage_ref:string;
+  quote_evidence_status:string;source_kind:string;source_verification_status:string;source_valid_until:Date;
+  evidence_complete:boolean;item_digest:string;price_digest:string};
+
+const HONGHUAN_ITEM_DIGESTS:Readonly<Record<string,string>>={
+  'gpu-honghuan-a100-sxm4-80gb-1':'43d3b15da7ea6125be30cdb01ee98c28',
+  'gpu-honghuan-a100-sxm4-80gb-2':'db66e5e383aff127cef0a4749d1102d1',
+  'gpu-honghuan-h100-sxm-80gb-1':'3a1b65f04ee25919fc7ad2839c618768',
+  'gpu-honghuan-h100-sxm-80gb-2':'4cefb2195bb5e8009d2f2f45a3505c6f',
+  'gpu-honghuan-h200-nvl-1':'7cd4f3b38a6b1f8af7966912eb2b1c9f',
+  'gpu-honghuan-h200-nvl-2':'4cb5c9b97e2af5ee238ef5d7f715da9b',
+  'gpu-honghuan-b200-179gb-1':'6ecbc2391eab2c5342ceee1a19fcc819',
+  'gpu-honghuan-b200-179gb-2':'8946bc5598b45e1948ce817c83104298',
+  'gpu-honghuan-b200-179gb-4':'6510dc990c70567b5b2ba240cfdf033f',
+  'gpu-honghuan-b300-269gb-1':'962c4b86a12b65792a2af9949e907942',
+  'server-honghuan-b300-monthly-32plus':'135ff67bc633d5f77c9c757e7f6442eb',
+};
+const HONGHUAN_PRICE_DIGESTS:Readonly<Record<string,string>>={
+  'gpu-honghuan-a100-sxm4-80gb-1':'9bc92bdf59077a93c09e436141c54bb5',
+  'gpu-honghuan-a100-sxm4-80gb-2':'e6a091d09329a441666afc1ef6f52ab9',
+  'gpu-honghuan-h100-sxm-80gb-1':'5b08709d3a272e127c4071dbd06925a5',
+  'gpu-honghuan-h100-sxm-80gb-2':'4ffbcc97a92e3aa83c7292d32e326cdf',
+  'gpu-honghuan-h200-nvl-1':'00a1ae9d0aeff303e6d54cb803cadb8b',
+  'gpu-honghuan-h200-nvl-2':'ce462d062283904ba7f2866dddf52c42',
+  'gpu-honghuan-b200-179gb-1':'f36d5f9f1af3cede045078cb02bb652f',
+  'gpu-honghuan-b200-179gb-2':'bd84696f3648c3f876b7f8d51e16bff4',
+  'gpu-honghuan-b200-179gb-4':'0f1d81e7a3da80576a3d3bc25bcdc1a0',
+  'gpu-honghuan-b300-269gb-1':'e4451510a818f3a5076bbd6423e7adb4',
+  'server-honghuan-b300-monthly-32plus':'7978a5cd52a9beecbd879202c1c22fe9',
+};
+const HONGHUAN_ITEM_DIGEST_SQL=`md5(jsonb_build_object('id',i.id,'canonicalId',i.canonical_id,'version',i.version,
+  'supplierId',i.supplier_id,'catalogKind',i.catalog_kind,'title',i.title,'model',i.model,'formFactor',i.form_factor,
+  'memoryGb',i.memory_gb,'gpuCount',i.gpu_count,'specSnapshot',i.spec_snapshot,'quantityUnit',i.quantity_unit,
+  'quantityMin',i.quantity_min,'quantityMax',i.quantity_max,'quantityAllowedValues',i.quantity_allowed_values,
+  'billingMode',i.billing_mode,'billingUnit',i.billing_unit,'referenceHourlyMinor',i.reference_hourly_minor,
+  'referenceDailyMinor',i.reference_daily_minor,'referenceMonthlyMinor',i.reference_monthly_minor,
+  'referenceCurrency',i.reference_currency,'referencePrecision',i.reference_precision,'referenceStatus',i.reference_status,
+  'availabilityStatus',i.availability_status,'deliveryMode',i.delivery_mode,'deliveryLeadTimeValue',i.delivery_lead_time_value,
+  'deliveryLeadTimeUnit',i.delivery_lead_time_unit,'deliveryLeadTimeStatus',i.delivery_lead_time_status,
+  'purchaseMode',i.purchase_mode,'purchasable',i.purchasable,'inventoryCommitment',i.inventory_commitment,
+  'orderCreation',i.order_creation,'inquiryAvailable',i.inquiry_available,'simulation',i.simulation,
+  'legalReviewRequired',i.legal_review_required,'active',i.active)::text)`;
+const HONGHUAN_PRICE_DIGEST_SQL=`md5(jsonb_build_object('catalogItemId',p.catalog_item_id,
+  'sourceCurrency',p.source_currency,'sourceHourlyMinor',p.source_hourly_minor,'sourceDailyMinor',p.source_daily_minor,
+  'sourceMonthlyMinor',p.source_monthly_minor,'listingMultiplierMillis',p.listing_multiplier_millis,
+  'conversionPolicyVersion',p.conversion_policy_version,'settlementFeeApplied',p.settlement_fee_applied,
+  'evidenceSha256',p.evidence_sha256,'evidenceStorageRef',p.evidence_storage_ref,
+  'evidenceStatus',p.evidence_status,'rawLegalTerms',p.raw_legal_terms)::text)`;
+
+type CreateBase=Readonly<{id:string;inquiryNumber:string;subjectId:string;userId:string;startsAt:Date;endsAt:Date;
+  timeZone:string;confirmBy:Date;billingMode:InquiryBillingMode;allowSubstitutes:boolean;maxCreditMicros:bigint;
+  useCase:InquiryUseCase;description:string;environment:InquiryEnvironment;network:InquiryNetwork;storageGiB:number;
+  dataRegion:string;termsVersion:string;privacyVersion:string;inquiryVersion:string;idempotencyKey:string;
+  payloadDigest:string;ipHash:string;requestId:string;now:Date}>;
+export type ResourceInquiryCreateInput=CreateBase&(
+  Readonly<{candidateId:string;gpuCount:number}>|
+  Readonly<{supplierResourceId:string;supplierResourceVersion:number;quantity:number}>
+);
 
 const inquirySelect = `i.id,i.inquiry_number,i.subject_id,i.requested_by_user_id,i.status,i.starts_at,i.ends_at,
   i.time_zone,i.confirm_by,i.gpu_count,i.billing_mode,i.allow_substitutes,i.max_credit_micros::text,
   i.use_case,i.description,i.environment,i.network,i.storage_gib,i.data_region,i.terms_version,i.privacy_version,
   i.inquiry_version,i.created_at AS accepted_at,i.supplier_subject_id,i.cancelled_at,i.capacity_confirmed_at,
   i.expired_at,i.status_message,i.version,i.created_at,i.updated_at,i.client_request_id,
-  i.payload_digest,i.cancel_idempotency_key,i.cancel_payload_digest,c.id AS candidate_id,c.model,c.card_type,
+  i.payload_digest,i.cancel_idempotency_key,i.cancel_payload_digest,i.supplier_catalog_item_id,
+  i.supplier_catalog_version,i.requested_quantity,i.supplier_snapshot,i.resource_snapshot,i.reference_price_snapshot,
+  i.source_snapshot,c.id AS candidate_id,c.model,c.card_type,
   c.wide_region,c.modes,c.status AS candidate_status,c.source_observed_at,c.verified_at,
   c.supplier_subject_id AS candidate_supplier_subject_id,c.created_at AS candidate_created_at`;
 
-function candidate(row: CandidateRow | InquiryRow): CatalogCandidate {
-  return { id: 'candidate_id' in row ? row.candidate_id : row.id, model: row.model, cardType: row.card_type,
-    region: row.wide_region, modes: row.modes as InquiryBillingMode[],
-    status: 'candidate_status' in row ? row.candidate_status : row.status as 'inquiry_required',
-    sourceObservedAt: new Date(row.source_observed_at), verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
-    supplierSubjectId: 'candidate_supplier_subject_id' in row ? row.candidate_supplier_subject_id : row.supplier_subject_id,
-    createdAt: new Date('candidate_created_at' in row ? row.candidate_created_at : row.created_at) };
+function candidate(row:CandidateRow):CatalogCandidate;
+function candidate(row:InquiryRow):CatalogCandidate|null;
+function candidate(row:CandidateRow|InquiryRow):CatalogCandidate|null{
+  if('candidate_id'in row){if(!row.candidate_id)return null;return{id:row.candidate_id,model:row.model!,
+    cardType:row.card_type!,region:row.wide_region!,modes:row.modes as InquiryBillingMode[],status:row.candidate_status!,
+    sourceObservedAt:new Date(row.source_observed_at!),verifiedAt:row.verified_at?new Date(row.verified_at):null,
+    supplierSubjectId:row.candidate_supplier_subject_id,createdAt:new Date(row.candidate_created_at)};}
+  return{id:row.id,model:row.model,cardType:row.card_type,region:row.wide_region,modes:row.modes as InquiryBillingMode[],
+    status:row.status,sourceObservedAt:new Date(row.source_observed_at),verifiedAt:row.verified_at?new Date(row.verified_at):null,
+    supplierSubjectId:row.supplier_subject_id,createdAt:new Date(row.created_at)};
 }
 
 function inquiry(row: InquiryRow): InquiryRecord {
+  const resource=row.resource_snapshot,supplier=row.supplier_snapshot,referencePrice=row.reference_price_snapshot,
+    source=row.source_snapshot;
+  const supplierResource=row.supplier_catalog_item_id&&row.requested_quantity&&resource&&supplier&&referencePrice&&source?{
+    ...(resource as Omit<NonNullable<InquiryRecord['supplierResource']>,'supplier'|'referencePrice'|'source'|'requestedQuantity'>),
+    supplier:supplier as NonNullable<InquiryRecord['supplierResource']>['supplier'],
+    referencePrice:referencePrice as NonNullable<InquiryRecord['supplierResource']>['referencePrice'],
+    source:source as NonNullable<InquiryRecord['supplierResource']>['source'],requestedQuantity:Number(row.requested_quantity)}:null;
   return { id: row.id, inquiryNumber: row.inquiry_number, subjectId: row.subject_id,
     requestedByUserId: row.requested_by_user_id, supplierSubjectId: row.supplier_subject_id,
-    candidate: candidate(row), status: row.status,
+    candidate: candidate(row),supplierResource,status: row.status,
     startsAt: new Date(row.starts_at), endsAt: new Date(row.ends_at), timeZone: row.time_zone,
-    confirmBy: new Date(row.confirm_by), gpuCount: Number(row.gpu_count), billingMode: row.billing_mode,
+    confirmBy: new Date(row.confirm_by), gpuCount: row.gpu_count===null?null:Number(row.gpu_count),
+    requestedQuantity:row.requested_quantity===null?null:Number(row.requested_quantity),billingMode: row.billing_mode,
     allowSubstitutes: row.allow_substitutes, maxCreditMicros: BigInt(row.max_credit_micros), useCase: row.use_case,
     description: row.description, environment: row.environment, network: row.network, storageGiB: Number(row.storage_gib),
     dataRegion: row.data_region, termsVersion: row.terms_version, privacyVersion: row.privacy_version,
@@ -67,6 +150,29 @@ function inquiry(row: InquiryRow): InquiryRecord {
 
 function clarification(row: ClarificationRow): InquiryClarification {
   return { id: row.id, message: row.message, kind: row.message_kind, createdAt: new Date(row.created_at) };
+}
+
+function formalCatalogReady(rows:readonly FormalResourceRow[],now:Date){
+  if(rows.length!==11)return false;
+  const seen=new Set<string>();
+  for(const row of rows){
+    if(seen.has(row.canonical_id)||HONGHUAN_ITEM_DIGESTS[row.canonical_id]!==row.item_digest
+      ||HONGHUAN_PRICE_DIGESTS[row.canonical_id]!==row.price_digest)return false;
+    seen.add(row.canonical_id);
+    if(row.supplier_id!=='supplier-shanghai-honghuan'||row.legal_name!=='上海鸿欢网络科技有限公司'
+      ||row.display_name!=='上海鸿欢'||row.disclosure_status!=='platform_imported_unverified'
+      ||row.logo_https_url!=='https://cloud.kai.com/assets/suppliers/shanghai-honghuan.jpg'||row.logo_version!=='v1'
+      ||row.logo_source_sha256!=='sha256:db1ed9e4cddc31f4b6e641bbc9179443e5a5d251a31abe28109c3fa55f32a70f'
+      ||row.logo_authorization_status!=='unverified'||row.logo_provenance!=='user_provided'
+      ||row.publication_directive_ref!=='platform-directive:2026-08-20:honghuan-formal-catalog-b1'
+      ||row.supplier_authorization_evidence_ref!==null
+      ||row.quote_evidence_sha256!=='sha256:e3e7ac76dbe0d6b19b81babedbf591f6f5ad3068911f7d24a75c4bce585b55a9'
+      ||row.quote_evidence_storage_ref!=='evidence://supplier-shanghai-honghuan/quotes/2026-08-19-v1'
+      ||row.quote_evidence_status!=='user_provided_unverified'||row.source_kind!=='USER_PROVIDED_SUPPLIER_QUOTE'
+      ||row.source_verification_status!=='unverified'||!row.evidence_complete
+      ||new Date(row.valid_until)<=now||new Date(row.source_valid_until)<=now)return false;
+  }
+  return seen.size===Object.keys(HONGHUAN_ITEM_DIGESTS).length;
 }
 
 export type SupplierImportCommitInput = Readonly<{
@@ -126,7 +232,7 @@ export type CandidateFilters = Readonly<{
 export class PostgresResourceInquiryStore {
   constructor(private readonly database: Database) {}
 
-  async listCandidates(filters: CandidateFilters) {
+  async listCandidates(filters: CandidateFilters):Promise<CatalogCandidate[]> {
     const values: unknown[] = []; const where = ['active=true'];
     const parameter = (value: unknown) => { values.push(value); return `$${values.length}`; };
     if (filters.model) where.push(`model=${parameter(filters.model)}`);
@@ -143,7 +249,7 @@ export class PostgresResourceInquiryStore {
     const rows = await this.database.query<CandidateRow>(`SELECT id,model,card_type,wide_region,modes,status,
       source_observed_at,verified_at,supplier_subject_id,created_at FROM candidate_resources WHERE ${where.join(' AND ')}
       ORDER BY created_at DESC,id DESC LIMIT ${limit}`, values);
-    return rows.rows.map(candidate);
+    return rows.rows.map((row)=>candidate(row));
   }
 
   async getCandidate(id: string) {
@@ -152,15 +258,12 @@ export class PostgresResourceInquiryStore {
     return result.rows[0] ? candidate(result.rows[0]) : null;
   }
 
-  async create(input: Readonly<{
-    id: string; inquiryNumber: string; subjectId: string; userId: string; candidateId: string; startsAt: Date; endsAt: Date;
-    timeZone: string; confirmBy: Date; gpuCount: number; billingMode: InquiryBillingMode; allowSubstitutes: boolean;
-    maxCreditMicros: bigint; useCase: InquiryUseCase; description: string; environment: InquiryEnvironment;
-    network: InquiryNetwork; storageGiB: number; dataRegion: string; termsVersion: string; privacyVersion: string;
-    inquiryVersion: string; idempotencyKey: string; payloadDigest: string; ipHash: string; requestId: string; now: Date;
-  }>): Promise<Readonly<{ status: 'created' | 'replayed'; inquiry: InquiryRecord }>
-    | Readonly<{ status: 'conflict' | 'candidate_not_found' | 'mode_unavailable' }>> {
+  async create(input:ResourceInquiryCreateInput):Promise<Readonly<{status:'created'|'replayed';inquiry:InquiryRecord}>
+    |Readonly<{status:'conflict'|'candidate_not_found'|'supplier_resource_not_found'|'catalog_not_ready'|'mode_unavailable'|'quantity_invalid'}>
+    |Readonly<{status:'catalog_version_conflict';currentVersion:number}>>{
     return this.database.transaction(async (client) => {
+      await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,[
+        `resource-inquiry-create:${input.subjectId}:${input.idempotencyKey}`]);
       const claim=await this.claimIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
         input.idempotencyKey,input.payloadDigest,input.now);
       if(claim==='conflict')return{status:'conflict' as const};
@@ -169,30 +272,103 @@ export class PostgresResourceInquiryStore {
           `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return{status:'conflict' as const};}
         await this.completeIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
           input.idempotencyKey,{inquiryId:existing.id});return{status:'replayed' as const,inquiry:inquiry(existing)};}
-      const candidateResult = await client.query<CandidateRow>(`SELECT id,model,card_type,wide_region,modes,status,
-        source_observed_at,verified_at,supplier_subject_id,created_at FROM candidate_resources WHERE id=$1 AND active=true FOR SHARE`, [input.candidateId]);
-      const selected = candidateResult.rows[0];
-      if (!selected){await this.releaseIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);
-        return { status: 'candidate_not_found' as const };}
-      if (!selected.modes.includes(input.billingMode)){await this.releaseIdempotency(client,input.userId,
-        `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return { status: 'mode_unavailable' as const };}
-      await client.query(`INSERT INTO resource_inquiries(id,inquiry_number,subject_id,requested_by_user_id,candidate_id,
-        status,starts_at,ends_at,time_zone,confirm_by,gpu_count,billing_mode,allow_substitutes,max_credit_micros,
-        use_case,description,environment,network,storage_gib,data_region,terms_version,privacy_version,inquiry_version,
-        client_request_id,payload_digest,created_at,updated_at)
-        VALUES($1,$2,$3,$4,$5,'submitted',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$25)`,
-      [input.id,input.inquiryNumber,input.subjectId,input.userId,input.candidateId,input.startsAt,input.endsAt,input.timeZone,
-        input.confirmBy,input.gpuCount,input.billingMode,input.allowSubstitutes,input.maxCreditMicros.toString(),input.useCase,
-        input.description,input.environment,input.network,input.storageGiB,input.dataRegion,input.termsVersion,input.privacyVersion,
-        input.inquiryVersion,input.idempotencyKey,input.payloadDigest,input.now]);
+      let auditResource:Record<string,unknown>;
+      if('candidateId'in input){
+        const candidateResult=await client.query<CandidateRow>(`SELECT id,model,card_type,wide_region,modes,status,
+          source_observed_at,verified_at,supplier_subject_id,created_at FROM candidate_resources
+          WHERE id=$1 AND active=true FOR SHARE`,[input.candidateId]);
+        const selected=candidateResult.rows[0];
+        if(!selected){await this.releaseIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
+          input.idempotencyKey);return{status:'candidate_not_found' as const};}
+        if(!selected.modes.includes(input.billingMode)){await this.releaseIdempotency(client,input.userId,
+          `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return{status:'mode_unavailable' as const};}
+        await client.query(`INSERT INTO resource_inquiries(id,inquiry_number,subject_id,requested_by_user_id,candidate_id,
+          status,starts_at,ends_at,time_zone,confirm_by,gpu_count,billing_mode,allow_substitutes,max_credit_micros,
+          use_case,description,environment,network,storage_gib,data_region,terms_version,privacy_version,inquiry_version,
+          client_request_id,payload_digest,created_at,updated_at)
+          VALUES($1,$2,$3,$4,$5,'submitted',$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$25)`,
+        [input.id,input.inquiryNumber,input.subjectId,input.userId,input.candidateId,input.startsAt,input.endsAt,input.timeZone,
+          input.confirmBy,input.gpuCount,input.billingMode,input.allowSubstitutes,input.maxCreditMicros.toString(),input.useCase,
+          input.description,input.environment,input.network,input.storageGiB,input.dataRegion,input.termsVersion,input.privacyVersion,
+          input.inquiryVersion,input.idempotencyKey,input.payloadDigest,input.now]);
+        auditResource={candidateId:input.candidateId};
+      }else{
+        await client.query(`LOCK TABLE supplier_inquiry_catalog_sources,supplier_inquiry_catalog_items,
+          supplier_inquiry_catalog_source_prices IN SHARE MODE`);
+        const counts=await client.query<{sources:string;items:string;prices:string}>(`SELECT
+          (SELECT count(*) FROM supplier_inquiry_catalog_sources WHERE supplier_id='supplier-shanghai-honghuan')::text sources,
+          (SELECT count(*) FROM supplier_inquiry_catalog_items WHERE supplier_id='supplier-shanghai-honghuan')::text items,
+          (SELECT count(*) FROM supplier_inquiry_catalog_source_prices p JOIN supplier_inquiry_catalog_items i
+            ON i.id=p.catalog_item_id WHERE i.supplier_id='supplier-shanghai-honghuan')::text prices`);
+        const catalogResult=await client.query<FormalResourceRow>(`SELECT i.id,i.canonical_id,i.version,i.catalog_kind,
+          i.title,i.legal_review_required,i.spec_snapshot,i.quantity_unit,i.quantity_min,i.quantity_max,
+          i.quantity_allowed_values,i.billing_mode,i.gpu_count,i.reference_hourly_minor::text,
+          i.reference_daily_minor::text,i.reference_monthly_minor::text,i.valid_until,i.source_observed_at,
+          s.supplier_id,s.legal_name,s.display_name,s.disclosure_status,s.logo_https_url,s.logo_version,
+          s.logo_source_sha256,s.logo_authorization_status,s.logo_provenance,s.publication_directive_ref,
+          s.supplier_authorization_evidence_ref,s.quote_evidence_sha256,s.quote_evidence_storage_ref,
+          s.quote_evidence_status,s.source_kind,s.source_verification_status,s.valid_until source_valid_until,
+          s.evidence_complete,${HONGHUAN_ITEM_DIGEST_SQL} item_digest,${HONGHUAN_PRICE_DIGEST_SQL} price_digest
+          FROM supplier_inquiry_catalog_items i JOIN supplier_inquiry_catalog_sources s ON s.supplier_id=i.supplier_id
+          JOIN supplier_inquiry_catalog_source_prices p ON p.catalog_item_id=i.id
+          WHERE i.supplier_id='supplier-shanghai-honghuan' FOR SHARE OF i,s,p`);
+        if(counts.rows[0]?.sources!=='1'||counts.rows[0]?.items!=='11'||counts.rows[0]?.prices!=='11'
+          ||!formalCatalogReady(catalogResult.rows,input.now)){
+          await this.releaseIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
+            input.idempotencyKey);return{status:'catalog_not_ready' as const};
+        }
+        const selected=catalogResult.rows.find((row)=>row.canonical_id===input.supplierResourceId);
+        if(!selected){await this.releaseIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
+          input.idempotencyKey);return{status:'supplier_resource_not_found' as const};}
+        if(selected.version!==input.supplierResourceVersion){await this.releaseIdempotency(client,input.userId,
+          `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return{status:'catalog_version_conflict' as const,
+          currentVersion:Number(selected.version)};}
+        if(selected.billing_mode!==input.billingMode){await this.releaseIdempotency(client,input.userId,
+          `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return{status:'mode_unavailable' as const};}
+        const allowed=selected.quantity_allowed_values;
+        if(input.quantity<Number(selected.quantity_min)||input.quantity>Number(selected.quantity_max)
+          ||(allowed!==null&&!allowed.map(Number).includes(input.quantity))){await this.releaseIdempotency(client,input.userId,
+          `resource_inquiry.create:${input.subjectId}`,input.idempotencyKey);return{status:'quantity_invalid' as const};}
+        const minor=(value:string|null)=>value===null?null:`${BigInt(value)/100n}.${(BigInt(value)%100n).toString().padStart(2,'0')}`;
+        const supplierSnapshot={id:selected.supplier_id,legalName:selected.legal_name,displayName:selected.display_name,
+          logo:{httpsUrl:selected.logo_https_url,version:selected.logo_version,authorizationStatus:'unverified',provenance:'user_provided'},
+          disclosureStatus:selected.disclosure_status};
+        const resourceSnapshot={resourceId:selected.canonical_id,version:Number(selected.version),catalogKind:selected.catalog_kind,
+          title:selected.title,legalReviewRequired:selected.legal_review_required,specifications:selected.spec_snapshot,
+          quantity:{unit:selected.quantity_unit,min:Number(selected.quantity_min),max:Number(selected.quantity_max),
+            allowedValues:allowed?.map(Number)??null}};
+        const referenceSnapshot={currency:'KAI_CARD_HOUR',precision:2,status:'reference_only',
+          hourlyAmount:minor(selected.reference_hourly_minor),dailyAmount:minor(selected.reference_daily_minor),
+          monthlyAmount:minor(selected.reference_monthly_minor),validUntil:new Date(selected.valid_until).toISOString()};
+        const observed=typeof selected.source_observed_at==='string'?selected.source_observed_at
+          :new Date(selected.source_observed_at).toISOString().slice(0,10);
+        const sourceSnapshot={observedAt:observed,kind:'USER_PROVIDED_SUPPLIER_QUOTE',
+          label:'资料来源：用户提供的供应商报价',verificationStatus:'unverified'};
+        const derivedGpuCount=selected.gpu_count===null?null:Number(selected.gpu_count)*input.quantity;
+        await client.query(`INSERT INTO resource_inquiries(id,inquiry_number,subject_id,requested_by_user_id,
+          supplier_catalog_item_id,supplier_catalog_version,requested_quantity,supplier_snapshot,resource_snapshot,
+          reference_price_snapshot,source_snapshot,status,starts_at,ends_at,time_zone,confirm_by,gpu_count,billing_mode,
+          allow_substitutes,max_credit_micros,use_case,description,environment,network,storage_gib,data_region,terms_version,
+          privacy_version,inquiry_version,client_request_id,payload_digest,created_at,updated_at)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,'submitted',$12,$13,$14,$15,$16,
+          $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$31)`,[input.id,input.inquiryNumber,input.subjectId,
+          input.userId,selected.id,selected.version,input.quantity,JSON.stringify(supplierSnapshot),JSON.stringify(resourceSnapshot),
+          JSON.stringify(referenceSnapshot),JSON.stringify(sourceSnapshot),input.startsAt,input.endsAt,input.timeZone,input.confirmBy,
+          derivedGpuCount,input.billingMode,input.allowSubstitutes,input.maxCreditMicros.toString(),input.useCase,input.description,
+          input.environment,input.network,input.storageGiB,input.dataRegion,input.termsVersion,input.privacyVersion,input.inquiryVersion,
+          input.idempotencyKey,input.payloadDigest,input.now]);
+        auditResource={supplierResourceId:input.supplierResourceId,supplierResourceVersion:input.supplierResourceVersion,
+          quantity:input.quantity,legalReviewRequired:selected.legal_review_required};
+      }
       for (const [kind, version] of [['terms',input.termsVersion],['privacy',input.privacyVersion],['inquiry',input.inquiryVersion]] as const) {
         await client.query(`INSERT INTO resource_inquiry_terms_acceptances(id,inquiry_id,subject_id,user_id,document_kind,
           version,ip_hash,accepted_at) VALUES(gen_random_uuid(),$1,$2,$3,$4,$5,$6,$7)`,
         [input.id,input.subjectId,input.userId,kind,version,input.ipHash,input.now]);
       }
       await this.audit(client, input.userId, 'RESOURCE_INQUIRY_SUBMITTED', input.id, input.requestId, input.ipHash,
-        input.payloadDigest, { subjectId: input.subjectId, candidateId: input.candidateId, status: 'submitted' });
-      await this.outbox(client, 'resource_inquiry.submitted', input.id, { inquiryId: input.id, subjectId: input.subjectId, status: 'submitted' });
+        input.payloadDigest, { subjectId: input.subjectId,...auditResource,status:'submitted' });
+      await this.outbox(client, 'resource_inquiry.submitted', input.id, { inquiryId: input.id,
+        subjectId: input.subjectId,...auditResource,status:'submitted' });
       await this.completeIdempotency(client,input.userId,`resource_inquiry.create:${input.subjectId}`,
         input.idempotencyKey,{inquiryId:input.id});
       const created = await this.getForSubject(client, input.subjectId, input.id);
@@ -210,14 +386,14 @@ export class PostgresResourceInquiryStore {
     }
     const limit = parameter(input.limit);
     const rows = await this.database.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE ${where.join(' AND ')}
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE ${where.join(' AND ')}
       ORDER BY i.created_at DESC,i.id DESC LIMIT ${limit}`, values);
     return rows.rows.map(inquiry);
   }
 
   async get(subjectId: string, id: string) {
     const result = await this.database.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.id=$2`, [subjectId,id]);
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.id=$2`, [subjectId,id]);
     return result.rows[0] ? inquiry(result.rows[0]) : null;
   }
 
@@ -228,7 +404,7 @@ export class PostgresResourceInquiryStore {
 
   async getOperator(id: string) {
     const result = await this.database.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.id=$1`, [id]);
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.id=$1`, [id]);
     return result.rows[0] ? inquiry(result.rows[0]) : null;
   }
 
@@ -239,7 +415,7 @@ export class PostgresResourceInquiryStore {
 
   async getSupplier(supplierSubjectId: string, id: string) {
     const result = await this.database.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.supplier_subject_id=$1 AND i.id=$2`,
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.supplier_subject_id=$1 AND i.id=$2`,
     [supplierSubjectId,id]);
     return result.rows[0] ? inquiry(result.rows[0]) : null;
   }
@@ -255,15 +431,19 @@ export class PostgresResourceInquiryStore {
       const current=await this.getAny(client,input.inquiryId,true);if(!current){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'not_found' as const};}
       if(current.version!==input.expectedVersion){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'version_conflict' as const,inquiry:inquiry(current)};}
       if(current.status!=='submitted'){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'invalid_state' as const,inquiry:inquiry(current)};}
+      if(current.supplier_catalog_item_id){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);
+        return{status:'formal_assignment_unavailable' as const};}
       const supplier=await client.query(`SELECT 1 FROM supplier_profiles p JOIN trading_subjects s ON s.id=p.subject_id
         WHERE p.subject_id=$1 AND p.status='approved' AND s.status='active' FOR SHARE`,[input.supplierSubjectId]);
       if(!supplier.rowCount){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'invalid_supplier' as const};}
-      const claimed=await client.query<{supplier_subject_id:string|null}>(`SELECT supplier_subject_id FROM candidate_resources
-        WHERE id=$1 FOR UPDATE`,[current.candidate_id]);
-      const bound=claimed.rows[0]?.supplier_subject_id;
-      if(bound&&bound!==input.supplierSubjectId){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'assignment_conflict' as const};}
-      if(!bound)await client.query(`UPDATE candidate_resources SET supplier_subject_id=$2,claimed_at=$3,claimed_by=$4
-        WHERE id=$1`,[current.candidate_id,input.supplierSubjectId,input.now,input.actorId]);
+      if(current.candidate_id){
+        const claimed=await client.query<{supplier_subject_id:string|null}>(`SELECT supplier_subject_id FROM candidate_resources
+          WHERE id=$1 FOR UPDATE`,[current.candidate_id]);
+        const bound=claimed.rows[0]?.supplier_subject_id;
+        if(bound&&bound!==input.supplierSubjectId){await this.releaseIdempotency(client,input.actorId,scope,input.idempotencyKey);return{status:'assignment_conflict' as const};}
+        if(!bound)await client.query(`UPDATE candidate_resources SET supplier_subject_id=$2,claimed_at=$3,claimed_by=$4
+          WHERE id=$1`,[current.candidate_id,input.supplierSubjectId,input.now,input.actorId]);
+      }
       await client.query(`UPDATE resource_inquiries SET supplier_subject_id=$2,assigned_by=$3,assigned_at=$4,
         status='awaiting_supplier',version=version+1 WHERE id=$1`,[input.inquiryId,input.supplierSubjectId,input.actorId,input.now]);
       await this.recordAction(client,{...input,actorSubjectId:null,action:'assign',fromStatus:'submitted',
@@ -315,7 +495,7 @@ export class PostgresResourceInquiryStore {
 
   async expireDue(now:Date,limit=100){return this.database.transaction(async(client)=>{
     const due=await client.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.confirm_by<=$1
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.confirm_by<=$1
       AND i.status IN ('submitted','awaiting_supplier','clarification_required')
       ORDER BY i.confirm_by,i.id FOR UPDATE OF i SKIP LOCKED LIMIT $2`,[now,limit]);
     for(const row of due.rows){await client.query(`UPDATE resource_inquiries SET status='inquiry_expired',
@@ -402,7 +582,7 @@ export class PostgresResourceInquiryStore {
     if(input.cursor){const createdAt=parameter(input.cursor.createdAt),id=parameter(input.cursor.id);
       where.push(`(i.created_at,i.id)<(${createdAt}::timestamptz,${id}::uuid)`);}
     const limit=parameter(input.limit);const result=await this.database.query<InquiryRow>(`SELECT ${inquirySelect}
-      FROM resource_inquiries i JOIN candidate_resources c ON c.id=i.candidate_id
+      FROM resource_inquiries i LEFT JOIN candidate_resources c ON c.id=i.candidate_id
       ${where.length?`WHERE ${where.join(' AND ')}`:''} ORDER BY i.created_at DESC,i.id DESC LIMIT ${limit}`,values);
     return result.rows.map(inquiry);
   }
@@ -458,20 +638,20 @@ export class PostgresResourceInquiryStore {
 
   private async findByRequest(client: PoolClient, subjectId: string, key: string) {
     const result = await client.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.client_request_id=$2 FOR UPDATE OF i`,
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.client_request_id=$2 FOR UPDATE OF i`,
     [subjectId,key]);
     return result.rows[0] ?? null;
   }
 
   private async getForSubject(client: PoolClient, subjectId: string, id: string, lock = false) {
     const result = await client.query<InquiryRow>(`SELECT ${inquirySelect} FROM resource_inquiries i
-      JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.id=$2${lock ? ' FOR UPDATE OF i' : ''}`,
+      LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.subject_id=$1 AND i.id=$2${lock ? ' FOR UPDATE OF i' : ''}`,
     [subjectId,id]);
     return result.rows[0] ?? null;
   }
 
   private async getAny(client:PoolClient,id:string,lock=false){const result=await client.query<InquiryRow>(`SELECT ${inquirySelect}
-    FROM resource_inquiries i JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.id=$1${lock?' FOR UPDATE OF i':''}`,[id]);
+    FROM resource_inquiries i LEFT JOIN candidate_resources c ON c.id=i.candidate_id WHERE i.id=$1${lock?' FOR UPDATE OF i':''}`,[id]);
     return result.rows[0]??null;}
 
   private audit(client: PoolClient,userId:string|null,action:string,id:string,requestId:string,ipHash:string|null,

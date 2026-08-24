@@ -25,6 +25,8 @@ export class TopupReversalService {
       ...input, clientRequestId: input.idempotencyKey, payloadDigest, now: this.now() });
     if (result.status === 'conflict') throw new AppError('IDEMPOTENCY_KEY_CONFLICT', 409, '同一请求标识对应了不同的充值冲正。');
     if (result.status === 'topup_not_found') throw new AppError('TOPUP_NOT_FOUND', 404, '充值记录不存在。');
+    if (result.status === 'qixiang_refund_workflow_required') throw new AppError(
+      'QIXIANG_REFUND_WORKFLOW_REQUIRED', 409, '该充值必须使用七相退款双审流程。');
     if (result.status === 'topup_not_settled') throw new AppError('TOPUP_REVERSAL_STATE_INVALID', 409, '仅已到账充值可以进入冲正流程。');
     if (result.status === 'amount_exceeds_remaining') throw new AppError('TOPUP_REVERSAL_AMOUNT_INVALID', 409, '冲正金额超过该充值尚可冲正的金额。');
     if (!('reversal' in result)) throw new Error('unhandled topup reversal creation result');

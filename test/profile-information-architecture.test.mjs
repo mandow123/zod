@@ -6,7 +6,7 @@ async function source(path) { return readFile(new URL(path, import.meta.url), 'u
 
 test('我的按产品经理信息架构分组，买家主路径保持优先', async () => {
   const profile = await source('../src/screens/ProfileScreen.tsx');
-  for (const group of ['资产与交易', '供给经营', '合作增长', '服务与安全']) {
+  for (const group of ['资产与履约', '供给经营', '合作增长', '服务与安全']) {
     assert.match(profile, new RegExp(`title="${group}"`, 'u'));
   }
   for (const item of ['我的资产', '订单', 'KAI 卡时', '达人合作', '客服与帮助', '主体与认证', '账号设置', '隐私与数据']) {
@@ -20,7 +20,7 @@ test('我的按产品经理信息架构分组，买家主路径保持优先', as
 test('纯买家不会被合成的兑付档案误判成供应商', async () => {
   const profile = await source('../src/screens/ProfileScreen.tsx');
   assert.match(profile, /const supplier = snapshot\.providerWorkspace\?\.supplier \?\? null/u);
-  assert.match(profile, /const showSupplyBusiness = supplier !== null/u);
+  assert.match(profile, /const showSupplyBusiness = supplier !== null \|\| stagingTools\.draftEntry !== null/u);
   assert.match(profile, /\{showSupplyBusiness \? <MenuGroup title="供给经营"/u);
   assert.doesNotMatch(profile, /showSupplyBusiness = Boolean\(supplier \|\| snapshot\.payoutProfile\)/u);
 });

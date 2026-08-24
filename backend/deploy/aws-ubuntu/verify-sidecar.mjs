@@ -3,12 +3,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isVpcPrivateIpv4 } from './preflight-host.mjs';
 
-const providerPaths = [
+const forbiddenMobilePaths = [
   '/mobile/v1/provider/bootstrap', '/mobile/v1/provider/resources', '/mobile/v1/provider/offer-drafts',
   '/mobile/v1/provider/offers', '/mobile/v1/provider/listings',
+  '/mobile/v1/market/resources', '/mobile/v1/credits/balance', '/mobile/v1/orders',
+  '/mobile/v1/operator/resource-inquiries',
 ];
 const paths = [
-  '/mobile/v1/health', '/mobile/v1/readiness', '/privacy', '/terms', '/account/delete', ...providerPaths,
+  '/mobile/v1/health', '/mobile/v1/readiness', '/privacy', '/terms', '/inquiry-terms', '/account/delete',
+  '/mobile/v1/supplier-inquiry-catalog?limit=50', '/mobile/v1/me', '/mobile/v1/resource-inquiries',
+  ...forbiddenMobilePaths,
 ];
 
 function contentType(response) {
@@ -54,12 +58,24 @@ export async function probeOrigin(rawOrigin) {
   if (readiness.status !== 200 || readiness.contentType !== 'application/json'
     || readinessBody?.ok !== true || readinessBody?.service !== 'kai-cloudpay-backend'
     || readinessBody?.deployment?.ready !== true || readinessBody?.release?.ready !== true
+    || readinessBody?.profile?.id !== 'inquiry_only' || readinessBody?.profile?.routePolicy !== 'allowlist-v1'
+    || readinessBody?.release?.scope !== 'supplier_inquiry'
+    || readinessBody?.commerce?.enabled !== false || readinessBody?.commerce?.reason !== 'PROFILE_DISABLED'
+    || readinessBody?.capabilities?.services?.ready !== true
+    || readinessBody?.capabilities?.kaiPairedProbe?.ready !== true
+    || readinessBody?.capabilities?.appSessionProbe?.ready !== true
+    || readinessBody?.capabilities?.durability?.mode !== 'local_only'
+    || readinessBody?.capabilities?.durability?.riskAccepted !== true
+    || readinessBody?.capabilities?.durability?.offsiteBackup !== false
+    || readinessBody?.capabilities?.backupRecovery?.backup?.ready !== true
+    || readinessBody?.capabilities?.backupRecovery?.restore?.ready !== true
     || !Array.isArray(readinessBody?.deployment?.blockers) || readinessBody.deployment.blockers.length !== 0
     || !Array.isArray(readinessBody?.release?.blockers) || readinessBody.release.blockers.length !== 0) {
     failures.push('/mobile/v1/readiness: deployment or release is not ready');
   }
 
-  for (const [path, marker] of [['/privacy', '隐私政策'], ['/terms', '用户协议'], ['/account/delete', '删除 CloudPay 账户']]) {
+  for (const [path, marker] of [['/privacy', '隐私政策'], ['/terms', '用户协议'],
+    ['/inquiry-terms', '资源询期规则'], ['/account/delete', '删除 CloudPay 账户']]) {
     const record = byPath[path];
     const html = record.body.toString('utf8');
     if (record.status !== 200 || record.contentType !== 'text/html' || !html.includes('KAI CloudPay') || !html.includes(marker)) {
@@ -67,12 +83,28 @@ export async function probeOrigin(rawOrigin) {
     }
   }
 
-  for (const path of providerPaths) {
+  const catalog = byPath['/mobile/v1/supplier-inquiry-catalog?limit=50'];
+  const catalogBody = parseJson(catalog);
+  if (catalog.status !== 200 || catalog.contentType !== 'application/json'
+    || catalogBody?.ok !== true || catalogBody?.items?.length !== 11) {
+    failures.push('/mobile/v1/supplier-inquiry-catalog: exact 11-item catalog missing');
+  }
+
+  for (const path of ['/mobile/v1/me', '/mobile/v1/resource-inquiries']) {
     const record = byPath[path];
     const body = parseJson(record);
     if (record.status !== 401 || record.contentType !== 'application/json'
       || body?.ok !== false || typeof body?.error?.code !== 'string') {
-      failures.push(`${path}: protected provider API identity missing`);
+      failures.push(`${path}: paired KAI buyer API identity missing`);
+    }
+  }
+
+  for (const path of forbiddenMobilePaths) {
+    const record = byPath[path];
+    const body = parseJson(record);
+    if (record.status !== 404 || record.contentType !== 'application/json'
+      || body?.ok !== false || body?.error?.code !== 'NOT_FOUND') {
+      failures.push(`${path}: forbidden full-commerce route is not physically absent`);
     }
   }
 

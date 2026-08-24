@@ -5,12 +5,14 @@ import { join, relative, resolve } from 'node:path';
 const fixedFiles = [
   'App.tsx', 'index.ts', 'app.json', 'app.config.js', 'metro.config.js', 'package.json', 'package-lock.json',
 ];
-const sourceDirectories = ['src', 'plugins', 'android/app/src'];
+const sourceDirectories = ['src', 'plugins', 'modules', 'assets/suppliers', 'android/app/src'];
+const ignoredGeneratedDirectories = new Set(['.cxx', 'build', 'node_modules']);
 
 async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    if (entry.isDirectory() && ignoredGeneratedDirectories.has(entry.name)) continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...await filesUnder(path));
     else if (entry.isFile()) files.push(path);

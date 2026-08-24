@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260818-005",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-18T10:22:41Z",
+  "baseCommit": "e081dd539bcd212ec1be739cb5cd72de0ad2e470",
+  "stagedDiffSha256": "02f7ce597033fc6281e55221dacb693d12021e49b289665dcd0cfac47110e32f",
+  "summary": "已逐文件审阅本次 72 个暂存文件。Zod 正式 App 现以 auth.kai.com 公共客户端和 PKCE 直接登录，固定使用经过 Android App Link 校验的 HTTPS 回调，APK 不包含客户端密钥，也不依赖旧 CloudPay 登录 broker。App 以 SecureStore 原子保存 access、refresh、ID token 三件套，每个受保护请求同时发送 opaque Bearer 与 X-KAI-ID-Token；后端严格校验 EdDSA、issuer、Zod audience、期限、at_hash 和 userinfo subject 一致性，并继续使用 issuer+sub 本地映射及本地 RBAC。当前用户协议和隐私政策已成为系统级业务门禁：仅身份资料与同意接口允许在同意前访问，其余订单、卡时、资产、供应商和运营路由均在业务事务前返回 428，旧版本同意不放行。正式服务不读取、不要求、不实例化旧 HS256、refresh 或 OTP 凭据，旧会话、验证码和 broker 仅物理保留在 NODE_ENV=test 且 LOCAL_E2E 的隔离验收路径。App 法务同意在保存登录前落库；远程撤销失败使用加密队列且不按猜测期限丢弃，队列损坏或无法持久化时保留原会话，刷新后重放 401 也统一撤销或可靠入队。正式界面隐藏没有真实能力的远程设备和推送入口，正式构建门禁拒绝旧 refresh、logout、sessions、broker callback 与本地验收标记。已核对 assetlinks、静态回调页、路由覆盖矩阵、生产配置失败关闭与零业务写回归；前端 166 项测试、后端 68 个测试文件共 307 项、TypeScript、后端构建、149 个前端调用与 127 个后端路由契约、Android 构建、正式 bundle 扫描及暂存差异检查均通过。"
+}

@@ -4,24 +4,32 @@ import type { CreditLedgerStore, PostCreditTransactionInput } from './store.js';
 import { formatCreditAmount } from './types.js';
 import { formatCreditDisplayMicros } from './display.js';
 import { isCreditCentAligned } from './precision.js';
+import type { CreditBalanceSnapshotReader } from './lot-allocator.js';
 
 export class CreditLedgerService {
-  constructor(private readonly store: CreditLedgerStore, private readonly subjects: SubjectAccess) {}
+  constructor(private readonly store: CreditLedgerStore, private readonly subjects: SubjectAccess,
+    private readonly balanceSnapshots: CreditBalanceSnapshotReader,
+    private readonly now: () => Date = () => new Date()) {}
 
   async balance(principal: AccountPrincipal) {
     const subject = await this.subjects.current(principal.userId, 'credits.read');
-    const accounts = await this.store.ensureSubjectAccounts(subject.subjectId);
+    const balanceSnapshot = await this.balanceSnapshots.snapshot(subject.subjectId, this.now());
+    const accounts = balanceSnapshot.accounts;
     const byKind = Object.fromEntries(accounts.map((account) => [account.kind, account])) as Record<string, typeof accounts[number]>;
     const available = byKind.available?.amountMicros ?? 0n;
     const reserved = byKind.reserved?.amountMicros ?? 0n;
     const receivable = byKind.supplier_receivable?.amountMicros ?? 0n;
     const payoutFrozen = byKind.payout_frozen?.amountMicros ?? 0n;
     const supplierEarnings = byKind.supplier_earnings_available?.amountMicros ?? 0n;
+    const lotSnapshot = balanceSnapshot.lots;
     return {
       subjectId: subject.subjectId,
       unit: 'KAI_CREDIT',
       precision: 2,
       available: formatCreditAmount(available),
+      unrestrictedAvailable: formatCreditAmount(lotSnapshot.unrestrictedAvailableMicros),
+      purchasedExpiring: formatCreditAmount(lotSnapshot.unexpiredLotAvailableMicros),
+      nearestExpiry: lotSnapshot.nearestExpiry?.toISOString() ?? null,
       reserved: formatCreditAmount(reserved),
       supplierReceivable: formatCreditAmount(receivable),
       payoutFrozen: formatCreditAmount(payoutFrozen),

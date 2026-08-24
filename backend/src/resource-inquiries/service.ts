@@ -14,6 +14,14 @@ import type {
 } from './types.js';
 
 type RequestContext = Readonly<{ requestId: string; ip: string }>;
+type InquiryCreateCommon=Readonly<{startsAt:string;endsAt:string;timeZone:string;confirmBy:string;
+  billingMode:InquiryBillingMode;allowSubstitutes:boolean;maxCreditAmount:string;useCase:InquiryUseCase;
+  description:string;environment:InquiryEnvironment;network:InquiryNetwork;storageGiB:number;dataRegion:string;
+  terms:Readonly<{termsVersion:string;privacyVersion:string;inquiryVersion:string}>;idempotencyKey:string}>;
+type InquiryCreateRequest=InquiryCreateCommon&(
+  Readonly<{candidateId:string;gpuCount:number}>|
+  Readonly<{supplierResourceId:string;supplierResourceVersion:number;quantity:number}>
+);
 
 function required(value: string | undefined, name: string) {
   if (!value) throw new Error(`${name} is required.`);
@@ -67,10 +75,12 @@ export class SupplierCatalogImportService {
 export class ResourceInquiryService {
   private readonly cursor: CursorService;
   private readonly pepper: string;
+  private readonly honghuanMode:RuntimeConfig['honghuanSupplierCatalogMode'];
   constructor(private readonly store: PostgresResourceInquiryStore, private readonly subjects: SubjectAccess,
     config: RuntimeConfig, private readonly now:()=>Date=()=>new Date()) {
     this.cursor=new CursorService(required(config.CURSOR_SECRET,'CURSOR_SECRET'));
     this.pepper=required(config.AUDIT_PEPPER,'AUDIT_PEPPER');
+    this.honghuanMode=config.honghuanSupplierCatalogMode;
   }
 
   async catalog(input: Readonly<{ model?: CatalogCandidate['model']; region?: string; query?: string;
@@ -90,12 +100,12 @@ export class ResourceInquiryService {
     return this.publicCandidate(item);
   }
 
-  async create(principal:AccountPrincipal,input:Readonly<{ candidateId:string;startsAt:string;endsAt:string;timeZone:string;
-    confirmBy:string;gpuCount:number;billingMode:InquiryBillingMode;allowSubstitutes:boolean;maxCreditAmount:string;
-    useCase:InquiryUseCase;description:string;environment:InquiryEnvironment;network:InquiryNetwork;storageGiB:number;
-    dataRegion:string;terms:Readonly<{termsVersion:string;privacyVersion:string;inquiryVersion:string}>;
-    idempotencyKey:string }>,context:RequestContext) {
+  async create(principal:AccountPrincipal,input:InquiryCreateRequest,context:RequestContext) {
     this.idempotency(input.idempotencyKey);
+    if('supplierResourceId'in input&&this.honghuanMode==='off')
+      throw new AppError('SUPPLIER_INQUIRY_RESOURCE_NOT_FOUND',404,'没有找到这项供应商预约资源。');
+    if('supplierResourceId'in input&&this.honghuanMode==='read_only')
+      throw new AppError('SUPPLIER_INQUIRY_CATALOG_READ_ONLY',403,'当前供应商目录仅开放查看，暂不接受询期。');
     const subject=await this.subjects.current(principal.userId,'orders.buy');
     const startsAt=new Date(input.startsAt),endsAt=new Date(input.endsAt),confirmBy=new Date(input.confirmBy),now=this.now();
     if(Number.isNaN(startsAt.getTime())||Number.isNaN(endsAt.getTime())||startsAt<=now||endsAt<=startsAt)
@@ -109,23 +119,34 @@ export class ResourceInquiryService {
     if(input.terms.termsVersion!==LEGAL_VERSIONS.terms||input.terms.privacyVersion!==LEGAL_VERSIONS.privacy
       ||input.terms.inquiryVersion!==LEGAL_VERSIONS.inquiry)
       throw new AppError('LEGAL_VERSION_STALE',409,'协议版本已经更新，请重新阅读并确认。');
-    const normalized={ candidateId:input.candidateId,startsAt:startsAt.toISOString(),endsAt:endsAt.toISOString(),
-      timeZone:input.timeZone,confirmBy:confirmBy.toISOString(),gpuCount:input.gpuCount,billingMode:input.billingMode,
+    const resource='candidateId'in input?{candidateId:input.candidateId,gpuCount:input.gpuCount}:
+      {supplierResourceId:input.supplierResourceId,supplierResourceVersion:input.supplierResourceVersion,quantity:input.quantity};
+    const normalized={...resource,startsAt:startsAt.toISOString(),endsAt:endsAt.toISOString(),
+      timeZone:input.timeZone,confirmBy:confirmBy.toISOString(),billingMode:input.billingMode,
       allowSubstitutes:input.allowSubstitutes,maxCreditMicros:maxCreditMicros.toString(),useCase:input.useCase,
       description:input.description.trim(),environment:input.environment,network:input.network,storageGiB:input.storageGiB,
       dataRegion:input.dataRegion.trim(),terms:input.terms };
-    const result=await this.store.create({ id:randomUUID(),inquiryNumber:this.number(),subjectId:subject.subjectId,
-      userId:principal.userId,candidateId:input.candidateId,startsAt,endsAt,timeZone:input.timeZone,confirmBy,
-      gpuCount:input.gpuCount,billingMode:input.billingMode,allowSubstitutes:input.allowSubstitutes,
+    const common={id:randomUUID(),inquiryNumber:this.number(),subjectId:subject.subjectId,userId:principal.userId,
+      startsAt,endsAt,timeZone:input.timeZone,confirmBy,billingMode:input.billingMode,allowSubstitutes:input.allowSubstitutes,
       maxCreditMicros,useCase:input.useCase,description:normalized.description,environment:input.environment,
       network:input.network,storageGiB:input.storageGiB,dataRegion:normalized.dataRegion,
       termsVersion:input.terms.termsVersion,
       privacyVersion:input.terms.privacyVersion,inquiryVersion:input.terms.inquiryVersion,
       idempotencyKey:input.idempotencyKey,payloadDigest:this.digest(normalized),ipHash:this.ip(context.ip),
-      requestId:context.requestId,now });
+      requestId:context.requestId,now};
+    const result=await this.store.create('candidateId'in input?{...common,candidateId:input.candidateId,gpuCount:input.gpuCount}:
+      {...common,supplierResourceId:input.supplierResourceId,supplierResourceVersion:input.supplierResourceVersion,
+        quantity:input.quantity});
     if(result.status==='conflict')throw new AppError('IDEMPOTENCY_KEY_CONFLICT',409,'同一请求标识对应了不同的询期内容。');
     if(result.status==='candidate_not_found')throw new AppError('CATALOG_CANDIDATE_NOT_FOUND',404,'没有找到这项询期候选资源。');
+    if(result.status==='supplier_resource_not_found')throw new AppError('SUPPLIER_INQUIRY_RESOURCE_NOT_FOUND',404,
+      '没有找到这项供应商预约资源。');
+    if(result.status==='catalog_not_ready')throw new AppError('SUPPLIER_INQUIRY_CATALOG_NOT_READY',503,
+      '供应商预约目录暂不可用。');
+    if(result.status==='catalog_version_conflict')throw new AppError('CATALOG_VERSION_CONFLICT',409,
+      '预约目录已更新，请刷新后重新提交。',{currentVersion:result.currentVersion});
     if(result.status==='mode_unavailable')throw new AppError('INQUIRY_BILLING_MODE_UNAVAILABLE',409,'候选资源未登记该计费方式，请重新选择。');
+    if(result.status==='quantity_invalid')throw new AppError('INQUIRY_QUANTITY_INVALID',400,'申请数量不符合这项预约资源的范围。');
     if(!('inquiry' in result))throw new Error('unhandled resource inquiry creation result');
     return { replayed:result.status==='replayed',inquiry:await this.detail(result.inquiry) };
   }
@@ -205,8 +226,10 @@ export class ResourceInquiryService {
     lastVerifiedAt:item.verifiedAt?.toISOString()??null,
     verification:{status:'awaiting_supplier_confirmation' as const,message:'资料待供应方确认' as const},
     supplier:{displayName:'待认领供应方' as const,claimed:false as const},terms:'inquiry-required' as const};}
-  private summary(item:InquiryRecord){return{id:item.id,inquiryNumber:item.inquiryNumber,candidate:{candidateId:item.candidate.id,
-    model:item.candidate.model,cardType:item.candidate.cardType,region:item.candidate.region},status:item.status,
+  private summary(item:InquiryRecord){const resource=item.candidate?{candidate:{candidateId:item.candidate.id,
+    model:item.candidate.model,cardType:item.candidate.cardType,region:item.candidate.region}}:
+    {candidate:null,supplierResource:item.supplierResource,requestedQuantity:item.requestedQuantity};
+    return{id:item.id,inquiryNumber:item.inquiryNumber,...resource,status:item.status,
     startsAt:item.startsAt.toISOString(),endsAt:item.endsAt.toISOString(),timeZone:item.timeZone,confirmBy:item.confirmBy.toISOString(),
     gpuCount:item.gpuCount,billingMode:item.billingMode,version:item.version,
     assignment:{status:item.supplierSubjectId?'assigned' as const:'unassigned' as const},
@@ -226,7 +249,7 @@ export class ResourceInquiryService {
     if(item.status==='clarification_required')actions.push('provide_clarification');return actions;}
   private supplierActions(item:InquiryRecord){const actions:string[]=[];if(item.status==='awaiting_supplier')
     actions.push('request_clarification','decline','confirm_capacity');if(item.status==='clarification_required')actions.push('decline');return actions;}
-  private operatorActions(item:InquiryRecord){const actions:string[]=[];if(item.status==='submitted')actions.push('assign');
+  private operatorActions(item:InquiryRecord){const actions:string[]=[];if(item.status==='submitted'&&item.candidate)actions.push('assign');
     if(item.status==='awaiting_supplier')actions.push('request_clarification');if(item.status==='capacity_confirmed')actions.push('submit_audit');
     if(['submitted','awaiting_supplier','clarification_required'].includes(item.status)&&item.confirmBy<=this.now())actions.push('expire');return actions;}
   private supplierSummary(item:InquiryRecord){return{...this.summary(item),supplierSubjectId:item.supplierSubjectId,
@@ -257,6 +280,8 @@ export class ResourceInquiryService {
     if(result.status==='version_conflict')throw new AppError('RESOURCE_INQUIRY_VERSION_CONFLICT',409,'询期已更新，请刷新后重试。');
     if(result.status==='invalid_state')throw new AppError('RESOURCE_INQUIRY_STATE_INVALID',409,'询期状态已经变化，当前不能执行该操作。');
     if(result.status==='invalid_supplier')throw new AppError('SUPPLIER_SUBJECT_INVALID',409,'只能分派给已通过审核且有效的供应主体。');
+    if(result.status==='formal_assignment_unavailable')throw new AppError('FORMAL_SUPPLIER_ASSIGNMENT_UNAVAILABLE',409,
+      '正式供应商预约尚未建立经审计的供应主体映射，当前不能分派。');
     if(result.status==='assignment_conflict')throw new AppError('SUPPLIER_ASSIGNMENT_CONFLICT',409,'候选资源已经绑定其他供应主体。');
     if(!('inquiry'in result))throw new Error('unhandled inquiry transition');return{replayed:result.status==='replayed',
       inquiry:view==='operator'?await this.operatorDetail(result.inquiry):await this.supplierDetail(result.inquiry)};}

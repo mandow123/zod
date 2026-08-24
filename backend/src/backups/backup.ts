@@ -72,24 +72,27 @@ try {
   verified = true;
   const digest = await sha256File(outputPath);
   const size = (await stat(outputPath)).size;
+  const localOnly = config.mobileApiProfile === 'inquiry_only';
   const year = startedAt.getUTCFullYear().toString();
   const month = String(startedAt.getUTCMonth() + 1).padStart(2, '0');
-  const objectKey = `postgres/${year}/${month}/${artifactName}`;
+  const objectKey = localOnly ? `local://${artifactName}` : `postgres/${year}/${month}/${artifactName}`;
   const retentionUntil = new Date(startedAt.getTime() + config.BACKUP_RETENTION_DAYS * 24 * 60 * 60_000);
-  const client = new S3Client({
-    endpoint: config.BACKUP_S3_ENDPOINT!, region: config.BACKUP_S3_REGION!, forcePathStyle: config.backupS3ForcePathStyle,
-    credentials: { accessKeyId: config.BACKUP_S3_ACCESS_KEY!, secretAccessKey: config.BACKUP_S3_SECRET_KEY! },
-  });
-  await client.send(new PutObjectCommand({
-    Bucket: config.BACKUP_S3_BUCKET!, Key: objectKey, Body: createReadStream(outputPath), ContentLength: size,
-    ContentType: 'application/vnd.kai-cloudpay.postgres-backup', ServerSideEncryption: 'AES256',
-    ChecksumSHA256: Buffer.from(digest.slice(7), 'hex').toString('base64'),
-    ObjectLockMode: 'COMPLIANCE', ObjectLockRetainUntilDate: retentionUntil,
-    Metadata: {
-      database_fingerprint: fingerprint, schema_version: schemaVersion ?? 'unknown', encrypted: 'aes-256-gcm',
-      key_id: config.BACKUP_KEY_ID!,
-    },
-  }));
+  if (!localOnly) {
+    const client = new S3Client({
+      endpoint: config.BACKUP_S3_ENDPOINT!, region: config.BACKUP_S3_REGION!, forcePathStyle: config.backupS3ForcePathStyle,
+      credentials: { accessKeyId: config.BACKUP_S3_ACCESS_KEY!, secretAccessKey: config.BACKUP_S3_SECRET_KEY! },
+    });
+    await client.send(new PutObjectCommand({
+      Bucket: config.BACKUP_S3_BUCKET!, Key: objectKey, Body: createReadStream(outputPath), ContentLength: size,
+      ContentType: 'application/vnd.kai-cloudpay.postgres-backup', ServerSideEncryption: 'AES256',
+      ChecksumSHA256: Buffer.from(digest.slice(7), 'hex').toString('base64'),
+      ObjectLockMode: 'COMPLIANCE', ObjectLockRetainUntilDate: retentionUntil,
+      Metadata: {
+        database_fingerprint: fingerprint, schema_version: schemaVersion ?? 'unknown', encrypted: 'aes-256-gcm',
+        key_id: config.BACKUP_KEY_ID!,
+      },
+    }));
+  }
   const completedAt = new Date();
   await database.transaction(async (db) => {
     await db.query(
@@ -100,13 +103,15 @@ try {
     await db.query(
       `INSERT INTO audit_events(id, actor_id, actor_kind, action, entity_type, entity_id, payload_digest, metadata)
        VALUES ($1, NULL, 'system', 'DATABASE_BACKUP_COMPLETED', 'BACKUP_RUN', $2, $3, $4::jsonb)`,
-      [randomUUID(), runId, digest.slice(7), JSON.stringify({ artifactName, objectKey, sizeBytes: size, schemaVersion })],
+      [randomUUID(), runId, digest.slice(7), JSON.stringify({ artifactName, objectKey, sizeBytes: size, schemaVersion,
+        databaseFingerprint:fingerprint,durability:localOnly?'local_only':'offsite_object_lock',offsite:!localOnly })],
     );
   });
-  await rm(outputPath, { force: true });
+  if (!localOnly) await rm(outputPath, { force: true });
   process.stdout.write(`${JSON.stringify({
     ok: true, runId, artifactName, objectKey, keyId: config.BACKUP_KEY_ID,
     encryptedSizeBytes: size, sha256Digest: digest, retentionUntil: retentionUntil.toISOString(),
+    durability:localOnly?'local_only':'offsite_object_lock',offsite:!localOnly,
   })}\n`);
 } catch (error) {
   const code = errorCode(error);

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { QueryResultRow } from 'pg';
 import type { Database } from '../database.js';
+import { LEGAL_VERSIONS, type AccountUser } from './types.js';
 
 export type KaiOidcTransaction = Readonly<{
   id: string;
@@ -56,6 +57,21 @@ export interface KaiIdentityStore {
   }>): Promise<KaiAppLoginCodeResult>;
 }
 
+export type KaiAccessIdentity = Readonly<{
+  userId: string;
+  role: AccountUser['role'];
+  status: AccountUser['status'];
+  currentLegalConsents: boolean;
+}>;
+
+export interface KaiAccessIdentityStore {
+  resolveAccessIdentity(input: Readonly<{
+    issuer: string;
+    subjectHash: string;
+    now: Date;
+  }>): Promise<KaiAccessIdentity>;
+}
+
 type TransactionRow = QueryResultRow & {
   id: string;
   nonce_hash: string;
@@ -78,7 +94,7 @@ function mapTransaction(row: TransactionRow): KaiOidcTransaction {
   };
 }
 
-export class PostgresKaiIdentityStore implements KaiIdentityStore {
+export class PostgresKaiIdentityStore implements KaiIdentityStore, KaiAccessIdentityStore {
   constructor(private readonly database: Database) {}
 
   async createTransaction(input: Parameters<KaiIdentityStore['createTransaction']>[0]) {
@@ -166,6 +182,61 @@ export class PostgresKaiIdentityStore implements KaiIdentityStore {
       );
       return userId;
     });
+  }
+
+  async resolveAccessIdentity(input: Parameters<KaiAccessIdentityStore['resolveAccessIdentity']>[0]) {
+    const existing = await this.touchExistingAccessIdentity(input);
+    if (existing) return existing;
+    try {
+      return await this.database.transaction(async (client) => {
+        const userId = randomUUID();
+        await client.query(
+          `INSERT INTO users(id, phone_ciphertext, phone_lookup_hash, email_ciphertext,
+             email_lookup_hash, display_name, federated_principal)
+           VALUES ($1, NULL, NULL, NULL, NULL, 'KAI 用户', true)`,
+          [userId],
+        );
+        await client.query(
+          `INSERT INTO kai_oidc_identities(id, user_id, issuer, subject_hash, last_authenticated_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [randomUUID(), userId, input.issuer, input.subjectHash, input.now],
+        );
+        return { userId, role: 'member', status: 'active', currentLegalConsents: false } as const;
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code !== '23505') throw error;
+      const raced = await this.touchExistingAccessIdentity(input);
+      if (!raced) throw error;
+      return raced;
+    }
+  }
+
+  private async touchExistingAccessIdentity(input: Parameters<KaiAccessIdentityStore['resolveAccessIdentity']>[0]) {
+    const found = await this.database.query<{
+      user_id: string;
+      role: AccountUser['role'];
+      status: AccountUser['status'];
+      current_legal_consents: boolean;
+    }>(
+      `SELECT i.user_id, u.role, u.status,
+         (EXISTS (SELECT 1 FROM legal_consents c
+           WHERE c.user_id = i.user_id AND c.document_kind = 'terms' AND c.document_version = $3)
+          AND EXISTS (SELECT 1 FROM legal_consents c
+           WHERE c.user_id = i.user_id AND c.document_kind = 'privacy' AND c.document_version = $4))
+           AS current_legal_consents
+       FROM kai_oidc_identities i
+       JOIN users u ON u.id = i.user_id
+       WHERE i.issuer = $1 AND i.subject_hash = $2`,
+      [input.issuer, input.subjectHash, LEGAL_VERSIONS.terms, LEGAL_VERSIONS.privacy],
+    );
+    const row = found.rows[0];
+    if (!row) return null;
+    return {
+      userId: row.user_id,
+      role: row.role,
+      status: row.status,
+      currentLegalConsents: row.current_legal_consents,
+    };
   }
 
   async createAppLoginCode(input: Parameters<KaiIdentityStore['createAppLoginCode']>[0]) {

@@ -1,6 +1,13 @@
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
-import { clearSession, loadSession, updateSessionTokens } from './session';
+import {
+  KaiOidcRefreshValidationError,
+  isDefinitiveKaiOidcTokenInvalid,
+  refreshKaiOidcTokens,
+  revokeKaiOidcTokens,
+} from './kai-oidc-client';
+import { queueKaiOidcRevocation } from './kai-revocation-queue';
+import { clearSession, loadSession, updateKaiOidcSessionTokens } from './session';
 import { distributionChannel } from './distribution';
 
 const configuredBase = String(Constants.expoConfig?.extra?.cloudPayBaseUrl ?? 'https://cloudpay.kai.com').replace(/\/+$/u, '');
@@ -21,7 +28,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = Readonly<{
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   auth?: 'none' | 'optional' | 'required';
   headers?: Record<string, string>;
@@ -29,6 +36,7 @@ type RequestOptions = Readonly<{
 }>;
 
 let refreshInFlight: Promise<string | null> | null = null;
+let sessionLogoutInProgress = false;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   let payload: unknown;
@@ -40,7 +48,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-async function rawRequest<T>(path: string, options: RequestOptions, accessToken?: string) {
+async function rawRequest<T>(path: string, options: RequestOptions, accessToken?: string, idToken?: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -51,6 +59,7 @@ async function rawRequest<T>(path: string, options: RequestOptions, accessToken?
         'x-kai-distribution-channel': distributionChannel,
         ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(idToken ? { 'X-KAI-ID-Token': idToken } : {}),
         ...options.headers,
       },
       ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
@@ -64,24 +73,89 @@ async function rawRequest<T>(path: string, options: RequestOptions, accessToken?
 }
 
 async function refreshAccessToken() {
+  if (sessionLogoutInProgress) return null;
   refreshInFlight ??= (async () => {
     const session = await loadSession();
-    if (!session) return null;
+    if (!session || sessionLogoutInProgress) return null;
     try {
-      const response = await rawRequest<{ ok: true; session: {
-        accessToken: string; refreshToken: string; accessExpiresInSeconds: number; refreshExpiresAt: string;
-      } }>('/mobile/v1/auth/refresh', {
-        method: 'POST', auth: 'none', body: { refreshToken: session.refreshToken, deviceId: session.deviceId },
+      const response = await refreshKaiOidcTokens({
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        idToken: session.idToken,
+        tokenType: 'Bearer',
+        scope: session.scope,
+        expiresInSeconds: Math.max(1, Math.floor((Date.parse(session.accessExpiresAt) - Date.now()) / 1_000)),
+        subject: session.oidcSubject,
       });
-      const updated = await updateSessionTokens(response.session);
+      const updated = await updateKaiOidcSessionTokens({
+        ...response,
+        oidcSubject: response.subject,
+        accessExpiresInSeconds: response.expiresInSeconds,
+      });
       return updated?.accessToken ?? null;
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) await clearSession();
+      if (error instanceof KaiOidcRefreshValidationError) {
+        try {
+          await queueKaiOidcRevocation(error.revocationCandidate);
+          await clearSession();
+        } catch {
+          throw new Error('登录刷新未完成，本机仍保留原登录以便安全重试。');
+        }
+      } else if (isDefinitiveKaiOidcTokenInvalid(error)) {
+        await clearSession();
+      }
       throw error;
     }
   })().finally(() => { refreshInFlight = null; });
   return refreshInFlight;
 }
+
+async function retireRejectedPairedSession() {
+  const current = await loadSession();
+  if (!current) return;
+  try {
+    await revokeKaiOidcTokens(current);
+  } catch {
+    try {
+      await queueKaiOidcRevocation(current);
+    } catch {
+      throw new ApiError(
+        'AUTH_REVOCATION_PERSIST_FAILED',
+        0,
+        '登录状态无法安全撤销，本机仍保留当前登录；请联网后重试。',
+      );
+    }
+  }
+  await clearSession();
+}
+
+async function handlePairedRequestFailure(error: unknown): Promise<never> {
+  if (error instanceof ApiError && error.status === 401) await retireRejectedPairedSession();
+  throw error;
+}
+
+export async function beginSessionLogout() {
+  sessionLogoutInProgress = true;
+  try { await refreshInFlight; } catch { /* Logout continues and clears the local session. */ }
+}
+
+export function endSessionLogout() {
+  sessionLogoutInProgress = false;
+}
+
+export function apiRequestWithAccessToken<T>(
+  path: string,
+  accessToken: string,
+  idToken: string,
+  options: RequestOptions = {},
+) {
+  if (!accessToken || accessToken.length < 20 || !idToken || idToken.length < 40) {
+    throw new ApiError('AUTH_REQUIRED', 401, '请先登录。');
+  }
+  return rawRequest<T>(path, { ...options, auth: 'none' }, accessToken, idToken);
+}
+
+function sessionIdToken(session: Awaited<ReturnType<typeof loadSession>>) { return session?.idToken; }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const auth = options.auth ?? 'none';
@@ -91,7 +165,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
     session = token ? await loadSession() : null;
   }
   if (auth === 'required' && !session) throw new ApiError('AUTH_REQUIRED', 401, '请先登录。');
-  const execute = () => rawRequest<T>(path, options, session?.accessToken);
+  const execute = () => rawRequest<T>(path, options, session?.accessToken, sessionIdToken(session));
   try {
     return await execute();
   } catch (error) {
@@ -99,22 +173,25 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
       const latestSession = await loadSession();
       if (latestSession && latestSession.accessToken !== session.accessToken) {
         session = latestSession;
-        return rawRequest<T>(path, options, session.accessToken);
+        try {
+          return await rawRequest<T>(path, options, session.accessToken, sessionIdToken(session));
+        } catch (latestError) {
+          return handlePairedRequestFailure(latestError);
+        }
       }
       const token = await refreshAccessToken();
       if (!token) throw error;
       session = await loadSession();
       try {
-        return await rawRequest<T>(path, options, session?.accessToken);
+        return await rawRequest<T>(path, options, session?.accessToken, sessionIdToken(session));
       } catch (retryError) {
-        if (retryError instanceof ApiError && retryError.status === 401) await clearSession();
-        throw retryError;
+        return handlePairedRequestFailure(retryError);
       }
     }
     const shouldRetry = options.retry ?? (options.method === undefined || options.method === 'GET');
     if (shouldRetry
       && error instanceof ApiError && (error.status === 0 || [502, 503, 504].includes(error.status))) {
-      return rawRequest<T>(path, options, session?.accessToken);
+      return rawRequest<T>(path, options, session?.accessToken, sessionIdToken(session));
     }
     throw error;
   }
