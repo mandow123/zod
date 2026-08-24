@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ZOD Phase 2 · 统一审阅入口</title>
+  <style>
+    :root {
+      --canvas: #f4f0e7;
+      --surface: #fffdf8;
+      --ink: #172031;
+      --muted: #667085;
+      --line: #d7d1c5;
+      --blue: #1748d1;
+      --blue-soft: #e9efff;
+      --green: #176b50;
+      --green-soft: #e6f5ee;
+      --amber: #8b5200;
+      --amber-soft: #fff0cd;
+      --red: #9d2c2c;
+      --shadow: 0 16px 44px rgba(23, 32, 49, .08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.62;
+    }
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid #f1934a; outline-offset: 3px; }
+    code {
+      padding: .12rem .35rem;
+      border: 1px solid #ddd7cc;
+      border-radius: 5px;
+      background: #f7f4ed;
+      font: .9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding-bottom: 80px; }
+    .hero {
+      margin: 24px 0 18px;
+      padding: clamp(28px, 5vw, 64px);
+      overflow: hidden;
+      border: 1px solid #1d3158;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 85% 15%, rgba(79, 145, 255, .36), transparent 34%),
+        linear-gradient(140deg, #0b1730, #142f67 58%, #0b1730);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    .eyebrow { margin: 0 0 14px; color: #9ec1ff; font: 800 12px/1.3 ui-monospace, monospace; letter-spacing: .14em; }
+    h1 { max-width: 820px; margin: 0; font-size: clamp(36px, 7vw, 72px); line-height: .98; letter-spacing: -.055em; }
+    .hero p { max-width: 820px; color: #d7e4ff; }
+    .status-row, .actions, .route-list { display: flex; flex-wrap: wrap; gap: 9px; }
+    .chip, .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .hero .chip { border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: white; }
+    .hero .actions { margin-top: 24px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 15px;
+      border-radius: 10px;
+      background: white;
+      color: #102250;
+      font-size: 13px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+    .button.secondary { border: 1px solid rgba(255,255,255,.35); background: transparent; color: white; }
+    .warning {
+      margin: 18px 0;
+      padding: 18px 20px;
+      border: 1px solid #e1c47b;
+      border-radius: 14px;
+      background: var(--amber-soft);
+      color: #5e3c08;
+    }
+    .warning strong { display: block; margin-bottom: 4px; }
+    .top-nav {
+      position: sticky;
+      z-index: 5;
+      top: 10px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin: 16px 0 26px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 253, 248, .94);
+      backdrop-filter: blur(12px);
+    }
+    .top-nav a { flex: 0 0 auto; padding: 8px 11px; border-radius: 8px; color: var(--ink); font-size: 12px; font-weight: 800; text-decoration: none; }
+    .top-nav a:hover { background: var(--blue-soft); color: var(--blue); }
+    section { margin: 42px 0; scroll-margin-top: 84px; }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: clamp(27px, 4vw, 42px); line-height: 1.08; letter-spacing: -.035em; }
+    h3 { margin: 0; font-size: 18px; }
+    .section-head p { max-width: 730px; margin: 8px 0 0; color: var(--muted); }
+    .section-label { color: var(--blue); font: 800 11px ui-monospace, monospace; letter-spacing: .1em; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card {
+      min-width: 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(23,32,49,.035);
+    }
+    .card p { margin: 8px 0 0; color: var(--muted); }
+    .card .actions { margin-top: 16px; }
+    .card .button { border: 1px solid #c6d3f4; background: var(--blue-soft); color: var(--blue); }
+    .status.phase1 { background: #eceff4; color: #3f4b5f; }
+    .status.pass { background: var(--green-soft); color: var(--green); }
+    .status.review { background: var(--amber-soft); color: var(--amber); }
+    .status.boundary { background: #fbeaea; color: var(--red); }
+    .matrix-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid #e7e2d8; text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #f0ece3; color: #3f4a5a; font: 800 11px ui-monospace, monospace; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    .route-list { margin-top: 12px; }
+    .route-list a { padding: 6px 9px; border: 1px solid #ccd6ec; border-radius: 999px; background: #f5f8ff; font-size: 12px; font-weight: 750; text-decoration: none; }
+    .direction-card { padding: 0; overflow: hidden; }
+    .direction-card img { display: block; width: 100%; aspect-ratio: 390 / 844; object-fit: cover; object-position: top; background: #e5e7eb; }
+    .direction-card .copy { padding: 18px; }
+    .gallery { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .gallery a { display: block; min-width: 0; text-decoration: none; }
+    .gallery img { display: block; width: 100%; aspect-ratio: 390 / 844; object-fit: cover; object-position: top; border: 1px solid var(--line); border-radius: 12px; background: #e5e7eb; }
+    .gallery span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .gallery .overview img { aspect-ratio: 16 / 9; }
+    .gallery .overview { grid-column: span 2; }
+    .shot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .shot-grid figure { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .shot-grid img { display: block; width: 100%; border-radius: 9px; background: #e5e7eb; }
+    figcaption { margin-top: 8px; color: var(--muted); font-size: 12px; }
+    .boundary-list { margin: 12px 0 0; padding-left: 20px; }
+    .boundary-list li + li { margin-top: 8px; }
+    .command { overflow-x: auto; padding: 14px 16px; border-radius: 12px; background: #101928; color: #e6efff; font: 12px/1.6 ui-monospace, monospace; white-space: nowrap; }
+    footer { margin-top: 60px; padding-top: 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    @media (max-width: 920px) {
+      .grid, .grid.two { grid-template-columns: 1fr 1fr; }
+      .gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .shot-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1180px); }
+      .hero { margin-top: 10px; border-radius: 18px; }
+      .grid, .grid.two, .shot-grid { grid-template-columns: 1fr; }
+      .gallery { grid-template-columns: 1fr 1fr; }
+      .section-head { grid-template-columns: 1fr; }
+      .top-nav { top: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <main class="shell" id="top">
+    <header class="hero">
+      <p class="eyebrow">ZOD / PHASE 2 / UNIFIED REVIEW / 2026-08-24</p>
+      <h1>架构、视觉与版本边界，一处查清。</h1>
+      <p>这是统一审阅工件，不是 React Native 生产界面。它链接既有证据，不接 API、不发布、不部署，也不授权后续真实 UI 实施。</p>
+      <div class="status-row" aria-label="当前审阅状态">
+        <span class="chip">Phase 1 报告已批准</span>
+        <span class="chip">Phase 2 报告已批准</span>
+        <span class="chip">真实 UI 仍暂停</span>
+      </div>
+      <div class="actions">
+        <a class="button" href="ACCEPTANCE_REPORT.md">打开 Markdown 验收报告</a>
+        <a class="button secondary" href="../ZOD_MOBILE_VISUAL_DIRECTIONS.md">查看视觉选型记录</a>
+      </div>
+    </header>
+
+    <aside class="warning" role="note">
+      <strong>不可推断边界</strong>
+      HTML 的 History、URL、DOM focus 和浏览器几何不等于 RN 已实现；<code>143 calls / 121 routes</code> 只表示 method + normalized path 的静态合同，不验证 payload、认证授权或运行时后端可达性。
+    </aside>
+
+    <nav class="top-nav" aria-label="页面章节">
+      <a href="#matrix">AC 矩阵</a>
+      <a href="#architecture">架构</a>
+      <a href="#directions">A/B/C</a>
+      <a href="#scenes">3×12 场景</a>
+      <a href="#screenshots">截图</a>
+      <a href="#remote">远程快照</a>
+      <a href="#boundaries">证据边界</a>
+      <a href="#open">本地打开</a>
+    </nav>
+
+    <section id="matrix">
+      <div class="section-head">
+        <div><span class="section-label">01 / ACCEPTANCE</span><h2>AC-01 至 AC-07 证据矩阵</h2><p>Phase 1 与 Phase 2 的已列报告均已获妈妈批准；本入口继续作为设计证据和版本边界索引，不构成 RN 实施或生产发布。</p></div>
+      </div>
+      <div class="matrix-wrap">
+        <table>
+          <thead><tr><th>AC</th><th>审阅状态</th><th>关键证据</th><th>不可推断</th></tr></thead>
+          <tbody>
+            <tr><td>AC-01</td><td><span class="status phase1">Phase 1 已批准</span></td><td>typed intent、provider_order side、生命周期、provider_offer；8/8、161/161、TypeScript、143/121。</td><td>静态合同不覆盖 payload/auth/runtime。</td></tr>
+            <tr><td>AC-02</td><td><span class="status phase1">Phase 1 已批准</span></td><td>架构 before/after 两份自包含 HTML 解析 2/2。</td><td>没有真实设备性能 profiler。</td></tr>
+            <tr><td>AC-03</td><td><span class="status pass">Phase 2 已批准</span></td><td>A/B/C 结构上 3×12 可达；两角色五栏；9 张 390×844 代表截图；既有浏览器 72/72 双尺寸证据。</td><td>没有 36 张全矩阵截图，也没有 360 截图集；CSS 不能替代几何实测。</td></tr>
+            <tr><td>AC-04</td><td><span class="status pass">Phase 2 已批准</span></td><td>design 来源提交、provider 快照、README、gap audit、媒体依赖均可追溯。</td><td>设计证据不是 main、不是生产、不是已实现 RN。</td></tr>
+            <tr><td>AC-05</td><td><span class="status pass">Phase 2 已批准</span></td><td>本页、Markdown 报告、本地链接与边界矩阵。</td><td>入口只汇总证据，不启动实施阶段。</td></tr>
+            <tr><td>AC-06</td><td><span class="status phase1">Phase 1 已批准</span></td><td>provider 顶部媒体、底部五栏、390/360、console 0/0、媒体暂停合同。</td><td>实际 OS reduced-motion 未模拟。</td></tr>
+            <tr><td>AC-07</td><td><span class="status phase1">Phase 1 已批准</span></td><td>技术负责人和移动美术总监联合报告 :2 已批准，无接口/所有权冲突。</td><td>批准报告不授权真实 UI、发布或部署。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="section-head">
+        <div><span class="section-label">02 / ARCHITECTURE</span><h2>架构 before / after</h2><p>入口职责从集中式协调收束为 lifecycle adapter、typed intent 与 App 唯一副作用执行器；页面视觉、错误/空态和后端边界保持原位。</p></div>
+      </div>
+      <div class="grid two">
+        <article class="card"><span class="status boundary">BEFORE</span><h3>入口承担全部协调</h3><p>用于查看优化前的平台订阅、目的地判定与副作用耦合。</p><div class="actions"><a class="button" href="../../architecture-previews/current-state.html">打开 current-state.html</a></div></article>
+        <article class="card"><span class="status pass">AFTER</span><h3>显式架构边界</h3><p>展示 <code>useAppLifecycle</code>、<code>AppNavigationIntent</code> 和唯一执行器。</p><div class="actions"><a class="button" href="../../architecture-previews/target-state.html">打开 target-state.html</a></div></article>
+        <article class="card"><h3>架构审计</h3><p>包含 provider_order side、provider_offer、生命周期、RN/Web 和 API 静态合同边界。</p><div class="actions"><a class="button" href="../ZOD_ARCHITECTURE_OPTIMIZATION.md">打开架构报告</a></div></article>
+        <article class="card"><h3>行为证据</h3><p>聚焦测试验证订单侧、卸载保护和 offer 失败顺序。</p><div class="route-list"><a href="../../test/provider-order-side-architecture.test.mjs">order side test</a><a href="../../test/app-lifecycle.test.mjs">lifecycle test</a><a href="../../test/app-navigation-intents.test.mjs">intent test</a></div></article>
+      </div>
+    </section>
+
+    <section id="directions">
+      <div class="section-head">
+        <div><span class="section-label">03 / VISUAL DIRECTIONS</span><h2>A / B / C 三套方向</h2><p>三套 HTML 共用同一 12 场景运行时，但视觉语法不同。妈妈已选择 B 编辑流骨架 + A 提供方状态组件 + C 交易凭证组件；这是选型规则，不表示新的混合 HTML 或 RN 已实现。</p></div>
+        <a href="../ZOD_MOBILE_VISUAL_DIRECTIONS.md">视觉方向说明</a>
+      </div>
+      <div class="grid">
+        <article class="card direction-card"><a href="../design-previews/2026-08-23/direction-a-control.html"><img src="../design-previews/2026-08-23/screenshots-a-workspace.png" alt="A 精密控制供应工作台代表截图"></a><div class="copy"><span class="status boundary">A / CONTROL</span><h3>精密控制</h3><p>暗色网格、状态灯、紧凑运营反馈。</p><div class="actions"><a class="button" href="../design-previews/2026-08-23/direction-a-control.html">打开 A</a></div></div></article>
+        <article class="card direction-card"><a href="../design-previews/2026-08-23/direction-b-editorial.html"><img src="../design-previews/2026-08-23/screenshots-b-home.png" alt="B 编辑流首页代表截图"></a><div class="copy"><span class="status pass">B / EDITORIAL</span><h3>编辑流</h3><p>暖纸底、强排版、已选全局骨架。</p><div class="actions"><a class="button" href="../design-previews/2026-08-23/direction-b-editorial.html">打开 B</a></div></div></article>
+        <article class="card direction-card"><a href="../design-previews/2026-08-23/direction-c-ledger.html"><img src="../design-previews/2026-08-23/screenshots-c-assets.png" alt="C 信任凭证资产代表截图"></a><div class="copy"><span class="status review">C / LEDGER</span><h3>信任凭证</h3><p>凭证、序列、核验与交易生命周期。</p><div class="actions"><a class="button" href="../design-previews/2026-08-23/direction-c-ledger.html">打开 C</a></div></div></article>
+      </div>
+      <div class="actions" style="margin-top:16px"><a class="button" href="../design-previews/2026-08-23/index.html">打开 A/B/C 总览</a></div>
+    </section>
+
+    <section id="scenes">
+      <div class="section-head">
+        <div><span class="section-label">04 / SCENE MATRIX</span><h2>结构可达的 3 × 12</h2><p>每个链接都直接定位方向、角色与场景。该矩阵证明结构可达，不代表存在 36 张截图。</p></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>两角色五栏</h3>
+        <p><strong>buyer：</strong>home / 首页、market / 市场、assets / 我的资产、messages / 消息、profile / 我的</p>
+        <p><strong>provider：</strong>workspace / 工作台、resources / 资源、publish / 上架、messages / 消息、profile / 我的</p>
+      </div>
+      <div class="matrix-wrap">
+        <table>
+          <thead><tr><th>场景</th><th>角色</th><th>A 精密控制</th><th>B 编辑流</th><th>C 信任凭证</th></tr></thead>
+          <tbody>
+            <tr><td>home · 买方首页</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=home">A / home</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=home">B / home</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=home">C / home</a></td></tr>
+            <tr><td>market · 资源市场</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=market">A / market</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=market">B / market</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=market">C / market</a></td></tr>
+            <tr><td>assets · 我的资产</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=assets">A / assets</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=assets">B / assets</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=assets">C / assets</a></td></tr>
+            <tr><td>messages · 消息</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=messages">A / messages</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=messages">B / messages</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=messages">C / messages</a></td></tr>
+            <tr><td>profile · 我的</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=profile">A / profile</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=profile">B / profile</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=profile">C / profile</a></td></tr>
+            <tr><td>orders · 买方订单</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=orders">A / orders</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=orders">B / orders</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=orders">C / orders</a></td></tr>
+            <tr><td>wallet · KAI 卡时</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=wallet">A / wallet</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=wallet">B / wallet</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=wallet">C / wallet</a></td></tr>
+            <tr><td>workspace · 供应工作台</td><td>provider</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=provider&amp;screen=workspace">A / workspace</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=provider&amp;screen=workspace">B / workspace</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=provider&amp;screen=workspace">C / workspace</a></td></tr>
+            <tr><td>resources · 提供方资源</td><td>provider</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=provider&amp;screen=resources">A / resources</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=provider&amp;screen=resources">B / resources</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=provider&amp;screen=resources">C / resources</a></td></tr>
+            <tr><td>publish · 上架中心</td><td>provider</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=provider&amp;screen=publish">A / publish</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=provider&amp;screen=publish">B / publish</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=provider&amp;screen=publish">C / publish</a></td></tr>
+            <tr><td>login · 安全登录</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=login">A / login</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=login">B / login</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=login">C / login</a></td></tr>
+            <tr><td>offline · 离线恢复</td><td>buyer</td><td><a href="../design-previews/2026-08-23/direction-a-control.html?mode=buyer&amp;screen=offline">A / offline</a></td><td><a href="../design-previews/2026-08-23/direction-b-editorial.html?mode=buyer&amp;screen=offline">B / offline</a></td><td><a href="../design-previews/2026-08-23/direction-c-ledger.html?mode=buyer&amp;screen=offline">C / offline</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="screenshots">
+      <div class="section-head">
+        <div><span class="section-label">05 / SCREENSHOTS</span><h2>代表截图与双尺寸证据</h2><p>A/B/C 只有 9 张 390×844 代表截图；Phase 1 provider 修订另有 390×844、360×800 和 buyer 对照三张证据图。没有 A/B/C 的 360 截图集。</p></div>
+      </div>
+      <div class="gallery" aria-label="A B C 代表截图">
+        <a class="overview" href="../design-previews/2026-08-23/screenshots-overview.png"><img src="../design-previews/2026-08-23/screenshots-overview.png" alt="A B C 视觉方向总览"><span>方向总览 · 1280×720</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-a-home.png"><img src="../design-previews/2026-08-23/screenshots-a-home.png" alt="A 首页"><span>A · home</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-a-market.png"><img src="../design-previews/2026-08-23/screenshots-a-market.png" alt="A 市场"><span>A · market</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-a-workspace.png"><img src="../design-previews/2026-08-23/screenshots-a-workspace.png" alt="A 供应工作台"><span>A · workspace</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-b-home.png"><img src="../design-previews/2026-08-23/screenshots-b-home.png" alt="B 首页"><span>B · home</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-b-market.png"><img src="../design-previews/2026-08-23/screenshots-b-market.png" alt="B 市场"><span>B · market</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-b-assets.png"><img src="../design-previews/2026-08-23/screenshots-b-assets.png" alt="B 我的资产"><span>B · assets</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-c-home.png"><img src="../design-previews/2026-08-23/screenshots-c-home.png" alt="C 首页"><span>C · home</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-c-market.png"><img src="../design-previews/2026-08-23/screenshots-c-market.png" alt="C 市场"><span>C · market</span></a>
+        <a href="../design-previews/2026-08-23/screenshots-c-assets.png"><img src="../design-previews/2026-08-23/screenshots-c-assets.png" alt="C 我的资产"><span>C · assets</span></a>
+      </div>
+      <h3 style="margin:28px 0 12px">Phase 1 provider / buyer 证据副本</h3>
+      <div class="shot-grid">
+        <figure><a href="assets/zod-phase1-provider-390x844.png"><img src="assets/zod-phase1-provider-390x844.png" alt="provider 390×844"></a><figcaption>provider · 390×844 · 顶部媒体 + 底部五栏</figcaption></figure>
+        <figure><a href="assets/zod-phase1-provider-360x800.png"><img src="assets/zod-phase1-provider-360x800.png" alt="provider 360×800"></a><figcaption>provider · 360×800 · 无主内容横溢出</figcaption></figure>
+        <figure><a href="assets/zod-phase1-buyer-390x844.png"><img src="assets/zod-phase1-buyer-390x844.png" alt="buyer 390×844"></a><figcaption>buyer · 390×844 · 角色与导航对照</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="remote">
+      <div class="section-head">
+        <div><span class="section-label">06 / ISOLATED DESIGN SNAPSHOT</span><h2>最新 provider 修订的版本关系</h2><p>这是 design 分支工作树上的本地未提交预览快照，不是 main、生产或已实现 RN。</p></div>
+      </div>
+      <div class="matrix-wrap">
+        <table>
+          <tbody>
+            <tr><th>架构父提交</th><td><code>321fe7e8c6415fb673b418ca410b917f41c5f373</code>，其远端 main 基线为 <code>4a6236ec9bc3ae04f54713617a388f0b0aed7a6f</code>。</td></tr>
+            <tr><th>design 来源提交</th><td><code>origin/design/mobile-preview-20260823</code> / <code>0708bc377c75cd5ff4eac1ac6fea2a3419415fed</code>；内容已线性重放到本候选分支。</td></tr>
+            <tr><th>provider 修订来源</th><td><code>kai-mobile-v2-preview.html</code> 来自经批准的 design 工作树本地快照；本分支将其作为设计证据提交，不称其为 main、生产或 RN。</td></tr>
+            <tr><th>来源文件 SHA-256</th><td><code>49943850d13996c8b099a92f7160f543eb21b265940e96cbcf9614f9a223359c</code></td></tr>
+            <tr><th>旧 gap audit 基线</th><td><code>b2adcc088543a25725ed46bb8287454478150c85</code> 是 2026-08-20 审计时的 origin/main，不是当前 remote ref。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid" style="margin-top:16px">
+        <article class="card"><h3>Integrated preview</h3><p>provider workspace 媒体、两角色导航、route/History/focus 的 HTML 投影。</p><div class="actions"><a class="button" href="../design-previews/mobile-20260823/kai-mobile-v2-preview.html?role=provider&amp;size=393#app-workspace">provider / 393</a><a class="button" href="../design-previews/mobile-20260823/kai-mobile-v2-preview.html?role=provider&amp;size=360#app-workspace">provider / 360</a></div></article>
+        <article class="card"><h3>来源与差距</h3><p>README 明确预览不替换 RN；gap audit 记录目标态和旧审计基线。</p><div class="route-list"><a href="../design-previews/mobile-20260823/README.md">README</a><a href="../design-previews/mobile-20260823/zod-mobile-gap-audit.md">gap audit</a></div></article>
+        <article class="card"><h3>本地媒体依赖</h3><p>视频信息不承载在线、库存、可售或交付事实。</p><div class="route-list"><a href="../design-previews/mobile-20260823/server-room-poster.jpg">poster</a><a href="../design-previews/mobile-20260823/server-room-preview.mp4">mp4</a></div></article>
+      </div>
+    </section>
+
+    <section id="boundaries">
+      <div class="section-head"><div><span class="section-label">07 / EVIDENCE BOUNDARIES</span><h2>事实、运行时与未验证项</h2></div></div>
+      <div class="grid two">
+        <article class="card"><h3>RN 已验证</h3><ul class="boundary-list"><li>typed intent 与 order side</li><li>Linking/AppState/Notifications 生命周期和卸载保护</li><li>provider_offer 先进入 publish 的错误路径</li><li>TypeScript 与 Node 行为测试</li></ul></article>
+        <article class="card"><h3>HTML 已验证</h3><ul class="boundary-list"><li>A/B/C 结构可达、角色与五栏</li><li>既有真实浏览器 390/360 几何与 console</li><li>Back/Forward 后 URL、route 与 DOM focus</li><li>远程 provider 媒体和导航投影</li></ul></article>
+        <article class="card"><h3>静态合同已验证</h3><ul class="boundary-list"><li>143 个前端调用</li><li>121 个 method + normalized path route contracts</li><li><code>/mobile/v1</code> 范围闭合</li></ul></article>
+        <article class="card"><h3>未验证 / 非覆盖</h3><ul class="boundary-list"><li>真实 payload、认证授权、后端可达性</li><li>RN Web History 或 DOM focus（不存在该实现）</li><li>真实设备性能与完整 UI 落地</li><li>实际 OS reduced-motion；A/B/C 360 截图集</li></ul></article>
+      </div>
+    </section>
+
+    <section id="open">
+      <div class="section-head"><div><span class="section-label">08 / LOCAL REVIEW</span><h2>本地打开方式</h2><p>在仓库根目录启动任意静态文件服务器，并从本仓库的 <code>docs/unified-review/index.html</code> 打开。所有交付链接均为仓库相对路径。</p></div></div>
+      <p>也可直接以本地文件打开本页；Markdown 在浏览器中可能显示为纯文本，这是预期行为。</p>
+    </section>
+
+    <footer>
+      <p><strong>已批准报告：</strong><code>01a02b2b-c34f-7ce2-9f03-d7af11a121af:3</code>。该批准不等于真实 UI、发布、部署或生产变更授权。</p>
+      <p><a href="#top">返回顶部</a> · <a href="ACCEPTANCE_REPORT.md">Markdown 验收报告</a></p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260823-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-22T22:56:04Z",
+  "baseCommit": "a251c17cc2395ff98828b5f24e9641866c677a9e",
+  "stagedDiffSha256": "d8fec968a2e309907f13cb6d0a2d237e2356bfe4853c92a416610e1069dec3ef",
+  "summary": "已逐项审阅本次移动端设计预览包。变更仅新增 docs/design-previews/mobile-20260823 下的独立 HTML 评审页、KAI 透明角色资产、参考图、首页视频与封面、功能差距审计及运行说明，不修改 React Native 应用源码、业务接口、认证、支付或生产配置。三份 HTML 的内联 JavaScript 均通过语法检查，22 个包内文件共约 5.8 MB，静态资源引用无缺失；关键 HTML、视频和封面与已验收源文件 SHA-256 完全一致。粒子评审页已完成九种粒子、五场景、三尺寸、四套白昼/黑夜配色、网络状态、KAI 情绪、URL 返回、减少动态、焦点约束和控制台烟测，手机内场景底栏及关键入口可直接跳转。批准作为设计评审资料进入独立远端分支，后续是否同步真实应用仍需单独产品与工程验收。"
+}

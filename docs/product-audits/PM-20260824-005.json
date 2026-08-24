@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260824-005",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-24T09:07:54Z",
+  "baseCommit": "321fe7e8c6415fb673b418ca410b917f41c5f373",
+  "stagedDiffSha256": "8e9153ae5342c3d3af8631e2e5c94b612168d3eb0507525e488344614e6b9f13",
+  "summary": "批准本次精确暂存的单一 Phase 3 视觉设计证据提交。该提交在架构提交 321fe7e8 之上等价重放来源 design 提交 0708bc37 的设计证据，并纳入统一审阅入口与报告、经批准 provider 预览快照、KAI 外部边界预览、I 的 A2 v3 设定板和四张情绪素材，以及明确的 B 编辑流骨架 + A 提供方状态组件 + C 交易凭证组件选型记录。应用内五栏与 orders/wallet/publish 保持直接切换；仅外部账号授权、外部支付、后端服务网站显示 K→A→I 连体反馈，且预览不联网、不打开外部目标。交付说明不含 loopback 地址，所有交付链接均为仓库相对路径；文档不将设计证据称为新混合 HTML、RN 实现、main 合并或生产发布。审计确认不包含 App.tsx、src、backend、包管理、主题/API 模型、AppleDouble 或临时文件；K/A 保留为设计来源资产且没有改动。本批准不授权 PR、合并、部署、生产变更或远端推送。"
+}
