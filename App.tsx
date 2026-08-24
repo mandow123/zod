@@ -535,6 +535,7 @@ function CloudPayApp() {
         return <ProfileScreen snapshot={snapshot} kaiAuthProgress={snapshot.authenticated ? null : kaiAuthProgress}
           onSelectSubject={(subjectId) => void chooseSubject(subjectId)} onSessionChanged={refresh} onLogin={() => setAuthVisible(true)}
           onOpenQualification={() => { setPublishIntentToOpen('supplier'); navigate('publish'); }} onOpenCredits={() => navigate('credits')}
+          onOpenWallet={() => setCreditWalletVisible(true)}
           onOpenOrders={() => { setOrderSide('buyer'); navigate('orders'); }} onOpenAssets={() => navigate('assets')}
           onOpenCreatorCollaboration={() => navigate('creator')}
           onOpenPayout={() => setPayoutVisible(true)}
@@ -673,7 +674,7 @@ function CloudPayApp() {
           void refresh().catch(() => undefined);
         }}
       />
-      {snapshot.qixiangTopupCapability !== null || distributionPolicy.stagingDemo ? <CreditWalletSheet
+      {snapshot.authenticated || distributionPolicy.stagingDemo ? <CreditWalletSheet
         visible={creditWalletVisible}
         balance={snapshot.creditBalance}
         qixiangCapability={snapshot.qixiangTopupCapability}

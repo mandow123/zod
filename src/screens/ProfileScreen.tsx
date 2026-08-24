@@ -3,6 +3,7 @@ import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SessionLogoutError, logoutCloudPay, type CloudPaySnapshot, type TradingSubject } from '../api';
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
+import { creditAmount } from '../format';
 import { useStagingProfileToolsSlot } from '../StagingProfileToolsSlot';
 import { brand, colors } from '../theme';
 import { kaiAuthLastAttemptLabel, kaiAuthProgressMessage, type KaiAuthProgress } from '../kai-auth';
@@ -48,11 +49,11 @@ type Props = Readonly<{
   snapshot: CloudPaySnapshot; onSelectSubject: (subjectId: string) => void;
   kaiAuthProgress: KaiAuthProgress | null;
   onSessionChanged: () => void | Promise<void>; onLogin: () => void; onOpenQualification: () => void;
-  onOpenCredits: () => void; onOpenOrders: () => void; onOpenAssets: () => void;
+  onOpenCredits: () => void; onOpenWallet: () => void; onOpenOrders: () => void; onOpenAssets: () => void;
   onOpenCreatorCollaboration: () => void; onOpenMessages: () => void; onOpenPayout: () => void;
 }>;
 
-export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSessionChanged, onLogin, onOpenQualification, onOpenCredits, onOpenOrders, onOpenAssets, onOpenCreatorCollaboration, onOpenMessages, onOpenPayout }: Props) {
+export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSessionChanged, onLogin, onOpenQualification, onOpenCredits, onOpenWallet, onOpenOrders, onOpenAssets, onOpenCreatorCollaboration, onOpenMessages, onOpenPayout }: Props) {
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [securityVisible, setSecurityVisible] = useState(false);
   const [subjectsVisible, setSubjectsVisible] = useState(false);
@@ -78,9 +79,17 @@ export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSe
   const openSubjects = () => snapshot.authenticated ? setSubjectsVisible(true) : onLogin();
   const accountPending = !snapshot.authenticated && kaiAuthProgress !== null;
   const pendingAccountName = kaiAuthProgress?.kind === 'identity_pending' ? 'KAI 身份待确认' : 'KAI 账号已验证';
+  const openWallet = () => snapshot.authenticated ? onOpenWallet() : onLogin();
 
   return <View style={styles.root}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <Text style={styles.pageTitle}>我的</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="卡时余额与充值" onPress={openWallet} style={styles.walletHero}>
+      <View style={styles.walletTop}><View><Text style={styles.walletEyebrow}>KAI 卡时余额</Text><Text style={styles.walletValue}>{snapshot.authenticated && snapshot.creditBalance ? creditAmount(snapshot.creditBalance.available) : '—'}</Text><Text style={styles.walletUnit}>{snapshot.authenticated ? '可用卡时' : '登录后查看余额'}</Text></View>
+        <View style={styles.walletAction}><Text style={styles.walletActionText}>{snapshot.authenticated ? '立即充值' : '登录并充值'}</Text><Ionicons name="arrow-forward" size={15} color={colors.surface} /></View>
+      </View>
+      <View style={styles.walletDivider} />
+      <View style={styles.walletFooter}><Text style={styles.walletFact}>订单预留  {snapshot.authenticated && snapshot.creditBalance ? creditAmount(snapshot.creditBalance.reserved) : '—'}</Text><Text style={styles.walletRail}>七相支付 · 支付宝</Text></View>
+    </Pressable>
     <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? (accountPending ? pendingAccountName : '访客模式')}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? (accountPending ? '业务会话尚未建立' : '登录后查看账号资产')}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : accountPending ? '继续' : '登录 Zod'}</Text></Pressable></View>
 
     {accountPending ? <Pressable accessibilityRole="button" onPress={onLogin} style={styles.authProgressCard}>
@@ -148,6 +157,7 @@ function Menu({ icon, label, meta, onPress, enabled = true, trailingIcon, tone =
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.canvas }, content: { padding: 16, paddingBottom: 34 }, pageTitle: { color: colors.ink, fontSize: 25, fontWeight: '900', marginBottom: 12 },
+  walletHero: { minHeight: 154, marginBottom: 12, padding: 18, borderRadius: 22, backgroundColor: colors.primary, shadowColor: '#0B4E9B', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 4 }, walletTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, walletEyebrow: { color: '#DCEBFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }, walletValue: { color: colors.surface, fontSize: 38, lineHeight: 44, fontWeight: '900', letterSpacing: -1, marginTop: 4 }, walletUnit: { color: '#DCEBFF', fontSize: 10, marginTop: 1 }, walletAction: { minHeight: 42, paddingHorizontal: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)' }, walletActionText: { color: colors.surface, fontSize: 11, fontWeight: '900' }, walletDivider: { height: 1, marginVertical: 15, backgroundColor: 'rgba(255,255,255,0.22)' }, walletFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, walletFact: { color: '#E8F2FF', fontSize: 9, fontWeight: '700' }, walletRail: { color: colors.surface, fontSize: 9, fontWeight: '800' },
   accountCard: { minHeight: 76, paddingHorizontal: 13, borderRadius: 14, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, avatar: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F2FF' }, avatarText: { color: colors.ink, fontSize: 14, fontWeight: '900' }, accountCopy: { flex: 1, marginLeft: 11 }, accountName: { color: colors.ink, fontSize: 15, fontWeight: '900' }, accountMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, textAction: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   authProgressCard: { minHeight: 74, marginTop: 10, paddingHorizontal: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#C9DDF7' }, authProgressCopy: { flex: 1 }, authProgressTitle: { color: colors.primaryDark, fontSize: 12, fontWeight: '900' }, authProgressMeta: { color: colors.muted, fontSize: 9, lineHeight: 14, marginTop: 4 },
   authAttemptMeta: { color: colors.subtle, fontSize: 8, marginTop: 4 },

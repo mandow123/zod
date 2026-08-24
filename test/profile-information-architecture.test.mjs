@@ -17,6 +17,21 @@ test('我的按产品经理信息架构分组，买家主路径保持优先', as
   assert.doesNotMatch(profile, /合同与发票/u);
 });
 
+test('卡时余额和充值入口位于我的页面最上方并直达钱包', async () => {
+  const [profile, app] = await Promise.all([
+    source('../src/screens/ProfileScreen.tsx'), source('../App.tsx'),
+  ]);
+  const walletIndex = profile.indexOf('accessibilityLabel="卡时余额与充值"');
+  const accountIndex = profile.indexOf('style={styles.accountCard}');
+  assert.ok(walletIndex >= 0 && accountIndex > walletIndex);
+  assert.match(profile, /KAI 卡时余额/u);
+  assert.match(profile, /立即充值/u);
+  assert.match(profile, /七相支付 · 支付宝/u);
+  assert.match(profile, /snapshot\.authenticated \? onOpenWallet\(\) : onLogin\(\)/u);
+  assert.match(app, /onOpenWallet=\{\(\) => setCreditWalletVisible\(true\)\}/u);
+  assert.match(app, /snapshot\.authenticated \|\| distributionPolicy\.stagingDemo \? <CreditWalletSheet/u);
+});
+
 test('纯买家不会被合成的兑付档案误判成供应商', async () => {
   const profile = await source('../src/screens/ProfileScreen.tsx');
   assert.match(profile, /const supplier = snapshot\.providerWorkspace\?\.supplier \?\? null/u);

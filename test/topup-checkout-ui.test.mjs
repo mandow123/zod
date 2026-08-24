@@ -43,11 +43,15 @@ test('正式快线只挂载七相面板，staging 流程继续物理隔离', asy
     source('../src/QuicklinePaymentSource.ts'),
     source('../src/QuicklinePaymentSource.staging.ts'),
   ]);
-  assert.match(app, /snapshot\.qixiangTopupCapability !== null \|\| distributionPolicy\.stagingDemo \? <CreditWalletSheet/u);
+  assert.match(app, /snapshot\.authenticated \|\| distributionPolicy\.stagingDemo \? <CreditWalletSheet/u);
   assert.match(credit, /quicklineAvailable \? <Pressable onPress=\{onOpenWallet\}.*快线支付/us);
   assert.match(wallet, /quickline\.source !== 'staging' && qixiangCapability \? <QixiangTopupPanel/u);
   assert.doesNotMatch(wallet, /listCreditTopups|loadCreditTopup|CreditTopup/u);
   assert.match(panel, /支付通道：七相支付（支付宝）/u);
+  assert.match(panel, /充值套餐/u);
+  assert.match(panel, /自定义金额（元）/u);
+  assert.match(panel, /TOPUP_PACKAGES/u);
+  assert.match(panel, /使用七相支付/u);
   assert.match(panel, /WebBrowser\.openBrowserAsync\(safeUrl/u);
   assert.match(panel, /await WebBrowser\.openBrowserAsync[\s\S]*await observeReturn\(attempt\)/u);
   assert.match(panel, /createQixiangBrowserReturnCoordinator/u);

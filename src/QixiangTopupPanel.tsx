@@ -40,6 +40,14 @@ const statusCopy: Readonly<Record<QixiangTopup['status'], Readonly<{
   manual_review: { title: '人工核对中', detail: '核对完成前不会增加卡时。', icon: 'people-outline' },
 };
 
+const TOPUP_PACKAGES = [
+  { amountCents: 5_000, label: '轻量' },
+  { amountCents: 10_000, label: '常用' },
+  { amountCents: 30_000, label: '进阶' },
+  { amountCents: 50_000, label: '畅用' },
+  { amountCents: 100_000, label: '大额' },
+] as const;
+
 function gateFor(capability: QixiangTopupCapability): QixiangReadinessGateInput {
   return { authenticated: true, readiness: {
     profile: { id: 'full_commerce', routePolicy: 'full-commerce-v1' },
@@ -69,6 +77,9 @@ export function QixiangTopupPanel({
   const minimum = capability.minAmountCents ?? 1;
   const maximum = capability.maxAmountCents ?? minimum;
   const initialAmount = qixiangAmount(Math.min(maximum, Math.max(minimum, 10_000)));
+  const packages = useMemo(() => capability.canaryOnly ? [] : TOPUP_PACKAGES.filter(
+    (item) => item.amountCents >= minimum && item.amountCents <= maximum,
+  ), [capability.canaryOnly, maximum, minimum]);
   const gate = useMemo(() => gateFor(capability), [capability]);
   const contextKey = `${userId ?? ''}\u0000${subjectId ?? ''}`;
   const [amountInput, setAmountInput] = useState(initialAmount);
@@ -274,7 +285,7 @@ export function QixiangTopupPanel({
     try { amountCents = qixiangAmountInputCents(amountInput, minimum, maximum); } catch { /* rendered below */ }
     return <View style={styles.section}>
       {!unresolvedCreate ? <Pressable disabled={busy} onPress={() => setConfirming(false)} style={styles.back}><Ionicons name="arrow-back" size={18} color={colors.primary} /><Text style={styles.backText}>返回卡时</Text></Pressable> : null}
-      <Text style={styles.eyebrow}>快线支付</Text><Text style={styles.title}>{unresolvedCreate ? '继续未完成的支付' : '确认支付'}</Text>
+      <Text style={styles.eyebrow}>七相支付</Text><Text style={styles.title}>{unresolvedCreate ? '继续未完成的支付' : '确认支付'}</Text>
       <View style={styles.summaryCard}>
         <Summary label="运营主体" value={operatorName ?? '主体信息暂时无法读取'} />
         <Summary label="实付" value={`¥ ${amountInput}`} />
@@ -293,8 +304,18 @@ export function QixiangTopupPanel({
   }
 
   return <View style={styles.section}>
-    <Text style={styles.sectionTitle}>快线支付</Text><Text style={styles.help}>支付通道：七相支付（支付宝）</Text>
-    <Text style={styles.fieldLabel}>实付金额（元）</Text>
+    <Text style={styles.sectionTitle}>充值卡时</Text><Text style={styles.help}>支付通道：七相支付（支付宝）</Text>
+    {packages.length > 0 ? <><Text style={styles.fieldLabel}>充值套餐</Text><View style={styles.packageGrid}>{packages.map((item) => {
+      const selectedPackage = amountInput === qixiangAmount(item.amountCents);
+      return <Pressable key={item.amountCents} accessibilityRole="button" accessibilityState={{ selected: selectedPackage }}
+        accessibilityLabel={`${item.label}套餐 ${qixiangAmount(item.amountCents)}元`}
+        onPress={() => { setAmountInput(qixiangAmount(item.amountCents)); setError(null); }}
+        style={[styles.packageCard, selectedPackage && styles.packageCardSelected]}>
+        <Text style={[styles.packageLabel, selectedPackage && styles.packageLabelSelected]}>{item.label}</Text>
+        <Text style={[styles.packageAmount, selectedPackage && styles.packageAmountSelected]}>¥{qixiangAmount(item.amountCents)}</Text>
+      </Pressable>;
+    })}</View></> : null}
+    <Text style={styles.fieldLabel}>{capability.canaryOnly ? '验收金额' : '自定义金额（元）'}</Text>
     <View style={styles.amountField}><TextInput accessibilityLabel="实付金额" value={amountInput}
       onChangeText={(value) => { setAmountInput(value); setError(null); }} keyboardType="decimal-pad"
       editable={!capability.canaryOnly}
@@ -304,7 +325,7 @@ export function QixiangTopupPanel({
     <View style={styles.quoteCard}><Text style={styles.quoteLabel}>预计获得</Text><Text style={styles.quoteValue}>{(() => { try { return `${qixiangAmount(Math.floor((qixiangAmountInputCents(amountInput, minimum, maximum) * 1000) / 1002))} KAI 卡时`; } catch { return '—'; } })()}</Text><Text style={styles.meta}>按 1.002 向下取整到两位 · 有效期 364 天</Text></View>
     {operatorName ? <Text style={styles.operator}>运营主体：{operatorName}</Text> : null}
     {error ? <Notice text={error} /> : null}
-    <Pressable disabled={blocked || !operatorName || creation?.allowed !== true} onPress={() => setConfirming(true)} style={[styles.primary, (blocked || !operatorName || creation?.allowed !== true) && styles.disabled]}><Text style={styles.primaryText}>进入快线支付</Text></Pressable>
+    <Pressable disabled={blocked || !operatorName || creation?.allowed !== true} onPress={() => setConfirming(true)} style={[styles.primary, (blocked || !operatorName || creation?.allowed !== true) && styles.disabled]}><Text style={styles.primaryText}>使用七相支付</Text></Pressable>
     {creation?.allowed === false ? <Text style={styles.disclosure}>服务端当前不允许创建新支付；已有记录仍可查看和恢复。</Text> : null}
     <View style={styles.historyHeader}><Text style={styles.sectionTitle}>支付记录</Text><Pressable accessibilityLabel="刷新支付记录" onPress={() => void bootstrap()}><Ionicons name="refresh" size={19} color={colors.primary} /></Pressable></View>
     {items.length === 0 ? <View style={styles.empty}><Text style={styles.emptyText}>还没有支付记录</Text></View> : items.map((item) => <Pressable key={item.id} onPress={() => void selectTopup(item)} style={styles.record}><View style={styles.recordIcon}><Ionicons name={statusCopy[item.status].icon} size={20} color={colors.primary} /></View><View style={styles.recordCopy}><Text style={styles.recordTitle}>{item.credit.amount} KAI 卡时</Text><Text style={styles.meta}>{dateTime(item.createdAt)} · {statusCopy[item.status].title}</Text></View><Ionicons name="chevron-forward" size={17} color={colors.subtle} /></Pressable>)}
@@ -320,5 +341,5 @@ function Notice({ text }: Readonly<{ text: string }>) {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 12 }, loader: { marginVertical: 28 }, eyebrow: { color: colors.primary, fontSize: 10, fontWeight: '900', letterSpacing: 1 }, title: { color: colors.ink, fontSize: 22, fontWeight: '900' }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' }, help: { color: colors.muted, fontSize: 10, marginTop: -6 }, fieldLabel: { color: colors.ink, fontSize: 10, fontWeight: '800', marginTop: 3 }, amountField: { minHeight: 56, paddingHorizontal: 14, borderWidth: 1, borderColor: '#B7CEF4', borderRadius: 12, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center' }, amountInput: { flex: 1, color: colors.ink, fontSize: 23, fontWeight: '900' }, currency: { color: colors.muted, fontSize: 11 }, quoteCard: { padding: 15, borderRadius: 13, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#D5E5FA' }, quoteLabel: { color: colors.muted, fontSize: 9 }, quoteValue: { color: colors.primaryDark, fontSize: 20, fontWeight: '900', marginTop: 5 }, operator: { color: colors.muted, fontSize: 9, lineHeight: 14 }, primary: { minHeight: 48, paddingHorizontal: 16, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 12, fontWeight: '900' }, secondary: { minHeight: 44, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: '#B7CEF4' }, secondaryText: { color: colors.primary, fontSize: 11, fontWeight: '900' }, disabled: { opacity: 0.45 }, summaryCard: { padding: 15, gap: 11, borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface }, summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, summaryLabel: { color: colors.muted, fontSize: 10 }, summaryValue: { flex: 1, color: colors.ink, fontSize: 11, fontWeight: '800', textAlign: 'right' }, rules: { padding: 13, gap: 6, borderRadius: 12, backgroundColor: colors.primarySoft }, rule: { color: colors.muted, fontSize: 9, lineHeight: 15 }, notice: { padding: 12, flexDirection: 'row', gap: 8, borderRadius: 11, backgroundColor: colors.primarySoft }, noticeText: { flex: 1, color: colors.muted, fontSize: 9, lineHeight: 14 }, disclosure: { color: colors.muted, fontSize: 9, lineHeight: 15, textAlign: 'center' }, back: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' }, backText: { color: colors.primary, fontSize: 11, fontWeight: '800' }, statusIcon: { width: 58, height: 58, borderRadius: 19, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: colors.primarySoft }, statusSuccess: { backgroundColor: colors.greenSoft }, statusTitle: { color: colors.ink, fontSize: 22, fontWeight: '900', textAlign: 'center' }, statusDetail: { color: colors.muted, fontSize: 10, lineHeight: 16, textAlign: 'center' }, meta: { color: colors.muted, fontSize: 9, lineHeight: 14 }, historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }, empty: { padding: 20, borderRadius: 12, alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, emptyText: { color: colors.muted, fontSize: 10 }, record: { minHeight: 65, paddingHorizontal: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, recordIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, recordCopy: { flex: 1, marginHorizontal: 10 }, recordTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
+  section: { gap: 12 }, loader: { marginVertical: 28 }, eyebrow: { color: colors.primary, fontSize: 10, fontWeight: '900', letterSpacing: 1 }, title: { color: colors.ink, fontSize: 22, fontWeight: '900' }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' }, help: { color: colors.muted, fontSize: 10, marginTop: -6 }, fieldLabel: { color: colors.ink, fontSize: 10, fontWeight: '800', marginTop: 3 }, packageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, packageCard: { width: '31%', minWidth: 88, minHeight: 64, paddingHorizontal: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface }, packageCardSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft }, packageLabel: { color: colors.muted, fontSize: 9, fontWeight: '800' }, packageLabelSelected: { color: colors.primary }, packageAmount: { color: colors.ink, fontSize: 14, fontWeight: '900', marginTop: 4 }, packageAmountSelected: { color: colors.primaryDark }, amountField: { minHeight: 56, paddingHorizontal: 14, borderWidth: 1, borderColor: '#B7CEF4', borderRadius: 12, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center' }, amountInput: { flex: 1, color: colors.ink, fontSize: 23, fontWeight: '900' }, currency: { color: colors.muted, fontSize: 11 }, quoteCard: { padding: 15, borderRadius: 13, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: '#D5E5FA' }, quoteLabel: { color: colors.muted, fontSize: 9 }, quoteValue: { color: colors.primaryDark, fontSize: 20, fontWeight: '900', marginTop: 5 }, operator: { color: colors.muted, fontSize: 9, lineHeight: 14 }, primary: { minHeight: 48, paddingHorizontal: 16, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 12, fontWeight: '900' }, secondary: { minHeight: 44, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: '#B7CEF4' }, secondaryText: { color: colors.primary, fontSize: 11, fontWeight: '900' }, disabled: { opacity: 0.45 }, summaryCard: { padding: 15, gap: 11, borderRadius: 14, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface }, summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, summaryLabel: { color: colors.muted, fontSize: 10 }, summaryValue: { flex: 1, color: colors.ink, fontSize: 11, fontWeight: '800', textAlign: 'right' }, rules: { padding: 13, gap: 6, borderRadius: 12, backgroundColor: colors.primarySoft }, rule: { color: colors.muted, fontSize: 9, lineHeight: 15 }, notice: { padding: 12, flexDirection: 'row', gap: 8, borderRadius: 11, backgroundColor: colors.primarySoft }, noticeText: { flex: 1, color: colors.muted, fontSize: 9, lineHeight: 14 }, disclosure: { color: colors.muted, fontSize: 9, lineHeight: 15, textAlign: 'center' }, back: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' }, backText: { color: colors.primary, fontSize: 11, fontWeight: '800' }, statusIcon: { width: 58, height: 58, borderRadius: 19, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: colors.primarySoft }, statusSuccess: { backgroundColor: colors.greenSoft }, statusTitle: { color: colors.ink, fontSize: 22, fontWeight: '900', textAlign: 'center' }, statusDetail: { color: colors.muted, fontSize: 10, lineHeight: 16, textAlign: 'center' }, meta: { color: colors.muted, fontSize: 9, lineHeight: 14 }, historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }, empty: { padding: 20, borderRadius: 12, alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, emptyText: { color: colors.muted, fontSize: 10 }, record: { minHeight: 65, paddingHorizontal: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, recordIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, recordCopy: { flex: 1, marginHorizontal: 10 }, recordTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
 });
