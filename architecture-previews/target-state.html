@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZOD 架构证据 · 目标职责</title>
+  <style>
+    :root{--bg:#f7f7f4;--ink:#17201d;--muted:#66736d;--line:#b9c5bf;--surface:#fff;--accent:#256d58;--soft:#dcefe8}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:32px 20px}h1{margin:0 0 6px;font-size:clamp(26px,4vw,42px)}p{color:var(--muted)}.notice{padding:10px 12px;border:1px solid var(--line);border-radius:10px}.lane{display:grid;grid-template-columns:1fr 42px 1.2fr 42px 1.2fr;gap:9px;align-items:stretch;margin:18px 0}.node{padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.new{border-color:var(--accent);background:var(--soft)}.arrow{display:grid;place-items:center;color:var(--muted);font-size:22px}.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:24px}.tab{padding:10px;border-top:3px solid var(--accent);text-align:center}@media(max-width:760px){.lane{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.tabs{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body><main>
+  <h1>目标职责：翻译与执行分离</h1>
+  <p class="notice">架构证据，非产品视觉候选或最终美工稿；不改变 screen、Sheet、API、数据合同或发布权限。</p>
+  <section class="lane" aria-label="生命周期边界"><div class="node">Linking · AppState · Notifications</div><div class="arrow">→</div><div class="node new"><strong>useAppLifecycle</strong><br>集中订阅、成对清理、卸载保护</div><div class="arrow">→</div><div class="node">稳定 App callbacks<br>auth · refresh · notification</div></section>
+  <section class="lane" aria-label="导航意图边界"><div class="node">workspace / messages</div><div class="arrow">→</div><div class="node new"><strong>AppNavigationIntent</strong><br>route + OrderSide 纯函数翻译</div><div class="arrow">→</div><div class="node"><strong>App.tsx 唯一执行器</strong><br>route · load · Sheet</div></section>
+  <section class="lane" aria-label="既有产品边界"><div class="node">KAI · staging · inquiry · wallet</div><div class="arrow">→</div><div class="node">原 screen / Sheet props</div><div class="arrow">→</div><div class="node">原 API / backend contract</div></section>
+  <section class="tabs" aria-label="五项主栏"><div class="tab">首页</div><div class="tab">市场</div><div class="tab">我的资产</div><div class="tab">消息</div><div class="tab">我的</div></section>
+</main></body></html>

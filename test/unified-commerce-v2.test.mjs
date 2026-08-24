@@ -11,7 +11,7 @@ test('V2 keeps one five-item navigation and removes the repeated global view swi
   ]);
   for (const entry of [
     "{ key: 'home', label: '首页'", "{ key: 'market', label: '市场'",
-    "{ key: 'publish', label: '上架'", "{ key: 'messages', label: '消息'",
+    "{ key: 'assets', label: '我的资产'", "{ key: 'messages', label: '消息'",
     "{ key: 'profile', label: '我的'",
   ]) assert.match(components, new RegExp(entry.replace(/[{}]/gu, '\\$&'), 'u'));
   assert.doesNotMatch(app, /<WorkspaceHeader/u);

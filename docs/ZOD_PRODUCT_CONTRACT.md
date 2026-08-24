@@ -49,3 +49,13 @@
 - 审计结论必须明确为 `APPROVED`；任何有条件通过、待整改或不通过都禁止提交。
 - 审计记录必须绑定当前基线提交和暂存差异摘要，并随同该次 commit 保存到 `docs/product-audits/`。
 - 仓库提交门禁会校验审计记录；摘要不匹配、基线不匹配或没有批准记录时拒绝 commit。
+
+## 导航与订单语境
+
+- App 内部 route 与底部主栏分离。底部主栏只接受 `home / market / assets / messages / profile`。
+- `credits / orders / workspace / resources / publish` 归属“我的资产”，`creator` 归属“我的”；归属映射不删除内部 route，也不删除上架能力。
+- 跨页面动作先翻译为 typed navigation intent，再由 `App.tsx` 的唯一执行器修改 route、订单侧或 Sheet 状态。
+- 提供方工作台订单进入 `orders + provider`；提供方消息订单保持 `messages + provider`；买方消息订单进入 `orders + buyer`。
+- 打开正式订单时必须在加载前同步订单侧并将 `selectedOrderSource` 设为 `formal`；staging 订单仍只能由原 staging 入口设为 `staging`。
+- 提供方 offer 消息必须先进入内部 `publish` route 再加载状态；加载失败时保留 publish 页面及既有错误提示。
+- Linking、AppState 与 Notifications 订阅由应用生命周期边界集中注册并成对注销。AppState 恢复仍同时触发快照刷新、会话协调与认证状态恢复。

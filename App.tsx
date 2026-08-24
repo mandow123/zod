@@ -22,7 +22,7 @@ import {
   type DeviceOrder,
 } from './src/api';
 import { AftercareReviewSheet } from './src/AftercareReviewSheet';
-import { BottomNav, type TabKey } from './src/components';
+import { BottomNav } from './src/components';
 import { OfferWizardSheet } from './src/OfferWizardSheet';
 import { OrderDetailSheet } from './src/OrderDetailSheet';
 import { MarketOrderSheet } from './src/MarketOrderSheet';
@@ -46,9 +46,7 @@ import {
   publishStoredAuthentication,
   refreshAfterPendingAuthentication,
 } from './src/auth-refresh';
-import {
-  providerNextNavigation, providerOfferMessageDestination, type ProviderPublishIntent,
-} from './src/provider-next-navigation';
+import type { ProviderPublishIntent } from './src/provider-next-navigation';
 import {
   acceptVerifiedKaiConsents,
   cancelVerifiedKaiAuth,
@@ -81,12 +79,26 @@ import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
 import { loadSession, reconcileCommittedKaiOidcSession, type StoredSession } from './src/session';
 import { StagingDemoShell } from './src/StagingDemoShell';
 import { StagingEnvironmentBanner } from './src/StagingEnvironmentBanner';
+import {
+  messageNavigationIntent,
+  providerNextIntent,
+  resolveProviderOfferMessageIntent,
+  type AppNavigationIntent,
+  type OrderSide,
+} from './src/core/app-navigation-intents';
+import { useAppLifecycle } from './src/core/use-app-lifecycle';
+import { primaryTabFor, type AppRouteKey } from './src/navigation';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
+const APP_LIFECYCLE_ADAPTERS = {
+  linking: Linking,
+  appState: AppState,
+  notifications: Notifications,
+} as const;
 
 function CloudPayApp() {
-  const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [orderSide, setOrderSide] = useState<'buyer' | 'provider'>('buyer');
+  const [activeTab, setActiveTab] = useState<AppRouteKey>('home');
+  const [orderSide, setOrderSide] = useState<OrderSide>('buyer');
   const [snapshot, setSnapshot] = useState<CloudPaySnapshot>(initialSnapshot);
   const [refreshing, setRefreshing] = useState(false);
   const [authVisible, setAuthVisible] = useState(false);
@@ -121,6 +133,7 @@ function CloudPayApp() {
   const [myInquiriesVisible, setMyInquiriesVisible] = useState(false);
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const refreshGeneration = useRef(0);
+  const handledUrls = useRef(new Set<string>());
 
   const refresh = useCallback(async (force = false) => {
     if (refreshInFlight.current && !force) return refreshInFlight.current;
@@ -185,35 +198,28 @@ function CloudPayApp() {
 
   useEffect(() => { void restoreStoredKaiSession(); }, [restoreStoredKaiSession]);
 
-  useEffect(() => {
-    let active = true;
-    const handled = new Set<string>();
-    const handleUrl = async (url: string | null) => {
-      if (!url || handled.has(url)) return;
-      const referralToken = parseCreatorReferralToken(url);
-      if (referralToken) {
-        handled.add(url);
-        setPendingReferralToken(referralToken);
-        return;
-      }
-      if (!isKaiAuthCallback(url)) return;
-      handled.add(url);
-      setAuthVisible(true);
-      setKaiAuthBusy(true);
-      setKaiAuthError(null);
-      try {
-        const progress = await completeKaiAuth(url);
-        if (active && progress) setKaiAuthProgress(progress);
-      } catch (reason) {
-        if (active) setKaiAuthError(reason instanceof Error ? reason.message : '统一身份登录失败，请重试。');
-      } finally {
-        if (active) setKaiAuthBusy(false);
-      }
-    };
-    void Linking.getInitialURL().then(handleUrl);
-    const subscription = Linking.addEventListener('url', ({ url }) => { void handleUrl(url); });
-    return () => { active = false; subscription.remove(); };
-  }, [refreshAfterAuthentication]);
+  const handleUrl = useCallback(async (url: string | null, isActive: () => boolean) => {
+    if (!url || handledUrls.current.has(url)) return;
+    const referralToken = parseCreatorReferralToken(url);
+    if (referralToken) {
+      handledUrls.current.add(url);
+      setPendingReferralToken(referralToken);
+      return;
+    }
+    if (!isKaiAuthCallback(url)) return;
+    handledUrls.current.add(url);
+    setAuthVisible(true);
+    setKaiAuthBusy(true);
+    setKaiAuthError(null);
+    try {
+      const progress = await completeKaiAuth(url);
+      if (isActive() && progress) setKaiAuthProgress(progress);
+    } catch (reason) {
+      if (isActive()) setKaiAuthError(reason instanceof Error ? reason.message : '统一身份登录失败，请重试。');
+    } finally {
+      if (isActive()) setKaiAuthBusy(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authVisible || kaiAuthBusy) return;
@@ -248,15 +254,10 @@ function CloudPayApp() {
     Alert.alert('登录安全提醒', message);
   }), []);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        void refresh();
-        void restoreStoredKaiSession();
-        void restoreKaiAuthStatus();
-      }
-    });
-    return () => subscription.remove();
+  const handleAppActive = useCallback(() => {
+    void refresh();
+    void restoreStoredKaiSession();
+    void restoreKaiAuthStatus();
   }, [refresh, restoreKaiAuthStatus, restoreStoredKaiSession]);
 
   useEffect(() => {
@@ -297,37 +298,61 @@ function CloudPayApp() {
     return () => { active = false; };
   }, []);
 
-  const navigate = useCallback((tab: TabKey) => {
-    void Haptics.selectionAsync();
+  const navigate = useCallback((tab: AppRouteKey) => {
     setActiveTab(tab);
   }, []);
 
-  const openProviderNextAction = useCallback(async (route: string, entityId: string | null) => {
-    const destination = providerNextNavigation(route, entityId);
-    navigate(destination.tab);
-    if (destination.orderId) {
-      try {
+  const executeNavigationIntent = useCallback(async (intent: AppNavigationIntent) => {
+    switch (intent.kind) {
+      case 'navigate':
+        setActiveTab(intent.tab);
+        return;
+      case 'open-order':
+        setOrderSide(intent.side);
         setSelectedOrderSource('formal');
-        setSelectedOrder(await loadCloudPayOrder(destination.orderId));
-      } catch (caught) {
-        Alert.alert('没能打开订单', caught instanceof Error ? caught.message : '请稍后重试。');
-      }
+        setActiveTab(intent.tab);
+        setSelectedOrder(await loadCloudPayOrder(intent.orderId));
+        return;
+      case 'open-resource':
+        setActiveTab('resources');
+        setResourceToOpenId(intent.resourceId);
+        return;
+      case 'open-offer-wizard':
+        setActiveTab('publish');
+        setOfferWizard(intent.offerWizard);
+        return;
+      case 'open-publish-intent':
+        setActiveTab('publish');
+        setPublishIntentToOpen(intent.publishIntent);
+        return;
+      case 'reveal-offer':
+        setActiveTab('publish');
+        setPublishOfferToReveal(intent.offerId);
+        return;
+      case 'publish-listing':
+        setActiveTab('publish');
+        setListingOfferId(intent.offerId);
+        return;
+      case 'manage-listing':
+        setActiveTab('publish');
+        setPublishListingToManage(intent.listingId);
     }
-    if (destination.resourceId) setResourceToOpenId(destination.resourceId);
-    if (destination.offerResourceId) setOfferWizard({ resourceId: destination.offerResourceId });
-    if (destination.publishIntent) setPublishIntentToOpen(destination.publishIntent);
-    if (destination.resumeDraftId) setOfferWizard({ resumeDraftId: destination.resumeDraftId });
-    if (destination.revisionOfferId) {
-      const resumeDraft = snapshot.providerWorkspace?.resume?.kind === 'wizard_draft'
-        && snapshot.providerWorkspace.resume.id === destination.revisionOfferId;
-      setOfferWizard(resumeDraft
-        ? { resumeDraftId: destination.revisionOfferId }
-        : { revisionOfferId: destination.revisionOfferId });
+  }, []);
+
+  const openProviderNextAction = useCallback(async (route: string, entityId: string | null) => {
+    const canResumeRevisionDraft = snapshot.providerWorkspace?.resume?.kind === 'wizard_draft'
+      && snapshot.providerWorkspace.resume.id === entityId;
+    try {
+      await executeNavigationIntent(providerNextIntent(route, entityId, canResumeRevisionDraft));
+    } catch (caught) {
+      Alert.alert('没能打开订单', caught instanceof Error ? caught.message : '请稍后重试。');
     }
-    if (destination.revealOfferId) setPublishOfferToReveal(destination.revealOfferId);
-    if (destination.listingOfferId) setListingOfferId(destination.listingOfferId);
-    if (destination.manageListingId) setPublishListingToManage(destination.manageListingId);
-  }, [navigate, snapshot.providerWorkspace?.resume]);
+  }, [executeNavigationIntent, snapshot.providerWorkspace?.resume]);
+
+  const openProviderWorkspaceNextAction = useCallback((route: string, entityId: string | null) => {
+    void Haptics.selectionAsync();
+    return openProviderNextAction(route, entityId);
+  }, [openProviderNextAction]);
 
   const chooseSubject = useCallback(async (subjectId: string) => {
     try {
@@ -399,56 +424,36 @@ function CloudPayApp() {
         await selectTradingSubject(subjectId);
         await refresh();
       }
-      if (message.data.route === 'provider_order' && typeof message.data.orderId === 'string') {
-        setActiveTab('messages');
-        setSelectedOrderSource('formal');
-        setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
-        return;
-      }
-      if (message.data.route === 'buyer_order' && typeof message.data.orderId === 'string') {
-        setActiveTab('orders');
-        setSelectedOrderSource('formal');
-        setSelectedOrder(await loadCloudPayOrder(message.data.orderId));
-        return;
-      }
-      if (message.data.route === 'provider_resource' && typeof message.data.resourceId === 'string') {
-        setResourceToOpenId(message.data.resourceId);
-        setActiveTab('resources');
+      const directIntent = messageNavigationIntent(message);
+      if (directIntent) {
+        await executeNavigationIntent(directIntent);
         return;
       }
       if (message.data.route !== 'provider_offer' || typeof message.data.offerId !== 'string') return;
-      setActiveTab('publish');
-      const offer = await getSupplierOffer(message.data.offerId);
-      const destination = providerOfferMessageDestination(offer.status);
-      if (destination === 'revision') {
-        setOfferWizard({ revisionOfferId: message.data.offerId });
-        return;
-      }
-      if (destination === 'listing') {
-        setListingOfferId(message.data.offerId);
-        return;
-      }
-      setPublishOfferToReveal(message.data.offerId);
+      const intent = await resolveProviderOfferMessageIntent(
+        message.data.offerId,
+        () => setActiveTab('publish'),
+        async (offerId) => (await getSupplierOffer(offerId)).status,
+      );
+      await executeNavigationIntent(intent);
     } catch (reason) {
       Alert.alert('暂时无法打开', reason instanceof Error ? reason.message : '请稍后再试。');
       await refresh();
     }
-  }, [markRead, refresh, snapshot.currentSubjectId]);
+  }, [executeNavigationIntent, markRead, refresh, snapshot.currentSubjectId]);
 
-  useEffect(() => {
-    const captureNotification = (response: Notifications.NotificationResponse | null) => {
-      const notificationId = response?.notification.request.content.data?.notificationId;
-      if (typeof notificationId !== 'string') return;
-      setPendingNotificationId(notificationId);
-      setActiveTab('messages');
-    };
-    void Notifications.getLastNotificationResponseAsync().then((response) => {
-      captureNotification(response);
-      if (response) void Notifications.clearLastNotificationResponseAsync();
-    });
-    const subscription = Notifications.addNotificationResponseReceivedListener(captureNotification);
-    return () => subscription.remove();
+  const captureNotification = useCallback((response: Notifications.NotificationResponse | null) => {
+    const notificationId = response?.notification.request.content.data?.notificationId;
+    if (typeof notificationId !== 'string') return;
+    setPendingNotificationId(notificationId);
+    setActiveTab('messages');
   }, []);
+
+  useAppLifecycle({
+    onUrl: handleUrl,
+    onAppActive: handleAppActive,
+    onNotificationResponse: captureNotification,
+  }, APP_LIFECYCLE_ADAPTERS);
 
   useEffect(() => {
     if (!pendingNotificationId || snapshot.loading) return;
@@ -493,7 +498,7 @@ function CloudPayApp() {
           snapshot={snapshot}
           refreshing={refreshing}
           onRefresh={refresh}
-          onNext={openProviderNextAction}
+          onNext={openProviderWorkspaceNextAction}
           onLogin={() => setAuthVisible(true)}
           onOpenOrder={(order) => { setSelectedOrderSource('formal'); setSelectedOrder(order); }}
           onOpenDeviceOrder={setSelectedDeviceOrder}
@@ -570,7 +575,7 @@ function CloudPayApp() {
         <Text numberOfLines={2} style={styles.authStatusText}>{kaiAuthProgressMessage(kaiAuthProgress)}</Text>
         <Text style={styles.authStatusAction}>继续</Text>
       </Pressable> : null}
-      <BottomNav active={activeTab === 'orders' || activeTab === 'resources' || activeTab === 'credits' || activeTab === 'assets' || activeTab === 'creator' ? 'profile' : activeTab === 'workspace' ? 'publish' : activeTab} onChange={navigate} unread={snapshot.unreadCount} />
+      <BottomNav active={primaryTabFor[activeTab]} onChange={navigate} unread={snapshot.unreadCount} />
       <AuthSheet
         visible={authVisible}
         onClose={() => { setAuthVisible(false); setKaiAuthError(null); }}

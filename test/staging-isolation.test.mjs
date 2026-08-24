@@ -26,7 +26,7 @@ import {
 
 const source = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('staging keeps its own package and API while rendering the original five-tab app', async () => {
+test('staging keeps its own package and API while rendering the approved five-tab app', async () => {
   const [config, gradle, metro, shell, components, app] = await Promise.all([
     source('../app.config.js'),
     source('../android/app/build.gradle'),
@@ -46,7 +46,7 @@ test('staging keeps its own package and API while rendering the original five-ta
   assert.doesNotMatch(metro, /StagingDemoShell\.staging\.tsx/u);
   assert.match(shell, /return children;/u);
   assert.match(app, /<StagingDemoShell><CloudPayApp \/><\/StagingDemoShell>/u);
-  assert.match(components, /label: '首页'.*label: '市场'.*label: '上架'.*label: '消息'.*label: '我的'/us);
+  assert.match(components, /label: '首页'.*label: '市场'.*label: '我的资产'.*label: '消息'.*label: '我的'/us);
   assert.doesNotMatch(components, /label: '收益'|DEMO ASSETS|DEMO MARKET/u);
   await assert.rejects(() => source('../src/StagingDemoApp.tsx'), /ENOENT/u);
   assert.match(metro, /StagingProfileToolsSlot\.staging\.tsx/u);

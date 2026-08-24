@@ -7,9 +7,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { AppRouteKey, PrimaryTabKey } from './navigation';
 import { brand, colors, shadows } from './theme';
 
-export type TabKey = 'home' | 'market' | 'credits' | 'assets' | 'orders' | 'workspace' | 'resources' | 'publish' | 'messages' | 'profile' | 'creator';
+export type TabKey = AppRouteKey;
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function BrandHeader({
@@ -98,10 +99,10 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const mainTabs: Array<{ key: TabKey; label: string; icon: IconName; activeIcon: IconName }> = [
+const mainTabs: Array<{ key: PrimaryTabKey; label: string; icon: IconName; activeIcon: IconName }> = [
   { key: 'home', label: '首页', icon: 'home-outline', activeIcon: 'home' },
   { key: 'market', label: '市场', icon: 'storefront-outline', activeIcon: 'storefront' },
-  { key: 'publish', label: '上架', icon: 'add-circle-outline', activeIcon: 'add-circle' },
+  { key: 'assets', label: '我的资产', icon: 'wallet-outline', activeIcon: 'wallet' },
   { key: 'messages', label: '消息', icon: 'chatbubble-ellipses-outline', activeIcon: 'chatbubble-ellipses' },
   { key: 'profile', label: '我的', icon: 'person-outline', activeIcon: 'person' },
 ];
@@ -111,8 +112,8 @@ export function BottomNav({
   onChange,
   unread,
 }: {
-  active: TabKey;
-  onChange: (tab: TabKey) => void;
+  active: PrimaryTabKey;
+  onChange: (tab: PrimaryTabKey) => void;
   unread: number;
 }) {
   const insets = useSafeAreaInsets();

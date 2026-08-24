@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260824-004",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-24T06:35:14Z",
+  "baseCommit": "4a6236ec9bc3ae04f54713617a388f0b0aed7a6f",
+  "stagedDiffSha256": "a86645288f19c8356080182a97107ea2caab093b534694a08e0510cdc0305ac2",
+  "summary": "批准本次精确暂存的架构优化差异。五项底部主栏固定为首页、市场、我的资产、消息、我的，内部 credits/orders/workspace/resources/publish 归属我的资产，creator 归属我的；publish 内部能力保持。跨屏动作通过 typed intent 和唯一 App 执行器携带订单侧，提供方工作台、提供方消息和买方消息的 tab/side 语义均有聚焦测试。Linking、AppState 与 Notifications 集中订阅、配对清理并保护晚到异步事件；AppState 激活仍恢复快照、stored session 与认证状态。新 main 原有两张询价 Sheet、钱包 support、七相 capability/user/subject、KAI OIDC、staging formal/source 与原错误提示保持。审计确认受保护路径零差异、TypeScript 通过、聚焦测试 64/64、全量 Node 285 通过并跳过 2 项、移动端后端静态合同 184 calls/160 routes、两份 HTML 解析通过。本批准只覆盖该原子代码提交，不授权 PR、合并、部署、生产变更或视觉最终选型。"
+}

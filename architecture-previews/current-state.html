@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZOD 架构证据 · 当前基线</title>
+  <style>
+    :root{--bg:#f7f7f4;--ink:#17201d;--muted:#66736d;--line:#b9c5bf;--surface:#fff;--accent:#a74632;--soft:#f5e0da}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px 20px}h1{margin:0 0 6px;font-size:clamp(26px,4vw,42px)}p{color:var(--muted)}.notice{padding:10px 12px;border:1px solid var(--line);border-radius:10px}.flow{display:grid;grid-template-columns:1fr 52px 1.5fr 52px 1fr;gap:10px;align-items:center;margin-top:24px}.node{padding:17px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.hot{border-color:var(--accent);background:var(--soft)}.arrow{text-align:center;font-size:22px;color:var(--muted)}ul{margin:8px 0 0;padding-left:18px}@media(max-width:760px){.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}
+  </style>
+</head>
+<body><main>
+  <h1>当前基线：入口协调职责集中</h1>
+  <p class="notice">架构证据，非产品视觉候选或最终美工稿。父提交：<code>4a6236ec9bc3ae04f54713617a388f0b0aed7a6f</code>。</p>
+  <section class="flow" aria-label="当前架构职责流">
+    <div class="node"><strong>平台事件</strong><ul><li>Linking</li><li>AppState</li><li>Notifications</li></ul></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="node hot"><strong>App.tsx</strong><ul><li>订阅与卸载</li><li>消息/工作台目的地判定</li><li>route、订单与 Sheet 副作用</li><li>页面 switch</li></ul></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="node"><strong>既有边界</strong><ul><li>screens / sheets</li><li>api / snapshot</li><li>KAI / staging / inquiry</li></ul></div>
+  </section>
+</main></body></html>
