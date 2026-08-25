@@ -80,6 +80,10 @@ import { PostgresAdminP0Store } from './admin/p0-store.js';
 import { AdminP0Service } from './admin/p0-service.js';
 import { KaiOidcClient } from './identity/kai-oidc-client.js';
 import { KaiIdTokenVerifier } from './identity/kai-id-token-verifier.js';
+import { createKaiCloudPublicApi } from './kai-cloud/client.js';
+import { KaiCloudVerificationService } from './kai-cloud/service.js';
+import { KaiCloudVerificationStore } from './kai-cloud/store.js';
+import { KaiCloudWebhookVerifier } from './kai-cloud/webhook.js';
 import { PostgresSupplierInquiryCatalogStore } from './supplier-inquiry-catalog/store.js';
 import { SupplierInquiryCatalogService } from './supplier-inquiry-catalog/service.js';
 import { PostgresSupplierQuoteDirectoryStore } from './supplier-quote-directory/store.js';
@@ -272,6 +276,19 @@ const nodeEnrollmentService = commerceRuntime && database && accountStore && sub
         payloadDigest: secretHash(JSON.stringify(input.details), config.AUDIT_PEPPER!), metadata: input.details }),
     })
   : undefined;
+const kaiCloudPublicApi = createKaiCloudPublicApi(config);
+const kaiCloudVerificationService = database && accountStore && subjectService
+  && config.readiness.capabilities.accountSecurity.available && config.AUDIT_PEPPER
+  ? new KaiCloudVerificationService(new KaiCloudVerificationStore(database), subjectService, kaiCloudPublicApi,
+    config.KAI_CLOUD_PUBLIC_WEBHOOK_SECRET
+      ? new KaiCloudWebhookVerifier(config.KAI_CLOUD_PUBLIC_WEBHOOK_SECRET) : null, {
+      record: async (input) => accountStore.recordAudit({ actorId: input.actorUserId,
+        actorKind: input.actorUserId ? 'user' : 'system', action: input.action, entityType: input.entityType,
+        entityId: input.entityId, requestId: input.requestId,
+        ipHash: secretHash(input.ip || 'unknown', config.AUDIT_PEPPER!),
+        payloadDigest: secretHash(JSON.stringify(input.details), config.AUDIT_PEPPER!), metadata: input.details }),
+    })
+  : undefined;
 const app = await buildApp({
   config,
   database,
@@ -291,6 +308,7 @@ const app = await buildApp({
   ...(creditOrderService ? { creditOrderService } : {}),
   ...(fulfillmentService ? { fulfillmentService } : {}),
   ...(nodeEnrollmentService ? { nodeEnrollmentService } : {}),
+  ...(kaiCloudVerificationService ? { kaiCloudVerificationService } : {}),
   ...(kaiOidc ? { kaiOidc } : {}),
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
   ...(vastMarketService ? { vastMarketService } : {}),
