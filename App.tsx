@@ -74,7 +74,6 @@ import {
 } from './src/creator-commissions';
 import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
-import { VideoGenerationScreen } from './src/screens/VideoGenerationScreen';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
 import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
 import { loadSession, reconcileCommittedKaiOidcSession, type StoredSession } from './src/session';
@@ -90,6 +89,7 @@ import {
 } from './src/core/app-navigation-intents';
 import { useAppLifecycle } from './src/core/use-app-lifecycle';
 import { primaryTabFor, type AppRouteKey } from './src/navigation';
+import { normalizeMobileRoute } from './src/feature-flags';
 
 const FRONTEND_IDENTITY = 'KAI_CLOUD_UNIFIED_ASSETS_V2';
 const APP_LIFECYCLE_ADAPTERS = {
@@ -301,13 +301,13 @@ function CloudPayApp() {
   }, []);
 
   const navigate = useCallback((tab: AppRouteKey) => {
-    setActiveTab(tab);
+    setActiveTab(normalizeMobileRoute(tab));
   }, []);
 
   const executeNavigationIntent = useCallback(async (intent: AppNavigationIntent) => {
     switch (intent.kind) {
       case 'navigate':
-        setActiveTab(intent.tab);
+        setActiveTab(normalizeMobileRoute(intent.tab));
         return;
       case 'open-order':
         setOrderSide(intent.side);
@@ -469,7 +469,7 @@ function CloudPayApp() {
   }, [openMessage, pendingNotificationId, snapshot.authenticated, snapshot.loading, snapshot.notifications]);
 
   const page = (() => {
-    switch (activeTab) {
+    switch (normalizeMobileRoute(activeTab)) {
       case 'market':
         return <MarketScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh}
           onOpenPublish={() => setDemandComposerVisible(true)} onBuy={setSelectedListing}
@@ -547,8 +547,6 @@ function CloudPayApp() {
           onOpenCreatorCollaboration={() => navigate('creator')}
           onOpenPayout={() => setPayoutVisible(true)}
           onOpenMessages={() => navigate('messages')} />;
-      case 'video':
-        return <VideoGenerationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)} />;
       case 'home':
       default:
         return <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}

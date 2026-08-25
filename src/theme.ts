@@ -20,6 +20,18 @@ export const colors = {
   red: '#D92D20',
 };
 
+/** Mother-approved C: ledger-outline action treatment for ordinary app actions. */
+export const ledgerActionButton = Object.freeze({
+  borderWidth: 1,
+  borderColor: '#AABBD5',
+  backgroundColor: 'transparent',
+  borderRadius: 12,
+});
+
+export const ledgerActionText = Object.freeze({
+  color: colors.primary,
+});
+
 export const brand = Object.freeze({
   name: 'Zod',
   legalProductName: 'Zod 算力市场',

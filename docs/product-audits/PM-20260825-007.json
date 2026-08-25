@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-007",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T05:19:09Z",
+  "summary": "Close the default-disabled Seedance mobile route gate and apply the approved C ledger-outline action treatment without changing payment or navigation behavior.",
+  "baseCommit": "234c9759312dcf84978e53aec45e2a007b4f886b",
+  "stagedDiffSha256": "1e263af1c7a8f8f9bd70fc2fcc7bc607e333fd3e3c97f122774f63cc090f2e94"
+}

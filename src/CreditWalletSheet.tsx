@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { CreditBalance } from './api';
-import { colors } from './theme';
+import { colors, ledgerActionButton, ledgerActionText } from './theme';
 import { distributionPolicy } from './distribution';
 import { creditAmount } from './format';
 import { topupQuote } from './topup-checkout';
@@ -239,7 +239,7 @@ function QuicklineConfirmPanel({ amount, cardHours, creating, pendingConfirmatio
       <View style={styles.checkoutRow}><Text style={styles.checkoutLabel}>支付方式</Text><Text style={styles.checkoutValue}>快线支付</Text></View>
     </View>
     {error ? <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={colors.amber} /><Text style={styles.noticeText}>{error}</Text></View> : null}
-    <Pressable disabled={creating || pendingConfirmation} onPress={onConfirm} style={[styles.primary, (creating || pendingConfirmation) && styles.disabled]}>{creating ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>{pendingConfirmation ? '支付结果待确认' : '创建支付单'}</Text>}</Pressable>
+    <Pressable disabled={creating || pendingConfirmation} onPress={onConfirm} style={[styles.primary, (creating || pendingConfirmation) && styles.disabled]}>{creating ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.primaryText}>{pendingConfirmation ? '支付结果待确认' : '创建支付单'}</Text>}</Pressable>
     <Text style={styles.safety}>{pendingConfirmation ? '系统会使用原请求标识恢复，确认前不能新建。' : '提交后由服务端创建支付单；页面只读取服务端返回的处理结果。'}</Text>
   </View>;
 }
@@ -284,7 +284,7 @@ function QuicklineStatusPanel({ payment, querying, error, onBack, onQuery, onSup
       <Text style={styles.statusMeta}>创建于 {dateTime(payment.createdAt)}</Text>
     </View>
     {error ? <View style={styles.notice}><Ionicons name="information-circle-outline" size={18} color={colors.amber} /><Text style={styles.noticeText}>{error}</Text></View> : null}
-    {refreshAllowed ? <Pressable disabled={querying} onPress={onQuery} style={[styles.primary, querying && styles.disabled]}>{querying ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.primaryText}>重新查询</Text>}</Pressable> : <Pressable onPress={onBack} style={styles.primary}><Text style={styles.primaryText}>{successful ? '查看卡时余额' : '重新充值'}</Text></Pressable>}
+    {refreshAllowed ? <Pressable disabled={querying} onPress={onQuery} style={[styles.primary, querying && styles.disabled]}>{querying ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.primaryText}>重新查询</Text>}</Pressable> : <Pressable onPress={onBack} style={styles.primary}><Text style={styles.primaryText}>{successful ? '查看卡时余额' : '重新充值'}</Text></Pressable>}
     <View style={styles.secondaryActions}>
       {refreshAllowed ? <Pressable onPress={onBack} style={styles.secondary}><Text style={styles.secondaryText}>返回卡时</Text></Pressable> : null}
       <Pressable onPress={onSupport} style={styles.secondary}><Text style={styles.secondaryText}>联系客服</Text></Pressable>
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   header: { minHeight: 76, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, eyebrow: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 }, title: { color: colors.ink, fontSize: 25, fontWeight: '900', marginTop: 3 }, close: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   content: { padding: 17, paddingBottom: 40 }, balanceCard: { padding: 20, borderRadius: 24, borderWidth: 1, borderColor: '#D5E5FA', backgroundColor: colors.surface }, balanceLabel: { color: colors.muted, fontSize: 10 }, balanceValue: { color: colors.primaryDark, fontSize: 39, fontWeight: '900', letterSpacing: -1, marginTop: 5 }, balanceUnit: { color: colors.primary, fontSize: 11, marginTop: 1 }, balanceDivider: { height: 1, backgroundColor: colors.line, marginVertical: 17 }, balanceFacts: { flexDirection: 'row', gap: 60 }, factLabel: { color: colors.muted, fontSize: 9 }, factValue: { color: colors.ink, fontSize: 17, fontWeight: '900', marginTop: 4 },
   sectionTitle: { color: colors.ink, fontSize: 18, fontWeight: '900', marginTop: 23 }, sectionHelp: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 5 }, notice: { flexDirection: 'row', gap: 8, padding: 11, marginTop: 12, borderRadius: 14, backgroundColor: colors.amberSoft }, noticeText: { flex: 1, color: colors.ink, fontSize: 10, lineHeight: 16 },
-  primary: { minHeight: 53, marginTop: 13, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 13, fontWeight: '900' }, disabled: { opacity: 0.45 }, safety: { color: colors.muted, fontSize: 9, lineHeight: 15, textAlign: 'center', marginTop: 10 },
+  primary: { minHeight: 53, marginTop: 13, alignItems: 'center', justifyContent: 'center', ...ledgerActionButton }, primaryText: { ...ledgerActionText, fontSize: 13, fontWeight: '900' }, disabled: { opacity: 0.45 }, safety: { color: colors.muted, fontSize: 9, lineHeight: 15, textAlign: 'center', marginTop: 10 },
   managedAccount: { minHeight: 88, marginTop: 18, padding: 15, borderRadius: 18, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primarySoft }, managedIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }, managedCopy: { flex: 1, marginLeft: 12 }, managedTitle: { color: colors.primaryDark, fontSize: 14, fontWeight: '900' }, managedText: { color: colors.muted, fontSize: 10, lineHeight: 16, marginTop: 4 },
   historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, loader: { marginTop: 20 }, empty: { padding: 22, marginTop: 12, borderRadius: 17, alignItems: 'center', backgroundColor: colors.surface }, emptyText: { color: colors.muted, fontSize: 11 }, record: { minHeight: 72, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.line }, recordIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, recordCopy: { flex: 1, marginLeft: 11 }, recordTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' }, recordMeta: { color: colors.muted, fontSize: 9, marginTop: 5 },
   rateCard: { minHeight: 70, marginTop: 14, padding: 14, flexDirection: 'row', alignItems: 'center', borderRadius: 18, borderWidth: 1, borderColor: '#D5E5FA', backgroundColor: colors.surface }, rateIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, rateCopy: { flex: 1, marginLeft: 11 }, rateLabel: { color: colors.muted, fontSize: 9 }, rateValue: { color: colors.ink, fontSize: 16, fontWeight: '900', marginTop: 4 }, rateLock: { color: colors.subtle, fontSize: 9 },

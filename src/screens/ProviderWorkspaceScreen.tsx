@@ -8,7 +8,7 @@ import { OrderCard } from '../OrderCard';
 import {
   providerOrderNeedsAttention, providerOrderSection, providerWorkspaceMetrics, providerWorkspaceRoadmap,
 } from '../provider-workspace-metrics';
-import { colors } from '../theme';
+import { colors, ledgerActionButton, ledgerActionText } from '../theme';
 
 export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNext, onLogin, onOpenOrder, onOpenDeviceOrder, onAllOrders }: Readonly<{
   snapshot: CloudPaySnapshot;
@@ -207,6 +207,6 @@ const styles = StyleSheet.create({
   currentPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.primarySoft }, currentText: { color: colors.primary, fontSize: 10, fontWeight: '900' },
   loginCard: { marginTop: 30, padding: 26, alignItems: 'center' }, loginIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   loginTitle: { color: colors.ink, fontSize: 21, fontWeight: '900', marginTop: 17, textAlign: 'center' }, loginText: { color: colors.muted, fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 8 },
-  primary: { minHeight: 48, marginTop: 18, paddingHorizontal: 22, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, primaryText: { color: colors.surface, fontSize: 14, fontWeight: '900' },
+  primary: { minHeight: 48, marginTop: 18, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center', ...ledgerActionButton }, primaryText: { ...ledgerActionText, fontSize: 14, fontWeight: '900' },
   deviceOrder: { minHeight: 70, paddingHorizontal: 12, marginBottom: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }, deviceOrderIcon: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft }, deviceOrderCopy: { flex: 1, marginHorizontal: 10 }, deviceOrderTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' }, deviceOrderMeta: { color: colors.muted, fontSize: 9, marginTop: 4 }, deviceOrderState: { color: colors.primary, fontSize: 9, fontWeight: '800' },
 });

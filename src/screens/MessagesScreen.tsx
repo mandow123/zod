@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import type { CloudPayNotification, CloudPaySnapshot } from '../api';
 import { Card } from '../components';
 import { providerOfferMessageActionLabel } from '../provider-next-navigation';
-import { colors } from '../theme';
+import { colors, ledgerActionButton, ledgerActionText } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 type MessageTone = 'green' | 'blue' | 'amber';
@@ -191,8 +191,8 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, marginBottom: 16 },
   emptyTitle: { color: colors.ink, fontSize: 18, fontWeight: '900', textAlign: 'center' },
   emptyBody: { color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 8 },
-  loginButton: { minHeight: 44, marginTop: 18, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
-  loginButtonText: { color: colors.surface, fontSize: 14, fontWeight: '800' },
+  loginButton: { minHeight: 44, marginTop: 18, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', ...ledgerActionButton },
+  loginButtonText: { ...ledgerActionText, fontSize: 14, fontWeight: '800' },
   localNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, marginTop: 16, paddingHorizontal: 8 },
   localText: { flex: 1, color: colors.muted, fontSize: 12, lineHeight: 18 },
 });

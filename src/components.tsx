@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppRouteKey, PrimaryTabKey } from './navigation';
-import { brand, colors, shadows } from './theme';
+import { brand, colors, ledgerActionButton, shadows } from './theme';
 
 export type TabKey = AppRouteKey;
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.ink, fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
   headerSubtitle: { color: colors.muted, fontSize: 12, marginTop: 2 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', ...ledgerActionButton },
   headerBadge: {
     position: 'absolute',
     right: 2,
