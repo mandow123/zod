@@ -79,7 +79,7 @@ export function CloudPayKlinePanel({ refreshToken = 0 }: Readonly<{ refreshToken
   const products = payload?.options.products.gpu ?? [];
 
   return <View style={styles.panel}>
-    <View style={styles.header}><View style={styles.headerCopy}><View style={styles.liveRow}><View style={styles.liveDot} /><Text style={styles.liveText}>CloudPay 同源行情</Text></View><Text style={styles.title}>{payload?.product.name ?? 'GPU 报价参考盘'}</Text><Text style={styles.meta}>{payload ? `${payload.region.name} · ${payload.product.unit}` : '正在连接 cloudpay.kai.com'}</Text></View>
+    <View style={styles.header}><View style={styles.headerCopy}><View style={styles.liveRow}><View style={styles.liveDot} /><Text style={styles.liveText}>CloudPay 同源行情</Text></View><Text style={styles.title}>{payload?.product.name ?? 'GPU 报价参考盘'}</Text><Text style={styles.meta}>{payload ? `${payload.region.name} · ${payload.product.unit}` : '正在连接市场服务'}</Text></View>
       {change ? <View style={styles.latest}><Text style={styles.latestPrice}>{formatPrice(change.last.close)}</Text><Text style={[styles.change, { color: change.amount >= 0 ? '#168A5B' : colors.red }]}>{change.amount >= 0 ? '+' : ''}{change.percent.toFixed(2)}%</Text></View> : null}</View>
 
     {products.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productTabs}>{products.map((item) => <Pressable key={item.id} onPress={() => setProduct(item.id)} style={[styles.productTab, product === item.id && styles.productTabActive]}><Text style={[styles.productText, product === item.id && styles.productTextActive]}>{item.name.replace('NVIDIA ', '')}</Text></Pressable>)}</ScrollView> : null}

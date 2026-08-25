@@ -7,8 +7,8 @@ import {
 
 export const QIXIANG_MERCHANT_ID = '4611';
 export const QIXIANG_API_ORIGIN = 'https://api.payqixiang.cn';
-export const QIXIANG_NOTIFY_URL = 'https://cloudpay.kai.com/mobile/v1/credits/topups/qixiang/notify';
-export const QIXIANG_RETURN_URL = 'https://cloudpay.kai.com/payments/qixiang/return';
+export const QIXIANG_NOTIFY_URL = 'https://api.kaicloudpay.com/mobile/v1/credits/topups/qixiang/notify';
+export const QIXIANG_RETURN_URL = 'https://api.kaicloudpay.com/payments/qixiang/return';
 
 type QixiangFetch = typeof fetch;
 

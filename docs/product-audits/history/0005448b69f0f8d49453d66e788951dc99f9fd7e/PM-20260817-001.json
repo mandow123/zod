@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260817-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-17T03:34:29Z",
+  "baseCommit": "9664a71cececc09a058ca0ba2fe09cb0356a2fbe",
+  "stagedDiffSha256": "7474833cf0670fa410a0583159a7821ca8b11a8ef1ff7e6f27ad0fd244d36090",
+  "summary": "产品经理提交审计门禁整改通过：批准记录仅从暂存区读取，并完成字段校验、提交后复核、GitLab CI阻断和自动安装本地钩子。"
+}

@@ -2,7 +2,7 @@ import { jwtVerify, SignJWT } from 'jose';
 import { AppError } from '../errors.js';
 import type { AccountPrincipal } from './types.js';
 
-const issuer = 'https://api.cloudpay.kai.com';
+const issuer = 'https://api.kaicloudpay.com';
 const audience = 'kai-cloudpay-mobile';
 const encoder = new TextEncoder();
 

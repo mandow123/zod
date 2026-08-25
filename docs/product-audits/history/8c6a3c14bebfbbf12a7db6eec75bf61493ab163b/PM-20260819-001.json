@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-001",
+  "auditedAt": "2026-08-19T14:45:00+08:00",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "summary": "批准独立管理员认证、最小权限只读控制台、运行文档和产品演示材料进入 Draft PR 复审。",
+  "baseCommit": "e081dd539bcd212ec1be739cb5cd72de0ad2e470",
+  "stagedDiffSha256": "20176b42b0a739c97541fa52a8ebc652e3a5fc8061c8887da642fca128ce4784"
+}

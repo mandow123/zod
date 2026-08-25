@@ -75,15 +75,16 @@ button, input { font: inherit; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .hero-copy .actions { margin-top: auto; }
 .btn {
-  min-height: 46px; padding: 12px 17px; border: 1px solid #cdcdca; border-radius: 12px;
-  background: #fff; color: var(--ink); font-weight: 680; font-size: 14px; cursor: pointer;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+  min-height: 46px; padding: 12px 17px; border: 1px solid #193246; border-radius: 12px;
+  background: #07111f; color: #f5fbff; font-weight: 680; font-size: 14px; cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,.18);
 }
-.btn:hover { transform: translateY(-2px); border-color: #aaa; box-shadow: 0 8px 22px rgba(0,0,0,.08); }
-.btn:active { transform: translateY(0); }
+.btn:hover { border-color: #3f6b8d; background: #0d1d31; box-shadow: 0 8px 22px rgba(0,0,0,.24); }
+.btn:active { background: #050b14; }
 .btn:disabled { opacity: .46; pointer-events: none; }
-.btn.primary { color: #fff; background: #0d0d0d; border-color: #0d0d0d; }
-.btn.primary:hover { background: #272727; }
+.btn.primary { color: #f5fbff; background: #07111f; border-color: #193246; }
+.btn.primary:hover { background: #0d1d31; border-color: #3f6b8d; }
 .btn.play-now { min-height: 54px; padding-inline: 22px; font-size: 16px; box-shadow: 0 12px 30px rgba(0,0,0,.16); }
 .btn.play-now b { margin-left: 12px; font-size: 20px; }
 .btn.accent, .btn.gold { color: #fff; background: var(--green); border-color: var(--green); }

@@ -176,7 +176,7 @@ export class OperationsService {
         &&this.now().getTime()-cached.checkedAt<5*60_000)return cached.ready;
       const parsed=await readBackupHeader(path);
       const ready=parsed.header.databaseFingerprint===this.databaseFingerprint
-        &&parsed.header.schemaVersion==='0065_credit_order_transition_closure.sql'
+        &&parsed.header.schemaVersion==='0068_kaicloudpay_production_domain_transition.sql'
         &&parsed.header.keyId===this.backupKeyId&&await sha256File(path)===artifact.sha256Digest;
       this.backupVerificationCache.set(path,{mtimeMs:info.mtimeMs,size:info.size,digest:artifact.sha256Digest,
         checkedAt:this.now().getTime(),ready});

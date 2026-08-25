@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260818-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-17T17:55:03Z",
+  "baseCommit": "bd360f1e30a742a8dbd5adae1a7ded447741be43",
+  "stagedDiffSha256": "94206ac3c43e721aff99420ff0371d0882d62b48291599979e44ecb36b7f6ddc",
+  "summary": "已审阅本次达人返佣、P0/P1 与‘我的’信息架构暂存差异：达人返佣使用独立账本和第一方真实归因，覆盖退款观察、冲正、主动转入及真实一次性红包事件；‘我的’按资产与交易、供给经营、合作增长、服务与安全四组呈现，普通买家隐藏供给入口，上架资格与底部上架职责已分开；所有用户交易金额只显示两位小数 KAI 卡时且无人民币参考价。前后端测试、类型检查、接口契约、Android 构建和模拟器验收均已通过。"
+}

@@ -288,7 +288,7 @@ const EXISTING_SECURITY_KEY_NAMES = [
 ] as const;
 
 const ADMIN_CALLBACK_PATH = '/admin/v1/auth/callback';
-const MOBILE_KAI_OIDC_CALLBACK_URL = 'https://cloudpay.kai.com/mobile/v1/auth/kai/callback';
+const MOBILE_KAI_OIDC_CALLBACK_URL = 'https://api.kaicloudpay.com/mobile/v1/auth/kai/callback';
 const MAX_ADMIN_GROUP_MAPPINGS = 64;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/u;
 
@@ -711,8 +711,8 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
   const qixiangRecoveryModeValue:QixiangRecoveryMode=inquiryOnly?'off':requestedQixiangRecoveryMode;
   const qixiangApprovedMax=parsed.QIXIANG_APPROVED_MAX_CENTS&&/^\d+$/u.test(parsed.QIXIANG_APPROVED_MAX_CENTS)
     ?Number(parsed.QIXIANG_APPROVED_MAX_CENTS):null;
-  const qixiangExpectedNotify='https://cloudpay.kai.com/mobile/v1/credits/topups/qixiang/notify';
-  const qixiangExpectedReturn='https://cloudpay.kai.com/payments/qixiang/return';
+  const qixiangExpectedNotify='https://api.kaicloudpay.com/mobile/v1/credits/topups/qixiang/notify';
+  const qixiangExpectedReturn='https://api.kaicloudpay.com/payments/qixiang/return';
   let qixiangMerchantCredentialAvailable=false;
   let qixiangCheckoutCredentialAvailable=false;
   if((qixiangMode==='on'||qixiangRecoveryModeValue==='on')&&parsed.CREDENTIALS_DIRECTORY){

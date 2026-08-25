@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260819-002",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-19T06:25:39Z",
+  "baseCommit": "42ecce4a0b93f91c5fca2f6e4ffb17f096ea0fdb",
+  "stagedDiffSha256": "ef635aea9fffd613e3680cd97a60424b53767d3a5588ed5f9c8db57e8ce357a4",
+  "summary": "批准豆局浏览器会话头与持久 HTTPS 共享口令代理的兼容修正，用于受控同事试用：浏览器改用独立 X-Doujoy-Token，同源 Web 代理在转发前转换为 Bearer 并移除外部会话头，避免 Caddy Basic Auth 与游戏会话 Authorization 冲突，后端 4310 继续不对公网开放。25/25 测试、规则完整性检查、移动端类型检查、发布预检和 Web 语法检查通过。此批准仅适用于固定 IP HTTPS、共享口令保护的小规模同事试用，不代表匿名大规模公网发布；既有多房间并发、落盘失败幂等确认、长期游客令牌和六位房号枚举风险仍须后续整改。"
+}

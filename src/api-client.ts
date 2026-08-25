@@ -10,7 +10,7 @@ import { queueKaiOidcRevocation } from './kai-revocation-queue';
 import { clearSession, loadSession, updateKaiOidcSessionTokens } from './session';
 import { distributionChannel } from './distribution';
 
-const configuredBase = String(Constants.expoConfig?.extra?.cloudPayBaseUrl ?? 'https://cloudpay.kai.com').replace(/\/+$/u, '');
+const configuredBase = String(Constants.expoConfig?.extra?.cloudPayBaseUrl ?? 'https://api.kaicloudpay.com').replace(/\/+$/u, '');
 const allowInsecureApiForLocalE2e = Constants.expoConfig?.extra?.allowInsecureApiForLocalE2e === true;
 const localE2eSessionToken = typeof Constants.expoConfig?.extra?.localE2eSessionToken === 'string'
   ? Constants.expoConfig.extra.localE2eSessionToken : null;

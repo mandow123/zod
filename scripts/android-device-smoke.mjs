@@ -133,7 +133,7 @@ check(
   'api_environment',
   localE2e
     ? embeddedExtra.allowInsecureApiForLocalE2e === true
-    : embeddedExtra.cloudPayBaseUrl === 'https://cloudpay.kai.com' && embeddedExtra.allowInsecureApiForLocalE2e !== true,
+    : embeddedExtra.cloudPayBaseUrl === 'https://api.kaicloudpay.com' && embeddedExtra.allowInsecureApiForLocalE2e !== true,
   `${embeddedExtra.cloudPayBaseUrl ?? 'missing'} (${localE2e ? 'local-e2e' : 'production'})`,
 );
 check('unified_identity_protocol_embedded', missingUnifiedIdentityMarkers.length === 0,

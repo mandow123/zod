@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Zod",
+    "name": "KAI CloudPay",
     "slug": "kai-cloudpay",
     "description": "面向企业算力任务的原生市场、容量发布与履约状态应用。",
     "version": "1.0.0",
@@ -71,10 +71,15 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "cloudPayBaseUrl": "https://cloudpay.kai.com",
+      "cloudPayBaseUrl": "https://api.kaicloudpay.com",
       "kaiOidcIssuer": "https://auth.kai.com/api/auth",
       "kaiOidcClientId": "xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K",
-      "accountDeletionUrl": "https://cloudpay.kai.com/account/delete",
+      "privacyPolicyUrl": "https://kaicloudpay.com/legal/privacy",
+      "termsUrl": "https://kaicloudpay.com/legal/terms",
+      "thirdPartySdksUrl": "https://kaicloudpay.com/legal/third-party-sdks",
+      "permissionsUrl": "https://kaicloudpay.com/legal/permissions",
+      "accountDeletionGuideUrl": "https://kaicloudpay.com/legal/account-deletion",
+      "accountDeletionUrl": "https://kaicloudpay.com/account/delete",
       "distributionChannel": "direct-cn",
       "nativeTopupsEnabled": true,
       "newOrdersEnabled": true

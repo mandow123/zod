@@ -83,7 +83,7 @@ try {
   const schema = await pool.query<{ version: string }>('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
   const schemaVersion = schema.rows[0]?.version ?? null;
   if (!schemaVersion || schemaVersion !== verified.header.schemaVersion) throw new Error('RESTORE_SCHEMA_VERSION_MISMATCH');
-  if(config.mobileApiProfile==='inquiry_only'&&schemaVersion!=='0065_credit_order_transition_closure.sql')
+  if(config.mobileApiProfile==='inquiry_only'&&schemaVersion!=='0068_kaicloudpay_production_domain_transition.sql')
     throw new Error('RESTORE_SCHEMA_0062_REQUIRED');
   const invariants = await pool.query<{
     listing_capacity_invalid: string; order_amount_invalid: string; duplicate_success_payment: string; refund_amount_invalid: string;
@@ -333,7 +333,7 @@ try {
     const auditPool=new Pool({connectionString:sourceAuditUrl,ssl:config.databaseSsl?{rejectUnauthorized:true}:false});
     try{
       const auditSchema=await auditPool.query<{version:string}>('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1');
-      if(auditSchema.rows[0]?.version!=='0065_credit_order_transition_closure.sql')
+      if(auditSchema.rows[0]?.version!=='0068_kaicloudpay_production_domain_transition.sql')
         throw new Error('RESTORE_AUDIT_DATABASE_SCHEMA_MISMATCH');
       await auditPool.query('BEGIN');
       await auditPool.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,

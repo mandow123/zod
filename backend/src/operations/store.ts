@@ -128,7 +128,7 @@ export class PostgresOperationsStore implements OperationsStore {
       WHERE status='succeeded' AND completed_at >= $1::timestamptz - interval '24 hours'
         AND artifact_name ~ '^cloudpay-postgres-[A-Za-z0-9_-]+\\.kcpb$'
         AND object_key='local://'||artifact_name AND encrypted_size_bytes > 0
-        AND encrypted_sha256_digest ~ '^sha256:[a-f0-9]{64}$' AND schema_version='0065_credit_order_transition_closure.sql'
+        AND encrypted_sha256_digest ~ '^sha256:[a-f0-9]{64}$' AND schema_version='0068_kaicloudpay_production_domain_transition.sql'
         AND EXISTS(SELECT 1 FROM audit_events a WHERE a.action='DATABASE_BACKUP_COMPLETED'
           AND a.entity_type='BACKUP_RUN' AND a.entity_id=b.id::text
           AND a.payload_digest=substring(b.encrypted_sha256_digest from 8)
@@ -141,14 +141,14 @@ export class PostgresOperationsStore implements OperationsStore {
       WHERE r.status='succeeded' AND r.completed_at >= $1::timestamptz - interval '90 days'
         AND b.status='succeeded' AND b.object_key='local://'||b.artifact_name AND b.encrypted_size_bytes>0
         AND b.encrypted_sha256_digest ~ '^sha256:[a-f0-9]{64}$'
-        AND b.schema_version='0065_credit_order_transition_closure.sql'
+        AND b.schema_version='0068_kaicloudpay_production_domain_transition.sql'
         AND EXISTS(SELECT 1 FROM audit_events a WHERE a.action='DATABASE_BACKUP_COMPLETED'
           AND a.entity_type='BACKUP_RUN' AND a.entity_id=b.id::text
           AND a.payload_digest=substring(b.encrypted_sha256_digest from 8)
           AND a.metadata @> jsonb_build_object('artifactName',b.artifact_name,'objectKey',b.object_key,
             'sizeBytes',b.encrypted_size_bytes,'schemaVersion',b.schema_version,'databaseFingerprint',$2::text,
             'durability','local_only','offsite',false))
-        AND r.schema_version='0065_credit_order_transition_closure.sql'
+        AND r.schema_version='0068_kaicloudpay_production_domain_transition.sql'
         AND length(btrim(r.target_fingerprint)) > 0 AND r.target_fingerprint <> $2::text
         AND jsonb_typeof(r.verified_invariants)='object'
         AND r.verified_invariants ?& $3::text[]
@@ -167,7 +167,7 @@ export class PostgresOperationsStore implements OperationsStore {
         AND length(btrim(a.metadata->>'probeOrigin')) > 0
         AND a.metadata->>'probeSubjectSha256' ~ '^[a-f0-9]{64}$'
         AND a.metadata->>'commerceStateDigest' ~ '^sha256:[a-f0-9]{64}$'
-        AND a.metadata @> '{"profile":"inquiry_only","me":true,"legal":true,"consent":true,"subjects":true,"subjectSelection":true,"formalInquiry":true,"cancel":true,"commerceUnchanged":true,"schemaVersion":"0065_credit_order_transition_closure.sql"}'::jsonb
+        AND a.metadata @> '{"profile":"inquiry_only","me":true,"legal":true,"consent":true,"subjects":true,"subjectSelection":true,"formalInquiry":true,"cancel":true,"commerceUnchanged":true,"schemaVersion":"0068_kaicloudpay_production_domain_transition.sql"}'::jsonb
        ORDER BY a.created_at DESC LIMIT 1) AS kai_paired_probe,
       (SELECT jsonb_build_object('payloadDigest',a.payload_digest,'metadata',a.metadata)
        FROM audit_events a WHERE a.action='INQUIRY_ONLY_APP_SESSION_PROBE_PASSED'
@@ -177,7 +177,7 @@ export class PostgresOperationsStore implements OperationsStore {
         AND a.metadata->>'publicOrigin' ~ '^https://'
         AND a.metadata->>'apkSha256Digest' ~ '^sha256:[a-f0-9]{64}$'
         AND a.metadata->>'reportSha256Digest' ~ '^sha256:[a-f0-9]{64}$'
-        AND a.metadata @> '{"profile":"inquiry_only","packageName":"com.kaicloud.marketplace","auth":true,"me":true,"legalConsent":true,"storedSession":true,"forceStopRestart":true,"recoveredSession":true,"schemaVersion":"0065_credit_order_transition_closure.sql"}'::jsonb
+        AND a.metadata @> '{"profile":"inquiry_only","packageName":"com.kaicloud.marketplace","auth":true,"me":true,"legalConsent":true,"storedSession":true,"forceStopRestart":true,"recoveredSession":true,"schemaVersion":"0068_kaicloudpay_production_domain_transition.sql"}'::jsonb
        ORDER BY a.created_at DESC LIMIT 1) AS app_session_probe`, [now,currentDatabaseFingerprint,[...restoreInvariantKeys]]);
     const row=result.rows[0];if(!row)throw new Error('INQUIRY_READINESS_SNAPSHOT_EMPTY');
     const evidence=(value:unknown)=>{if(!value||typeof value!=='object')return null;const record=value as Record<string,unknown>;

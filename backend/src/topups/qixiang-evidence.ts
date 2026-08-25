@@ -73,6 +73,12 @@ export class QixiangEvidenceService {
       || entity.unifiedSocialCreditCode !== this.config.UNIFIED_SOCIAL_CREDIT_CODE) {
       blockers.push('QIXIANG_MERCHANT_ENTITY_MATCH');
     }
+    const domainApproval = byKind.get('domain_app_scene_approval')?.metadata;
+    if (!domainApproval || domainApproval.domain !== 'api.kaicloudpay.com'
+      || domainApproval.appPackage !== 'com.kaicloud.marketplace'
+      || domainApproval.scene !== 'android_h5_alipay' || domainApproval.merchantId !== '4611') {
+      blockers.push('QIXIANG_DOMAIN_APP_SCENE_APPROVED');
+    }
     const maximum = byKind.get('approved_max_amount')?.metadata;
     const maxAmountCents = maximum?.merchantId === '4611' && maximum.currency === 'CNY' && maximum.minCents === 100
       && maximum.maxCents === this.config.qixiangApprovedMaxCents ? this.config.qixiangApprovedMaxCents : null;

@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   errorBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, padding: 12, marginTop: 8, borderRadius: 14, backgroundColor: '#FDECEC' },
   errorText: { flex: 1, color: colors.red, fontSize: 12, lineHeight: 18 },
   actionArea: { paddingTop: 10, backgroundColor: colors.surface },
-  primaryButton: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 17, backgroundColor: colors.primary },
+  primaryButton: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primary },
   primaryButtonDisabled: { opacity: 0.42 },
   primaryText: { color: colors.surface, fontSize: 15, fontWeight: '900' },
   changeAccountButton: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: 6 },

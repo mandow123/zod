@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260820-004",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-20T05:37:46.133Z",
+  "baseCommit": "b2adcc088543a25725ed46bb8287454478150c85",
+  "stagedDiffSha256": "db59d2627a665c810678b998f0341cb813acf328368e9bdf698111a89814cc05",
+  "summary": "批准阶段 2 KAI Cloud 公共接口沙箱契约、最小权限后端适配、签名 Webhook、在线验证界面及 fail-closed 门禁；不启用生产凭据、交易或发布能力。"
+}

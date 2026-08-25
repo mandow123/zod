@@ -52,11 +52,11 @@ try {
   }
   const migrations = migrationEntries.filter((name) => migrationNamePattern.test(name)).sort();
   const branchMigrations = ['0060_admin_identity_rbac_sessions.sql', '0060_kai_direct_auth_consents.sql'];
-  if (migrations.length !== 66
+  if (migrations.length !== 69
     || new Set(migrations).size !== migrations.length
     || branchMigrations.some((name) => !migrations.includes(name))
-    || migrations.at(-1) !== '0065_credit_order_transition_closure.sql') {
-    throw new Error(`Expected 66 migrations including both 0060 branch migrations through 0065_credit_order_transition_closure.sql; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
+    || migrations.at(-1) !== '0068_kaicloudpay_production_domain_transition.sql') {
+    throw new Error(`Expected 69 migrations including both 0060 branch migrations through 0068_kaicloudpay_production_domain_transition.sql; found ${migrations.length}, latest ${migrations.at(-1) ?? 'none'}.`);
   }
 
   const included = [

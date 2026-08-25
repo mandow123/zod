@@ -1,4 +1,6 @@
-const CLOUDPAY_MARKET_CANDLES_URL = 'https://cloudpay.kai.com/api/market/candles';
+import { API_BASE_URL } from './api-client';
+
+const CLOUDPAY_MARKET_CANDLES_URL = `${API_BASE_URL}/api/market/candles`;
 
 export type CloudPayMarketKind = 'gpu' | 'token' | 'rack' | 'server';
 export type CloudPayMarketInterval = '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1mo';

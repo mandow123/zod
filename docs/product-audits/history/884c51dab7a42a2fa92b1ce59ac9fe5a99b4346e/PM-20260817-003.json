@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260817-003",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-17T14:29:51+08:00",
+  "baseCommit": "e5307119c97b59ebeb92c2edbdd3a796ed302b3b",
+  "stagedDiffSha256": "63573b59a681d80e7a53280eda0f2e430a4661b8837d79c789c7a89855b981f0",
+  "summary": "终审确认白鸽在线 Spark 200 台在设备采购、上海筛选和搜索下均唯一可见，8 折价格只使用两位小数卡时且无人民币展示；Vast.ai 与平台资源分区清晰，短时报价、幂等预留、未知结果对账、成功清算、失败释放、无密钥空目录及我的资产状态均有前后端实现和完整测试证据。"
+}

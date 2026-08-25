@@ -208,8 +208,8 @@ if (!localE2e) {
     process.stderr.write(`Production artifact contains local E2E markers: ${found.join(', ')}\n`);
     process.exit(1);
   }
-  if (embeddedBaseUrl !== 'https://cloudpay.kai.com' || embeddedAllowsInsecureE2e
-    || !embeddedBundle.stdout.includes(Buffer.from('https://cloudpay.kai.com'))) {
+  if (embeddedBaseUrl !== 'https://api.kaicloudpay.com' || embeddedAllowsInsecureE2e
+    || !embeddedBundle.stdout.includes(Buffer.from('https://api.kaicloudpay.com'))) {
     process.stderr.write('Production artifact does not contain the CloudPay HTTPS origin.\n');
     process.exit(1);
   }

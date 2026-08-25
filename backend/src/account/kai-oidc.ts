@@ -13,7 +13,7 @@ import type { KaiIdentityStore } from './kai-identity-store.js';
 import type { AccountService } from './service.js';
 import { LEGAL_VERSIONS, type DeviceDescriptor } from './types.js';
 
-export const KAI_OIDC_CALLBACK_URL = 'https://cloudpay.kai.com/mobile/v1/auth/kai/callback';
+export const KAI_OIDC_CALLBACK_URL = 'https://api.kaicloudpay.com/mobile/v1/auth/kai/callback';
 export {
   KAI_OIDC_AUTHORIZATION_ENDPOINT,
   KAI_OIDC_ISSUER,

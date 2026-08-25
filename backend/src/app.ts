@@ -243,7 +243,7 @@ export async function buildApp({ config, database, accountService, subjectServic
       const restoreReady=backupRecoveryState.restore.ready;
       const releaseBlockers = [...new Set([
         ...(databaseConnected ? [] : ['DATABASE_CONNECTION']),
-        ...(databaseReady ? [] : ['DATABASE_SCHEMA_0065']),
+        ...(databaseReady ? [] : ['DATABASE_SCHEMA_0068']),
         ...(accountService ? [] : ['ACCOUNT_SERVICE']),
         ...(subjectService ? [] : ['SUBJECT_SERVICE']),
         ...(resourceInquiryService ? [] : ['RESOURCE_INQUIRY_SERVICE']),
@@ -297,7 +297,7 @@ export async function buildApp({ config, database, accountService, subjectServic
             mode: supplierCatalogState.mode,
             ready: catalogReady,
             blockers: [...new Set([
-              ...(databaseReady ? [] : ['DATABASE_SCHEMA_0065']), ...supplierCatalogState.blockers,
+              ...(databaseReady ? [] : ['DATABASE_SCHEMA_0068']), ...supplierCatalogState.blockers,
             ])],
           },
           legacyCreatorMode: { mode: 'off', ready: false, blockers: [] },
@@ -320,7 +320,7 @@ export async function buildApp({ config, database, accountService, subjectServic
       });
     }
     const supplierCatalogBlockers=config.honghuanSupplierCatalogMode==='off'?[]:[...supplierCatalogState.blockers,
-      ...(!databaseReady?['DATABASE_SCHEMA_0065']:[])];
+      ...(!databaseReady?['DATABASE_SCHEMA_0068']:[])];
     const deploymentBlockers = [
       ...(databaseConnected ? [] : ['DATABASE_CONNECTION']),
       ...(databaseConnected && !schema.ready ? ['DATABASE_SCHEMA'] : []),

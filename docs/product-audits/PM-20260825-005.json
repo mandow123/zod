@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-005",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T03:59:10Z",
+  "summary": "Apply candidate production configuration, disabled-by-default filing gates, selected visual language, and immutable source-audit history.",
+  "baseCommit": "630d24bf58a1718b7ba70ea4af00386d26fa711b",
+  "stagedDiffSha256": "3c4ad8c0ffe0a15f4836abe051ff1e6d5541037946a26d5eb14b9d90fa04acee"
+}

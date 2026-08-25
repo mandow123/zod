@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260818-004",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-18T06:40:09Z",
+  "baseCommit": "8f8fbc06ead56e2fe0119bd730c03e4ceff53985",
+  "stagedDiffSha256": "4ff965b36c70182c0651846461fb4c4cf85afc3b1da8311e4665c13ee705e4e5",
+  "summary": "已逐文件审阅本次 11 个暂存文件。我的询期状态筛选改为固定 56 像素横向轨道和 36 像素筛选项，不再被 flex 拉伸；平台保障、Vast.ai 即时、设备采购与预约询期四个数据源分别判断可用状态，某一路失败不会污染已经成功加载的目录，真实交易动作仍由原有市场和设备购买门禁控制。仅在 NODE_ENV=test 的本地 acceptance harness 增加 App 验收所需的只读接口，资源与挂牌接口返回真实空数组，设备、预约目录、readiness 和最小账号快照均通过 HTTP 200 与结构校验；生产路由与生产库存语义未改变。100 条本地演示挂牌保留 simulatedAudit 和不可购买事实，在 App 中强制映射为 purchasable=false，并使用独立卡片明确标注“本地验收资源”“非生产库存”“演示容量”和“仅供本机验收”，不显示卡时价格、双审通过、实时可用或购买入口，也不会进入 onBuy 或订单路径；真实生产挂牌继续使用原 MarketRow、listingAvailability 和 onBuy。NVIDIA DGX Spark 验收入口继续明确不可购买、不承诺库存且不创建真实订单；120 条预约候选保持独立目录。已核对 acceptance 全端点 200、市场真实资源与挂牌均为 0、LOCAL_E2E 演示挂牌 100 条、设备商品 1 条、询期候选 120 条；后端 66 个测试文件共 293 项、前端 162 项测试、TypeScript、后端构建、150 个前端调用与 128 个后端路由契约、Android 构建及暂存差异检查均通过。"
+}

@@ -6,7 +6,7 @@ import { createDatabase } from '../dist/database.js';
 import { databaseFingerprint } from '../dist/backups/postgres.js';
 import { probeEvidenceDigest } from '../dist/operations/probe-evidence.js';
 
-const SCHEMA = '0065_credit_order_transition_closure.sql';
+const SCHEMA = '0068_kaicloudpay_production_domain_transition.sql';
 const PACKAGE = 'com.kaicloud.marketplace';
 const inputIndex = process.argv.indexOf('--report');
 const reportPath = inputIndex >= 0 ? process.argv[inputIndex + 1] : undefined;
@@ -49,7 +49,7 @@ const database = createDatabase(config);
 if (!database) throw new Error('APP_SESSION_REPORT_DATABASE_REQUIRED');
 try {
   const schema = await database.schemaReadiness();
-  if (!schema.ready || schema.expected !== SCHEMA || schema.applied !== SCHEMA) throw new Error('DATABASE_SCHEMA_0065_REQUIRED');
+  if (!schema.ready || schema.expected !== SCHEMA || schema.applied !== SCHEMA) throw new Error('DATABASE_SCHEMA_0068_REQUIRED');
   const probeId = randomUUID();
   const metadata = {
     profile: 'inquiry_only', producer: 'record-inquiry-app-session.mjs@1', schemaVersion: SCHEMA,
