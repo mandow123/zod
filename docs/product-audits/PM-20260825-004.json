@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-004",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T03:51:50Z",
+  "summary": "Import the isolated Doujoy game subtree with CloudPay billing disabled by default.",
+  "baseCommit": "15ea0c4253cad3f1dc2379093581446dbfd5476a",
+  "stagedDiffSha256": "c1335f9d293a75a3d6481788ff8269236dbd1c1ed0f7659d94416b9aea973733"
+}

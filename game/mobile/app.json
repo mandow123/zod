@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "KAI Play",
+    "slug": "doujoy",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "doujoy",
+    "ios": {
+      "bundleIdentifier": "com.kaicloud.doujoy",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.kaicloud.doujoy",
+      "adaptiveIcon": {
+        "backgroundColor": "#071D19"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "允许 KAI Play 安全读取你的本地登录状态"
+        }
+      ]
+    ]
+  }
+}
