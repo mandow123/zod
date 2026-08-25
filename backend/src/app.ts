@@ -345,7 +345,10 @@ export async function buildApp({ config, database, accountService, subjectServic
     ];
     const commerceReady = deploymentReady && config.readiness.capabilities.creditCommerce.available
       && !qixiangBootstrapCanary&&qixiangState.blockers.length===0&&rewardConfigurationBlockers.length === 0;
-    return reply.status(deploymentReady ? 200 : 503).send({
+    const technicalCanaryReady = qixiangBootstrapCanary&&qixiangState.ready&&databaseReady
+      &&config.readiness.capabilities.accountSecurity.available
+      &&config.readiness.capabilities.kaiResourceAccess.available;
+    return reply.status(deploymentReady||technicalCanaryReady ? 200 : 503).send({
       ok: deploymentReady,
       service: 'kai-cloudpay-backend',
       app: {
@@ -353,6 +356,7 @@ export async function buildApp({ config, database, accountService, subjectServic
         androidPackage: 'com.kaicloud.marketplace',
         iosBundleId: 'com.kaicloud.marketplace',
       },
+      profile: { id: 'full_commerce', routePolicy: 'full-commerce-v1' },
       capabilities: {
         database: databaseReady,
         authentication: config.readiness.capabilities.accountSecurity.available,
@@ -496,7 +500,7 @@ export async function buildApp({ config, database, accountService, subjectServic
   if (accountService && creditTopupService) await registerCreditTopupRoutes(app, accountService, creditTopupService);
   if (config.qixiangRecoveryMode === 'on' && accountService && qixiangTopupService) {
     await registerQixiangTopupRoutes(app, accountService, qixiangTopupService,qixiangNewTopupsAvailable
-      ??(config.qixiangTopupMode === 'on'));
+      ??(config.qixiangTopupMode === 'on'),qixiangBootstrapCanary?config.QIXIANG_TECHNICAL_CANARY_USER_ID:undefined);
   }
   if (config.qixiangRecoveryMode === 'on' && accountService && qixiangRefundService) {
     await registerQixiangRefundRoutes(app, accountService, qixiangRefundService);

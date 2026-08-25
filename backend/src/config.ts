@@ -49,6 +49,10 @@ const environmentSchema = z.object({
   WECHAT_PLATFORM_CERTIFICATE: optionalText,
   QIXIANG_TOPUP_MODE: optionalText,
   QIXIANG_RECOVERY_MODE: optionalText,
+  QIXIANG_TECHNICAL_CANARY_MODE: z.enum(['on', 'off']).default('off'),
+  QIXIANG_TECHNICAL_CANARY_USER_ID: optionalText,
+  QIXIANG_TECHNICAL_CANARY_SUBJECT_ID: optionalText,
+  QIXIANG_TECHNICAL_CANARY_TOPUP_ID: optionalText,
   QIXIANG_PID: optionalText,
   QIXIANG_APPROVED_MAX_CENTS: optionalText,
   QIXIANG_CHECKOUT_KEY_ID: optionalText,
@@ -691,6 +695,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     ...(parsed.TOPUP_WECHAT_NOTIFY_URL && parsed.TOPUP_WECHAT_NOTIFY_URL !== expectedWechatTopupNotify
       ? ['TOPUP_WECHAT_NOTIFY_URL(exact public route)'] : []),
   ]);
+  const qixiangTechnicalCanaryMode=parsed.QIXIANG_TECHNICAL_CANARY_MODE==='on';
   const requestedQixiangTopupMode=qixiangTopupMode(parsed.QIXIANG_TOPUP_MODE);
   const qixiangMode:QixiangTopupMode=inquiryOnly?'off':requestedQixiangTopupMode;
   const requestedQixiangRecoveryMode=qixiangRecoveryMode(parsed.QIXIANG_RECOVERY_MODE
@@ -713,8 +718,27 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       checkoutKey.fill(0);
     }catch{/* Readiness remains fail-closed without exposing file or secret details. */}
   }
-  const qixiangBlockers=qixiangMode!=='on'?[]:[
+  const qixiangCanaryIdentityBlockers=qixiangTechnicalCanaryMode?[
+    ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(parsed.QIXIANG_TECHNICAL_CANARY_USER_ID??'')?[]:['QIXIANG_TECHNICAL_CANARY_USER_ID']),
+    ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(parsed.QIXIANG_TECHNICAL_CANARY_SUBJECT_ID??'')?[]:['QIXIANG_TECHNICAL_CANARY_SUBJECT_ID']),
+    ...(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(parsed.QIXIANG_TECHNICAL_CANARY_TOPUP_ID??'')?[]:['QIXIANG_TECHNICAL_CANARY_TOPUP_ID']),
+  ]:[];
+  const qixiangCommonBlockers=qixiangMode!=='on'?[]:[
     ...(parsed.QIXIANG_PID==='4611'?[]:['QIXIANG_MERCHANT_ENTITY_MATCH']),
+    ...(qixiangMerchantCredentialAvailable?[]:['QIXIANG_MERCHANT_CREDENTIAL_UNAVAILABLE']),
+    ...(qixiangCheckoutCredentialAvailable?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+    ...(parsed.QIXIANG_CHECKOUT_KEY_ID&&/^[a-z0-9][a-z0-9._-]{7,63}$/u.test(parsed.QIXIANG_CHECKOUT_KEY_ID)
+      &&parsed.QIXIANG_CHECKOUT_CIPHER_VERSION==='1'?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
+    ...(parsed.QIXIANG_NOTIFY_URL===qixiangExpectedNotify&&parsed.QIXIANG_RETURN_URL===qixiangExpectedReturn
+      ?[]:['QIXIANG_NOTIFY_RETURN_MISMATCH']),
+    ...qixiangCanaryIdentityBlockers,
+  ];
+  const qixiangBlockers=qixiangMode!=='on'?[]:[
+    ...qixiangCommonBlockers,
+    ...(qixiangTechnicalCanaryMode?[]:[
     ...(parsed.QIXIANG_KEY_ROTATION_EVIDENCE_REF?[]:['QIXIANG_KEY_ROTATED']),
     ...(parsed.QIXIANG_OLD_KEY_REVOCATION_EVIDENCE_REF?[]:['QIXIANG_OLD_KEY_REVOKED']),
     ...(parsed.QIXIANG_MERCHANT_ENTITY_EVIDENCE_REF?[]:['QIXIANG_MERCHANT_ENTITY_MATCH']),
@@ -727,17 +751,14 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       &&Number.isSafeInteger(qixiangApprovedMax)&&qixiangApprovedMax>=100&&qixiangApprovedMax<=4_999_999
       ?[]:['QIXIANG_APPROVED_MAX_UNVERIFIED']),
     ...(parsed.QIXIANG_LOT_ACCOUNTING_EVIDENCE_REF?[]:['QIXIANG_LOT_ACCOUNTING']),
-    ...(qixiangMerchantCredentialAvailable?[]:['QIXIANG_MERCHANT_CREDENTIAL_UNAVAILABLE']),
-    ...(qixiangCheckoutCredentialAvailable?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
-    ...(parsed.QIXIANG_CHECKOUT_KEY_ID&&/^[a-z0-9][a-z0-9._-]{7,63}$/u.test(parsed.QIXIANG_CHECKOUT_KEY_ID)
-      &&parsed.QIXIANG_CHECKOUT_CIPHER_VERSION==='1'?[]:['QIXIANG_CHECKOUT_CREDENTIAL_UNAVAILABLE']),
-    ...(parsed.QIXIANG_NOTIFY_URL===qixiangExpectedNotify&&parsed.QIXIANG_RETURN_URL===qixiangExpectedReturn
-      ?[]:['QIXIANG_NOTIFY_RETURN_MISMATCH']),
+    ]),
+    ...(qixiangTechnicalCanaryMode&&qixiangApprovedMax!==501?['QIXIANG_TECHNICAL_CANARY_AMOUNT']:[]),
   ];
   const qixiangTopups={mode:qixiangMode,available:qixiangMode==='on'&&qixiangBlockers.length===0,
     rails:qixiangMode==='on'?['qixiang_alipay'] as const:[] as const,
-    minAmountCents:qixiangMode==='on'?100:null,
-    maxAmountCents:qixiangMode==='on'&&qixiangBlockers.length===0?qixiangApprovedMax:null,
+    minAmountCents:qixiangMode==='on'?(qixiangTechnicalCanaryMode?501:100):null,
+    maxAmountCents:qixiangMode==='on'&&qixiangBlockers.length===0
+      ?(qixiangTechnicalCanaryMode?501:qixiangApprovedMax):null,
     conversion:qixiangMode==='on'?{numerator:1000 as const,denominator:1002 as const,
       rounding:'floor' as const,precision:2 as const}:null,
     lotValidityDays:364 as const,
@@ -1087,6 +1108,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     inviteRewardPolicy,
     qixiangTopupMode:qixiangMode,
     qixiangRecoveryMode:qixiangRecoveryModeValue,
+    qixiangTechnicalCanaryMode,
     qixiangApprovedMaxCents:qixiangApprovedMax,
     honghuanSupplierCatalogMode:honghuanMode,
     readiness: {

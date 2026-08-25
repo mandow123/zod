@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { authorizeQixiangEvidenceSigner } from '../deploy/direct-ubuntu/qixiang-evidence-trust-policy.mjs';
-import { isCurrentComplianceReview, isExactQixiangRetiredKeyRejection }
+import { isCurrentComplianceReview, isExactActiveQixiangMerchant, isExactQixiangRetiredKeyRejection }
   from '../deploy/direct-ubuntu/qixiang-production-evidence-core.mjs';
 
 const signer={publicKeySha256:'a'.repeat(64),authorityKind:'payment_provider' as const,
@@ -11,6 +11,13 @@ describe('Qixiang executable production evidence rules',()=>{
     expect(isExactQixiangRetiredKeyRejection({code:-3,msg:'商户密钥错误'})).toBe(true);
     for(const value of [{code:-3,msg:'限频'},{code:-4,msg:'商户密钥错误'},{code:-3,msg:'商户密钥错误',retry:true},
       {code:500,msg:'业务异常'},null])expect(isExactQixiangRetiredKeyRejection(value)).toBe(false);
+  });
+  it('accepts the provider active flag as its observed numeric or string one while pinning the echoed key',()=>{
+    for(const active of [1,'1'])expect(isExactActiveQixiangMerchant({code:1,pid:'4611',key:'current',active},'current'))
+      .toBe(true);
+    for(const value of [{code:'1',pid:'4611',key:'current',active:'1'},{code:1,pid:'4611',key:'wrong',active:'1'},
+      {code:1,pid:'4611',key:'current',active:true},{code:1,pid:'4612',key:'current',active:1},null])
+      expect(isExactActiveQixiangMerchant(value,'current')).toBe(false);
   });
   it('pins a signer to its exact authority, legal identity and evidence kind',()=>{
     const policy=[signer];const valid={publicKeySha256:signer.publicKeySha256,authorityKind:signer.authorityKind,

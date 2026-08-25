@@ -7,9 +7,9 @@
 - 旧站源机：`18.163.148.84`，私网 `172.31.33.227`。现有 Nginx 在 Docker 容器 `kai-transaction-edge` 内运行，宿主配置 `/home/ubuntu/kai-transaction-v1/nginx-kai.conf` 只读挂载为容器 `/etc/nginx/nginx.conf`，源站监听 `8081`。
 - 手机版后端机：`43.198.97.0`，私网 `172.31.31.78`。应用只监听 `127.0.0.1:4100`；`systemd-socket-proxyd` 只监听 `172.31.31.78:4154`。
 - 43 号机 nftables 只允许源地址 `172.31.33.227/32` 访问 `4154`，其他来源全部丢弃。PostgreSQL、应用 `4100` 和内部 metrics 均不得公开监听。
-- 18 号机只新增 `location = /mobile/v1`、七相 notify 精确 location、`location ^~ /mobile/v1/` 和四个法务页精确 location。无 URI rewrite，`/`、`/api/*` 及其旧配置保持不变。
+- 18 号机只新增 `location = /mobile/v1`、七相 notify 精确 location、KAI callback 精确 location、`location ^~ /mobile/v1/`、七相同步返回页和四个法务页精确 location。无 URI rewrite，`/`、`/api/*` 及其旧配置保持不变。
 - 七相 notify 精确 location 在 18 号机关闭 access log，禁止 `$request_uri`/`$args`；应用只记录路径。签名回调的完整查询、签名和交易号不得进入边缘或应用日志。
-- 六个新增 location 各自启用 `ngx_http_realip_module`，只信来自 VPC `172.31.0.0/16` 的现有 ALB peer 所追加的 XFF，并递归取最后一个不受信地址；从公网直接访问 `18:8081` 时，来访者不在可信 CIDR，伪造 XFF 不生效。随后把清洗后的单值 `$remote_addr` 传给 43。43 固定 `TRUST_PROXY_HOPS=1`，只信直接相连的 socket-proxyd 一跳，因此不同客户端独立限流，审计 IP 表示该受控代理链确认的客户端地址。
+- 九个新增 location 各自启用 `ngx_http_realip_module`，只信来自 VPC `172.31.0.0/16` 的现有 ALB peer 所追加的 XFF，并递归取最后一个不受信地址；从公网直接访问 `18:8081` 时，来访者不在可信 CIDR，伪造 XFF 不生效。随后把清洗后的单值 `$remote_addr` 传给 43。43 固定 `TRUST_PROXY_HOPS=1`，只信直接相连的 socket-proxyd 一跳，因此不同客户端独立限流，审计 IP 表示该受控代理链确认的客户端地址。
 - `PUBLIC_ORIGIN` 必须是 `https://cloudpay.kai.com`。`/internal/metrics` 不进入公网路由。
 
 inquiry-only 采用本机 AES-256-GCM 备份和同机隔离 PostgreSQL 恢复演练；没有站外备份、高可用或灾备，readiness 必须如实返回 `offsiteBackup=false`、`highAvailability=false`、`disasterRecovery=false`、`riskAccepted=true`。
@@ -43,6 +43,16 @@ PostgreSQL 必须是该服务独立的本机回环数据库。先运行 host pre
 ## 完整商业模式的额外门禁
 
 询期版本与真实充值物理分离。只有 ICP 与 App 备案均已签发给实际运营主体、`cloudpay.kai.com` 与 `com.kaicloud.marketplace` 已绑定、合资格法务完成互联网资源协作/交易处理/信息服务分类结论、七相完成新 Key 签发与旧 Key 吊销并批准实际域名、Android H5 支付场景、算力卡时类目、退款 API 和金额上限后，才允许准备完整商业模式。
+
+### 当前 Key 单笔技术闭环（不等同完整商业开通）
+
+当操作者只提供当前商户 Key、尚不能提供旧 Key 与外部审批材料时，只能启用显式的 `QIXIANG_TECHNICAL_CANARY_MODE=on`。该模式不声称旧 Key 已吊销，也不声称域名/App 场景、服务类目或退款 API 已获七相批准；完整商业发布门禁继续失败关闭。它只允许预绑定的一个真实用户、其个人主体、一个预留 v4 topup UUID 和固定 `501` 分创建唯一一笔七相真实订单，退款与其他交易写入全部关闭。仅当数据库、身份能力、统一登录和该笔七相技术验收均可用时，readiness HTTP 状态允许为 `200`，供现有 APK 读取受限能力；响应体仍必须保持 `ok=false`、`release.ready=false`、`commerce.ready=false` 并公开全部发布 blocker。任一技术验收能力失效时 HTTP 状态恢复为 `503`。
+
+密钥通过 `production:qixiang-technical-canary:enroll-host` 的 stdin 一次性输入。helper 仅创建当前商户 Key、随机 checkout 键以及 Ed25519 签名/验签密钥四份 host-key 加密 credential，拒绝覆盖既有 credential，不接收或记录旧 Key。`production:qixiang-technical-canary:issue` 每次实时查询 PID 4611 当前 Key 状态、绑定发布摘要与 PostgreSQL 实例/迁移摘要，并核对预绑定用户和个人主体；通过后签发十分钟 `bootstrap_canary`。专用 timer 每五分钟续签，任一核验失败后旧票据最多十分钟自动失效。首笔订单成功后签发器拒绝继续续签；只有完成真实回调、主动核单、账本、364 天 lot 和用户可见到账核验后，才能形成技术闭环报告。此报告不能升级为 `full_commerce`，也不能替代政府、法务或支付机构批准。
+
+技术验收进程的环境预检只容忍代码内固定列出的非本单能力缺失（短信、Push、对象存储/杀毒、站外备份、传统充值与算力供应商）以及三项如实的备案/分类 blocker。数据库、KAI 身份、七相当前 Key/checkout credential、技术 canary 三个 UUID、固定 501 分上下限或恢复核单能力任一不可用，仍会阻止进程启动；未知的新 blocker 也不会被容忍。
+
+七相现网的未支付查单响应与旧文档存在类型差异：`status` 可能为字符串，并会返回 nullable 的 `bill_trade_no`、`payurl` 等字段。适配器只接受已观测并受测试锁定的这一精确结构；必须再次核对 PID、商户订单号、金额、支付方式、商品名和业务扩展参数。若首次下单结果不确定但查单确认订单存在，核单 worker 只从七相系统订单号恢复同源 `/pay/submit/<trade_no>/` 收银台并加密保存，不得再次创建第二笔渠道订单。人工核对状态经用户显式“重新核对”后必须清除 dead-letter 锁，才能进入该恢复流程。
 
 新的七相 Key 不得写入 `backend.env`、聊天、命令参数或代码。root helper 只从 stdin 接收旋转后的当前 Key 与已退役旧 Key，在 43 号机内部生成 checkout 加密键与 Ed25519 验收签名密钥对，并将五份凭据用 host key 加密、解密回读、fsync 后原子创建；若已有 credential 会拒绝覆盖。主服务只获得当前 Key、checkout 键、验签公钥和已签名的短时票据，永不获得旧 Key 或签名私钥。
 

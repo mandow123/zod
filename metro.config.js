@@ -5,8 +5,25 @@ const config = getDefaultConfig(__dirname);
 const defaultResolveRequest = config.resolver.resolveRequest;
 const isolatedDemo = process.env.CLOUDPAY_STAGING_DEMO?.trim() === '1';
 const localE2e = Boolean(process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim()) || isolatedDemo;
+const localQixiangPreviewValue = process.env.CLOUDPAY_LOCAL_QIXIANG_PREVIEW?.trim();
+if (localQixiangPreviewValue && !['0', '1'].includes(localQixiangPreviewValue)) {
+  throw new Error('CLOUDPAY_LOCAL_QIXIANG_PREVIEW must be 0 or 1.');
+}
+const localQixiangPreview = localQixiangPreviewValue === '1';
+if (localQixiangPreview && !isolatedDemo) {
+  throw new Error('The local Qixiang preview requires CLOUDPAY_STAGING_DEMO=1.');
+}
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if ((moduleName.endsWith('/LocalQixiangPreviewShell') || moduleName === './src/LocalQixiangPreviewShell')
+    && !moduleName.endsWith('/LocalQixiangPreviewShell.local-preview')) {
+    return {
+      type: 'sourceFile',
+      filePath: path.resolve(__dirname, localQixiangPreview
+        ? 'src/LocalQixiangPreviewShell.local-preview.tsx'
+        : 'src/LocalQixiangPreviewShell.tsx'),
+    };
+  }
   if ((moduleName.endsWith('/AuthSheet') || moduleName === './src/AuthSheet')
     && !moduleName.endsWith('/AuthSheet.local-e2e')) {
     if (localE2e) {

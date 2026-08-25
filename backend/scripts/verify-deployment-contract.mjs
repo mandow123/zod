@@ -116,30 +116,32 @@ check('authoritative_two_host_topology', topology.publicOrigin === 'https://clou
   && topology.mobileSidecar?.loopbackPort === 4100 && topology.cloudKaiComChangesAllowed === false,
   '18 origin -> 43 private:4154 -> loopback:4100; cloud.kai.com immutable');
 
-const expectedRoutes = ['/mobile/v1', '/mobile/v1/*', '/privacy', '/terms', '/inquiry-terms', '/account/delete'];
+const expectedRoutes = ['/mobile/v1', '/mobile/v1/*', '/payments/qixiang/return', '/privacy', '/terms',
+  '/inquiry-terms', '/account/delete'];
 check('exact_route_allowlist', JSON.stringify(topology.forwardOnly) === JSON.stringify(expectedRoutes)
   && JSON.stringify(topology.preserveExactly) === JSON.stringify(['/', '/api/*']),
   `${topology.forwardOnly?.length ?? 0} routes; legacy root and /api preserved`);
 
 const locationHeaders = [...nginx.matchAll(/^location\s+([^\n{]+)\{/gmu)].map((match) => match[1].trim());
-const expectedLocations = ['= /mobile/v1', '= /mobile/v1/credits/topups/qixiang/notify', '^~ /mobile/v1/',
+const expectedLocations = ['= /mobile/v1', '= /mobile/v1/credits/topups/qixiang/notify',
+  '= /mobile/v1/auth/kai/callback', '^~ /mobile/v1/', '= /payments/qixiang/return',
   '= /privacy', '= /terms', '= /inquiry-terms', '= /account/delete'];
 const proxyCount = (nginx.match(/proxy_pass http:\/\/172\.31\.31\.78:4154;/gu) ?? []).length;
 check('nginx_exact_private_forwarding', JSON.stringify(locationHeaders) === JSON.stringify(expectedLocations)
-  && proxyCount === 7 && !/\brewrite\b/u.test(nginx) && !/^location[^\n]+\/api/gmu.test(nginx)
+  && proxyCount === 9 && !/\brewrite\b/u.test(nginx) && !/^location[^\n]+\/api/gmu.test(nginx)
   && !nginx.includes('/internal/metrics') && !/\bserver_name\s+[^;]*cloud\.kai\.com/u.test(nginx),
   `${locationHeaders.length} exact/prefix locations, ${proxyCount} private proxy targets`);
 check('nginx_canonical_headers_and_xff_cleaning',
-  (nginx.match(/proxy_set_header Host cloudpay\.kai\.com;/gu) ?? []).length === 7
-    && (nginx.match(/proxy_set_header X-Forwarded-Host cloudpay\.kai\.com;/gu) ?? []).length === 7
-    && (nginx.match(/proxy_set_header X-Forwarded-Proto https;/gu) ?? []).length === 7
-    && (nginx.match(/set_real_ip_from 172\.31\.0\.0\/16;/gu) ?? []).length === 7
-    && (nginx.match(/real_ip_header X-Forwarded-For;/gu) ?? []).length === 7
-    && (nginx.match(/real_ip_recursive on;/gu) ?? []).length === 7
-    && (nginx.match(/proxy_set_header X-Forwarded-For \$remote_addr;/gu) ?? []).length === 7
+  (nginx.match(/proxy_set_header Host cloudpay\.kai\.com;/gu) ?? []).length === 9
+    && (nginx.match(/proxy_set_header X-Forwarded-Host cloudpay\.kai\.com;/gu) ?? []).length === 9
+    && (nginx.match(/proxy_set_header X-Forwarded-Proto https;/gu) ?? []).length === 9
+    && (nginx.match(/set_real_ip_from 172\.31\.0\.0\/16;/gu) ?? []).length === 9
+    && (nginx.match(/real_ip_header X-Forwarded-For;/gu) ?? []).length === 9
+    && (nginx.match(/real_ip_recursive on;/gu) ?? []).length === 9
+    && (nginx.match(/proxy_set_header X-Forwarded-For \$remote_addr;/gu) ?? []).length === 9
     && !nginx.includes('$http_x_forwarded_for')
-    && (nginx.match(/add_header Cache-Control "no-store" always;/gu) ?? []).length === 7
-    && (nginx.match(/access_log off;/gu) ?? []).length === 1
+    && (nginx.match(/add_header Cache-Control "no-store" always;/gu) ?? []).length === 9
+    && (nginx.match(/access_log off;/gu) ?? []).length === 2
     && !/\$(?:request_uri|args)\b/u.test(nginx),
   'fixed host/proto, untrusted XFF discarded, API caching disabled');
 
@@ -624,6 +626,10 @@ check('release_bundle_contains_direct_contract', bundle.includes("'deploy/direct
   && bundle.includes("'deploy/direct-ubuntu/preflight-sidecar.mjs'")
   && bundle.includes("'deploy/direct-ubuntu/preflight-origin.mjs'")
   && bundle.includes("'deploy/direct-ubuntu/cloudpay-mobile-nginx-routes.conf'")
+  && bundle.includes("'deploy/direct-ubuntu/enroll-qixiang-technical-canary-credentials.mjs'")
+  && bundle.includes("'deploy/direct-ubuntu/issue-qixiang-technical-canary-gate.mjs'")
+  && bundle.includes("'deploy/direct-ubuntu/cloudpay-mobile-qixiang-technical-canary-gate-refresh.service'")
+  && bundle.includes("'deploy/direct-ubuntu/cloudpay-mobile-qixiang-technical-canary-gate-refresh.timer'")
   && !bundle.includes("'deploy/aws-ubuntu/verify-routing.mjs'")
   && bundle.includes("['--no-xattrs', '-czf'")
   && bundle.includes("['LIBARCHIVE', 'xattr']") && bundle.includes("['com', 'apple', 'provenance']"),

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh CloudPay Qixiang technical canary gate every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00
+RandomizedDelaySec=15
+Persistent=false
+Unit=cloudpay-mobile-qixiang-technical-canary-gate-refresh.service
+
+[Install]
+WantedBy=timers.target

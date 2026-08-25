@@ -197,7 +197,8 @@ export class PostgresQixiangTopupStore {
         await this.release(client,input.userId,scope,input.idempotencyKey);return{status:'version_conflict'};
       }
       const updated=await client.query<TopupRow>(`UPDATE kai_credit_topups SET status='verifying',
-        next_reconcile_at=$3,last_reconciliation_error=NULL WHERE id=$1 AND version=$2 RETURNING ${columns}`,
+        next_reconcile_at=$3,last_reconciliation_error=NULL,reconciliation_locked_at=NULL,
+        reconciliation_dead_lettered_at=NULL WHERE id=$1 AND version=$2 RETURNING ${columns}`,
       [input.topupId,input.expectedVersion,input.now]);
       if(!updated.rows[0]){await this.release(client,input.userId,scope,input.idempotencyKey);return{status:'version_conflict'};}
       const topup=map(updated.rows[0]);const context={actorId:input.userId,requestId:input.requestId,
@@ -293,7 +294,8 @@ export class PostgresQixiangTopupStore {
   }
 
   async recordUnpaidQuery(input:Readonly<{attemptId:string;claimedAt:Date;topupId:string;payloadDigest:string;
-    now:Date;nextAttemptAt:Date}>):Promise<QixiangQueryProcessingResult>{return this.database.transaction(async(client)=>{
+    now:Date;nextAttemptAt:Date;providerPaymentId?:string;checkout?:QixiangCheckoutCiphertext}>)
+  :Promise<QixiangQueryProcessingResult>{return this.database.transaction(async(client)=>{
     const current=await this.lockClaimedTopup(client,input.topupId,input.claimedAt);if(!current)return{status:'stale'};
     const duplicate=await client.query<{id:string}>(`SELECT id FROM qixiang_payment_receipts
       WHERE source='query' AND receipt_key=$1`,[`query:${input.attemptId}`]);
@@ -301,26 +303,36 @@ export class PostgresQixiangTopupStore {
     await client.query(`INSERT INTO qixiang_payment_receipts(id,topup_id,source,receipt_key,provider_reference,
       trade_no,api_trade_no,provider_code,provider_status,trade_status,payment_type,amount_cents,
       signature_verified,snapshot_matched,payload_digest,processing_result,received_at)
-      VALUES($1,$2,'query',$3,$4,NULL,NULL,1,0,NULL,'alipay',$5,false,true,$6,'accepted',$7)`,[
-      randomUUID(),current.id,`query:${input.attemptId}`,current.provider_reference,current.amount_cents,
-      input.payloadDigest,input.now,
+      VALUES($1,$2,'query',$3,$4,$5,NULL,1,0,NULL,'alipay',$6,false,true,$7,'accepted',$8)`,[
+      randomUUID(),current.id,`query:${input.attemptId}`,current.provider_reference,input.providerPaymentId??null,
+      current.amount_cents,input.payloadDigest,input.now,
     ]);const evidence=await client.query<{count:string;first:Date;last:Date}>(`SELECT count(*)::text count,
       min(received_at) first,max(received_at) last FROM qixiang_payment_receipts WHERE topup_id=$1
       AND source='query' AND provider_code=1 AND provider_status=0 AND payment_type='alipay'
       AND provider_reference=$2 AND amount_cents=$3 AND snapshot_matched=true AND processing_result='accepted'`,[
       current.id,current.provider_reference,current.amount_cents,
     ]);const count=Number(evidence.rows[0]!.count),first=date(evidence.rows[0]!.first),last=date(evidence.rows[0]!.last);
+    const recovered=input.providerPaymentId!==undefined&&input.checkout!==undefined;
+    if(recovered&&current.provider_payment_id!==null&&current.provider_payment_id!==input.providerPaymentId)
+      throw new Error('QIXIANG_QUERY_PROVIDER_PAYMENT_CONFLICT');
     const expires=date(current.expires_at);const shouldExpire=count>=2&&last.getTime()-first.getTime()>=30_000
-      && input.now>=expires;const hasCheckout=current.provider_payment_id!==null&&current.checkout_cipher_version===1;
+      && input.now>=expires;const hasCheckout=(current.provider_payment_id!==null&&current.checkout_cipher_version===1)||recovered;
     const status:QixiangTopupStatus=shouldExpire?'expired':hasCheckout&&input.now<expires?'pending':'verifying';
     const updated=await client.query<TopupRow>(`UPDATE kai_credit_topups SET status=$2,
       unpaid_query_confirmations=$3,first_unpaid_query_at=$4,last_unpaid_query_at=$5,
       reconciliation_locked_at=NULL,last_reconciled_at=$6,last_provider_status='0',
-      last_reconciliation_error=NULL,next_reconcile_at=$7 WHERE id=$1 RETURNING ${columns}`,[
-      current.id,status,count,first,last,input.now,input.nextAttemptAt,
+      last_reconciliation_error=NULL,next_reconcile_at=$7,
+      provider_payment_id=COALESCE(provider_payment_id,$8),checkout_cipher_version=COALESCE(checkout_cipher_version,$9),
+      checkout_key_id=COALESCE(checkout_key_id,$10),checkout_nonce=COALESCE(checkout_nonce,$11),
+      checkout_ciphertext=COALESCE(checkout_ciphertext,$12),checkout_auth_tag=COALESCE(checkout_auth_tag,$13)
+      WHERE id=$1 RETURNING ${columns}`,[
+      current.id,status,count,first,last,input.now,input.nextAttemptAt,input.providerPaymentId??null,
+      input.checkout?.cipherVersion??null,input.checkout?.keyId??null,input.checkout?.nonce??null,
+      input.checkout?.ciphertext??null,input.checkout?.authTag??null,
     ]);const topup=map(updated.rows[0]!);await this.auditSystem(client,'QIXIANG_QUERY_UNPAID_RECORDED',topup,
       input.attemptId,input.payloadDigest,input.now,{status:topup.status,version:topup.version,
-        unpaidQueryConfirmations:count});await this.outbox(client,status==='expired'?'qixiang.topup.expired':'qixiang.topup.query_unpaid',
+        unpaidQueryConfirmations:count,checkoutRecovered:recovered});await this.outbox(client,recovered?'qixiang.topup.checkout_recovered':
+          status==='expired'?'qixiang.topup.expired':'qixiang.topup.query_unpaid',
       topup,{topupId:topup.id,subjectId:topup.subjectId,status:topup.status,version:topup.version,
         queryAttemptId:input.attemptId});return{status:status==='expired'?'expired':status==='pending'?'pending':'verifying',topup};
   });}

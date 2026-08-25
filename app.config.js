@@ -5,6 +5,13 @@ if (stagingDemoValue && !['0', '1'].includes(stagingDemoValue)) {
   throw new Error('CLOUDPAY_STAGING_DEMO must be 1 when building the isolated demo App.');
 }
 const stagingDemo = stagingDemoValue === '1';
+const localQixiangPreviewValue = process.env.CLOUDPAY_LOCAL_QIXIANG_PREVIEW?.trim();
+if (localQixiangPreviewValue && !['0', '1'].includes(localQixiangPreviewValue)) {
+  throw new Error('CLOUDPAY_LOCAL_QIXIANG_PREVIEW must be 1 when enabling the local Qixiang preview.');
+}
+if (localQixiangPreviewValue === '1' && !stagingDemo) {
+  throw new Error('CLOUDPAY_LOCAL_QIXIANG_PREVIEW is allowed only with CLOUDPAY_STAGING_DEMO=1.');
+}
 const configuredStagingBaseUrl = process.env.CLOUDPAY_STAGING_BASE_URL?.trim();
 const legacyLocalE2eBaseUrl = process.env.CLOUDPAY_LOCAL_E2E_BASE_URL?.trim();
 if (stagingDemo && legacyLocalE2eBaseUrl) {

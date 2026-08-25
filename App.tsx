@@ -79,6 +79,7 @@ import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
 import { loadSession, reconcileCommittedKaiOidcSession, type StoredSession } from './src/session';
 import { StagingDemoShell } from './src/StagingDemoShell';
 import { StagingEnvironmentBanner } from './src/StagingEnvironmentBanner';
+import { LocalQixiangPreviewShell } from './src/LocalQixiangPreviewShell';
 import {
   messageNavigationIntent,
   providerNextIntent,
@@ -719,7 +720,7 @@ function CloudPayApp() {
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <StagingDemoShell><CloudPayApp /></StagingDemoShell>
+      <LocalQixiangPreviewShell><StagingDemoShell><CloudPayApp /></StagingDemoShell></LocalQixiangPreviewShell>
     </SafeAreaProvider>
   );
 }

@@ -54,6 +54,9 @@ export class QixiangEvidenceService {
 
   async readiness(mode:'full'|'bootstrap_canary'='full') {
     if (this.config.qixiangTopupMode !== 'on') return { ready: false, maxAmountCents: null, blockers: [] as string[] };
+    if (mode==='bootstrap_canary'&&this.config.qixiangTechnicalCanaryMode) {
+      return { ready: true, maxAmountCents: 501, blockers: [] as string[] };
+    }
     const rows = await this.store.approved(this.now());
     const byKind = new Map(rows.map((row) => [row.kind, row]));
     const blockers: string[] = [];

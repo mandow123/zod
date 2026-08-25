@@ -75,6 +75,28 @@ describe('Qixiang runtime configuration gate', () => {
     expect(enroll).not.toContain('--locked');
     expect(enroll).not.toContain('process.env.');
   });
+  it('ships a current-key-only technical canary that never claims retired-key or provider approvals',()=>{
+    const root=join(import.meta.dirname,'..');
+    const enroll=readFileSync(join(root,'deploy/direct-ubuntu/enroll-qixiang-technical-canary-credentials.mjs'),'utf8');
+    const issuer=readFileSync(join(root,'deploy/direct-ubuntu/issue-qixiang-technical-canary-gate.mjs'),'utf8');
+    const service=readFileSync(join(root,
+      'deploy/direct-ubuntu/cloudpay-mobile-qixiang-technical-canary-gate-refresh.service'),'utf8');
+    const timer=readFileSync(join(root,
+      'deploy/direct-ubuntu/cloudpay-mobile-qixiang-technical-canary-gate-refresh.timer'),'utf8');
+    expect(enroll).toContain('for await(const chunk of process.stdin)');
+    expect(enroll).toContain("'--with-key=host'");
+    expect(enroll).toContain("generateKeyPairSync('ed25519')");
+    expect(enroll).toContain('retiredKeyClaimed:false');
+    expect(enroll).not.toContain('retiredMerchantKey');
+    expect(enroll).not.toContain('process.env.');
+    expect(issuer).toContain('await currentMerchant(merchantKey)');
+    expect(issuer).toContain("phase:'bootstrap_canary'");
+    expect(issuer).toContain('retiredKeyRejected:false');
+    expect(issuer).toContain('domainAppScene:false,serviceCategory:false,refundApi:false');
+    expect(issuer).toContain("sign(null,Buffer.from(canonicalJson(payload)),signingKey)");
+    expect(service).toContain('issue-qixiang-technical-canary-gate.mjs');
+    expect(timer).toContain('OnCalendar=*-*-* *:00/5:00');
+  });
   it('reads both dedicated 0600 credentials and opens only the statically complete runtime gate', () => {
     const config = loadConfig(environment());
     const capability = config.readiness.capabilities.qixiangTopups;
@@ -97,6 +119,25 @@ describe('Qixiang runtime configuration gate', () => {
     const config=loadConfig({...environment(),QIXIANG_TOPUP_MODE:'off',QIXIANG_RECOVERY_MODE:'on'});
     expect(config.readiness.capabilities.qixiangTopups.available).toBe(false);
     expect(config.readiness.capabilities.qixiangRecovery).toEqual({mode:'on',available:true,blockers:[]});
+  });
+
+  it('opens only the exact ¥5.01 pinned technical canary without external approval references',()=>{
+    const input={...environment(),QIXIANG_TECHNICAL_CANARY_MODE:'on',QIXIANG_APPROVED_MAX_CENTS:'501',
+      QIXIANG_TECHNICAL_CANARY_USER_ID:'00000000-0000-4000-8000-000000000011',
+      QIXIANG_TECHNICAL_CANARY_SUBJECT_ID:'00000000-0000-4000-8000-000000000012',
+      QIXIANG_TECHNICAL_CANARY_TOPUP_ID:'00000000-0000-4000-8000-000000000010',
+      QIXIANG_KEY_ROTATION_EVIDENCE_REF:undefined,QIXIANG_OLD_KEY_REVOCATION_EVIDENCE_REF:undefined,
+      QIXIANG_MERCHANT_ENTITY_EVIDENCE_REF:undefined,QIXIANG_DOMAIN_APP_SCENE_EVIDENCE_REF:undefined,
+      QIXIANG_SERVICE_CATEGORY_EVIDENCE_REF:undefined,QIXIANG_REFUND_API_EVIDENCE_REF:undefined,
+      QIXIANG_REAL_FULFILLMENT_EVIDENCE_REF:undefined,QIXIANG_RECONCILIATION_EVIDENCE_REF:undefined,
+      QIXIANG_APPROVED_MAX_EVIDENCE_REF:undefined,QIXIANG_LOT_ACCOUNTING_EVIDENCE_REF:undefined};
+    const runtime=loadConfig(input);const capability=runtime.readiness.capabilities.qixiangTopups;
+    expect(runtime.qixiangTechnicalCanaryMode).toBe(true);
+    expect(capability).toMatchObject({available:true,minAmountCents:501,maxAmountCents:501,blockers:[]});
+    expect(loadConfig({...input,QIXIANG_APPROVED_MAX_CENTS:'502'}).readiness.capabilities.qixiangTopups.blockers)
+      .toContain('QIXIANG_TECHNICAL_CANARY_AMOUNT');
+    expect(loadConfig({...input,QIXIANG_TECHNICAL_CANARY_TOPUP_ID:'00000000-0000-3000-8000-000000000010'})
+      .readiness.capabilities.qixiangTopups.blockers).toContain('QIXIANG_TECHNICAL_CANARY_TOPUP_ID');
   });
 
   it('fails closed on a noncanonical checkout credential or mixed-case key id', () => {

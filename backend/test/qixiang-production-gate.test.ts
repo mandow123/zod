@@ -91,6 +91,26 @@ describe('Qixiang signed production runtime gate',()=>{
       .rejects.toThrow();
     await expect(gate.require('refund')).rejects.toThrow();
   });
+  it('permits an honest current-key-only bootstrap receipt while keeping refunds and full commerce closed',async()=>{
+    const input=fixture();const parsed=JSON.parse(input.receipt);parsed.phase='bootstrap_canary';
+    parsed.provider.retiredKeyRejected=false;parsed.approvals.domainAppScene=false;
+    parsed.approvals.serviceCategory=false;parsed.approvals.refundApi=false;
+    const{signature:_signature,...payload}=parsed;parsed.signature={algorithm:'Ed25519',
+      value:sign(null,Buffer.from(canonicalJson(payload)),input.pair.privateKey).toString('base64')};
+    const gate=new QixiangProductionGate({receipt:JSON.stringify(parsed),verificationPublicKeyPem:input.publicKey,environment,
+      merchantKey:merchant,checkoutKey:checkout,releaseManifestSha256:release,now:()=>new Date(input.now),
+      databaseStateLoader:async()=>({identitySha256:'b'.repeat(64),migrationSha256:'c'.repeat(64)})});
+    await expect(gate.require('create',{userId:parsed.canary.userId,subjectId:parsed.canary.subjectId,amountCents:501}))
+      .resolves.toMatchObject({ready:true,canaryTopupId:parsed.canary.topupId});
+    expect(gate.readiness('refund')).toMatchObject({ready:false,
+      blockers:expect.arrayContaining(['REFUND_API_NOT_APPROVED','GATE_BOOTSTRAP_CANARY_ONLY'])});
+    parsed.phase='full_commerce';const{signature:oldSignature,...fullPayload}=parsed;void oldSignature;
+    parsed.signature={algorithm:'Ed25519',value:sign(null,Buffer.from(canonicalJson(fullPayload)),input.pair.privateKey).toString('base64')};
+    const fullGate=new QixiangProductionGate({receipt:JSON.stringify(parsed),verificationPublicKeyPem:input.publicKey,
+      environment,merchantKey:merchant,checkoutKey:checkout,releaseManifestSha256:release,now:()=>new Date(input.now)});
+    expect(fullGate.readiness('create')).toMatchObject({ready:false,
+      blockers:expect.arrayContaining(['GATE_FULL_COMMERCE_APPROVALS_REQUIRED'])});
+  });
   it('re-reads a renewed root-owned receipt for every action without restarting the process',()=>{
     const first=fixture('2026-08-24T04:00:00.000Z');const renewed=fixture('2026-08-24T04:09:00.000Z',first.pair);let receipt=first.receipt;
     const gate=new QixiangProductionGate({receipt,receiptLoader:()=>receipt,verificationPublicKeyPem:first.publicKey,

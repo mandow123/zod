@@ -66,6 +66,15 @@ describe('QixiangProvider transport boundary', () => {
     await expect(rejected.queryOrder(base)).rejects.toMatchObject({ code: 'QIXIANG_QUERY_REJECTED' });
   });
 
+  it('accepts the live unpaid response shape and recovers its exact submit URL',async()=>{
+    const provider=new QixiangProvider(key,pepper,vi.fn(async()=>json({code:1,msg:'succ',trade_no:'20260824184100001',
+      out_trade_no:base.providerReference,api_trade_no:null,bill_trade_no:null,type:'alipay',pid:'4611',
+      addtime:'2026-08-24 18:41:02',endtime:null,name:base.name,money:'12.30',param:base.attemptToken,
+      buyer:null,status:'0',payurl:null}))as typeof fetch);
+    await expect(provider.queryOrder(base)).resolves.toMatchObject({state:'pending',providerStatus:'0',
+      providerPaymentId:'20260824184100001',checkoutUrl:'https://api.payqixiang.cn/pay/submit/20260824184100001/'});
+  });
+
   it.each([
     'https://api.payqixiang.cn/cashier/one',
     'https://api.payqixiang.cn/pay/submit/a/?next=x',

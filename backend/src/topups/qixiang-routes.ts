@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AccountService } from '../account/service.js';
@@ -13,7 +14,7 @@ function key(value:unknown){const result=typeof value==='string'?value:'';
     '请求缺少有效的幂等标识。');return result;}
 
 export async function registerQixiangTopupRoutes(app:FastifyInstance,accounts:AccountService,service:QixiangTopupService,
-  allowNewTopups:boolean|(()=>boolean|Promise<boolean>)=true){
+  allowNewTopups:boolean|(()=>boolean|Promise<boolean>)=true,technicalCanaryUserId?:string){
   app.post('/mobile/v1/credits/topups/qixiang',{config:{rateLimit:{max:10,timeWindow:'1 hour'}}},async(request,reply)=>{
     const newTopupsEnabled=typeof allowNewTopups==='function'?await allowNewTopups():allowNewTopups;
     if(!newTopupsEnabled)throw new AppError('QIXIANG_NEW_TOPUPS_DISABLED',503,
@@ -25,7 +26,12 @@ export async function registerQixiangTopupRoutes(app:FastifyInstance,accounts:Ac
   });
   app.get('/mobile/v1/credits/topups/qixiang',async(request)=>{const{principal}=await authenticateMobileRequest(accounts,request);
     const query=parse(z.object({limit:z.coerce.number().int().min(1).max(100).default(30),cursor:z.string().max(256).optional()}).strict(),
-      request.query);return service.list(principal,{limit:query.limit,...(query.cursor===undefined?{}:{cursor:query.cursor})});});
+      request.query);const result=await service.list(principal,{limit:query.limit,...(query.cursor===undefined?{}:{cursor:query.cursor})});
+    if(technicalCanaryUserId&&result.creation.allowed===false)request.log.warn({event:'qixiang_canary_creation_denied',
+      reason:result.creation.reason,userMatchesCanary:principal.userId===technicalCanaryUserId,
+      userAuditToken:createHash('sha256').update(principal.userId).digest('hex').slice(0,16)},
+    'Qixiang technical canary creation policy denied the authenticated App');
+    return result;});
   app.get('/mobile/v1/credits/topups/qixiang/:topupId',async(request)=>{const{principal}=await authenticateMobileRequest(accounts,request);
     const parameters=parse(z.object({topupId:z.string().uuid()}).strict(),request.params);return service.get(principal,parameters.topupId);});
   app.post('/mobile/v1/credits/topups/qixiang/:topupId/recheck',{config:{rateLimit:{max:20,timeWindow:'1 hour'}}},

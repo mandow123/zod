@@ -257,7 +257,8 @@ const qixiangQueryLogger:WorkerLogger={info:(fields,message)=>runtimeWorkerLogge
   error:(fields,message)=>runtimeWorkerLogger?.error(fields,message)};
 const qixiangQueryWorker=qixiangRuntime
   ?new QixiangQueryWorker(qixiangRuntime.store,qixiangRuntime.provider,config.AUDIT_PEPPER!,qixiangQueryLogger,
-    15_000,()=>new Date(),qixiangBootstrapCanaryTopupId)
+    15_000,()=>new Date(),qixiangBootstrapCanaryTopupId,
+    {key:qixiangRuntime.checkoutKey,keyId:config.QIXIANG_CHECKOUT_KEY_ID!})
   :undefined;
 const nodeEnrollmentService = commerceRuntime && database && accountStore && subjectService
   && config.readiness.capabilities.nodeEnrollment.available && config.AUDIT_PEPPER

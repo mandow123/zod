@@ -10,7 +10,8 @@ import { probeEvidenceDigest } from '../../dist/operations/probe-evidence.js';
 import { parseRefreshState } from '../../scripts/kai-probe-credential-core.mjs';
 import { fullCommerceStaticFailures, parseEnvironment } from './full-commerce-gate-core.mjs';
 import { authorizeQixiangEvidenceSigner, QIXIANG_EVIDENCE_TRUST_POLICY } from './qixiang-evidence-trust-policy.mjs';
-import { isCurrentComplianceReview, isExactQixiangRetiredKeyRejection } from './qixiang-production-evidence-core.mjs';
+import { isCurrentComplianceReview, isExactActiveQixiangMerchant, isExactQixiangRetiredKeyRejection }
+  from './qixiang-production-evidence-core.mjs';
 
 const ENV_PATH = '/etc/kai-cloudpay/backend.env';
 const EVIDENCE_ROOT = '/var/lib/kai-cloudpay-evidence';
@@ -150,8 +151,7 @@ try {
     providerMerchantQuery(merchantKey), providerMerchantQuery(retiredKey), secureRead(COMPLIANCE_MANIFEST, 256 * 1024),
     secureRead(join(process.cwd(), 'RELEASE-MANIFEST.json'), 4 * 1024 * 1024, false, false),
   ]);
-  const currentActive = currentProvider.code === 1 && String(currentProvider.pid) === '4611'
-    && currentProvider.key === merchantKey && currentProvider.active === 1;
+  const currentActive = isExactActiveQixiangMerchant(currentProvider, merchantKey);
   const retiredRejected = isExactQixiangRetiredKeyRejection(retiredProvider);
   if (!currentActive) throw new Error('QIXIANG_CURRENT_KEY_LIVE_PROOF_FAILED');
   if (!retiredRejected) throw new Error('QIXIANG_RETIRED_KEY_STILL_ACTIVE');

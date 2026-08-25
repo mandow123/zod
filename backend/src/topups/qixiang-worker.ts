@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { lookupHash } from '../account/crypto.js';
 import { AppError } from '../errors.js';
+import { encryptQixiangCheckout } from '../payment/qixiang-checkout-crypto.js';
 import type { QixiangProvider, QixiangQueryResult } from '../payment/qixiang-provider.js';
 import type { PostgresQixiangTopupStore } from './qixiang-store.js';
 import type { QixiangQueryAttempt, QixiangQueryProcessingResult, QixiangTopupRecord } from './qixiang-types.js';
@@ -21,7 +22,8 @@ export class QixiangQueryWorker{
   private schedulerFailures=0;
   constructor(private readonly store:PostgresQixiangTopupStore,private readonly provider:QixiangProvider,
   private readonly auditPepper:string,private readonly logger:Logger,private readonly intervalMs=15_000,
-  private readonly now:()=>Date=()=>new Date(),private readonly scopedTopupId:string|null=null){
+  private readonly now:()=>Date=()=>new Date(),private readonly scopedTopupId:string|null=null,
+  private readonly checkoutRecovery?:Readonly<{key:Buffer;keyId:string}>){
     if(!auditPepper)throw new Error('AUDIT_PEPPER_REQUIRED');this.startedAt=this.now();
   }
   start(){if(this.timer||this.stopping)return;void this.run();this.timer=setInterval(()=>void this.run(),this.intervalMs);
@@ -65,9 +67,13 @@ export class QixiangQueryWorker{
       return false;}}
   private async apply(attempt:QixiangQueryAttempt,result:QixiangQueryResult):Promise<QixiangQueryProcessingResult>{
     const now=this.now();const digest=lookupHash(canonical(result.normalizedPayload),this.auditPepper);
-    if(result.state==='pending')return this.store.recordUnpaidQuery({attemptId:attempt.attemptId,
+    if(result.state==='pending'){let recovery:{}|Readonly<{providerPaymentId:string;checkout:ReturnType<typeof encryptQixiangCheckout>}>= {};
+      if(result.providerPaymentId&&result.checkoutUrl&&this.checkoutRecovery){const checkout=encryptQixiangCheckout(
+        result.checkoutUrl,{topupId:attempt.topup.id,providerReference:attempt.topup.providerReference,
+          keyId:this.checkoutRecovery.keyId},this.checkoutRecovery.key);recovery={providerPaymentId:result.providerPaymentId,checkout};}
+      return this.store.recordUnpaidQuery({attemptId:attempt.attemptId,
       claimedAt:attempt.claimedAt,topupId:attempt.topup.id,payloadDigest:digest,now,
-      nextAttemptAt:this.next(now,attempt.topup.reconciliationAttempts)});
+      nextAttemptAt:this.next(now,attempt.topup.reconciliationAttempts),...recovery});}
     const apiTradeNo=result.normalizedPayload.apiTradeNo;
     if(typeof apiTradeNo!=='string'||apiTradeNo.length===0)throw new Error('QIXIANG_QUERY_API_TRADE_NO_MISSING');
     const grantPayloadDigest=lookupHash(canonical({topupId:attempt.topup.id,subjectId:attempt.topup.subjectId,

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   loadQixiangCheckoutKey, loadQixiangMerchantKey, qixiangCheckoutKeyPath, qixiangMerchantKeyPath,
+  qixiangPrivateCredentialPermissionsSafe,
 } from '../src/payment/qixiang-credential.js';
 
 const directories: string[] = [];
@@ -34,6 +35,17 @@ describe('Qixiang merchant key file credential', () => {
     const link = join(directory, 'linked-key');
     symlinkSync(file, link);
     expect(() => loadQixiangMerchantKey(link)).toThrow(/INVALID/u);
+  });
+
+  it('accepts root-owned 0440 only at the exact systemd credential root',()=>{
+    const metadata={mode:0o100440,uid:0,gid:0};const directory='/run/credentials/cloudpay.service';
+    expect(qixiangPrivateCredentialPermissionsSafe(`${directory}/qixiang-merchant-key`,metadata,directory)).toBe(true);
+    expect(qixiangPrivateCredentialPermissionsSafe('/tmp/qixiang-merchant-key',metadata,'/tmp')).toBe(false);
+    expect(qixiangPrivateCredentialPermissionsSafe(`${directory}/nested/key`,metadata,directory)).toBe(false);
+    expect(qixiangPrivateCredentialPermissionsSafe(`${directory}/qixiang-merchant-key`,{...metadata,uid:1000},directory))
+      .toBe(false);
+    expect(qixiangPrivateCredentialPermissionsSafe(`${directory}/qixiang-merchant-key`,{...metadata,mode:0o100640},directory))
+      .toBe(false);
   });
 
   it('rejects multi-line or whitespace-padded key material', () => {

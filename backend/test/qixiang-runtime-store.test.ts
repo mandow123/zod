@@ -70,9 +70,14 @@ describe('Qixiang dedicated runtime store',()=>{
     const started=await store.startCreate(prepared.topup.id,prepared.topup.version,new Date(now.getTime()+11_000),mutation);
     const saved=await store.saveCheckout(started!.id,started!.version,`TRADE${prepared.topup.providerReference}`,{
       cipherVersion:1,keyId:'qixiang-checkout-2026a',nonce:Buffer.alloc(12,1),ciphertext:Buffer.alloc(32,2),authTag:Buffer.alloc(16,3),
-    },mutation);const key=`recheck-${randomUUID()}`;const base={topupId:saved!.id,subjectId,userId,expectedVersion:saved!.version,
+    },mutation);await pglite.query(`UPDATE kai_credit_topups SET status='manual_review',
+      reconciliation_dead_lettered_at=$2 WHERE id=$1`,[saved!.id,now]);
+    const manual=await store.get(subjectId,saved!.id);const key=`recheck-${randomUUID()}`;
+    const base={topupId:saved!.id,subjectId,userId,expectedVersion:manual!.version,
       idempotencyKey:key,payloadDigest:'f'.repeat(128),requestId:'recheck',ipHash:'a'.repeat(64),now};
     const first=await store.recheck(base);expect(first.status).toBe('updated');
+    expect((await pglite.query<{dead:Date|null}>(`SELECT reconciliation_dead_lettered_at dead
+      FROM kai_credit_topups WHERE id=$1`,[saved!.id])).rows[0]?.dead).toBeNull();
     const replay=await store.recheck(base);expect(replay.status).toBe('replayed');
     await expect(store.recheck({...base,payloadDigest:'0'.repeat(128)})).resolves.toEqual({status:'conflict'});
     await expect(store.get(randomUUID(),saved!.id)).resolves.toBeNull();

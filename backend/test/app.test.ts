@@ -188,6 +188,7 @@ describe('system routes', () => {
     expect(response.json().release.blockers).toContain('PUSH');
     expect(response.json().release.blockers).not.toContain('PUSH_CREDENTIALS_JSON');
     expect(response.json()).toMatchObject({
+      profile: { id: 'full_commerce', routePolicy: 'full-commerce-v1' },
       deployment: { ready: false },
       commerce: { model: 'kai-credit-only', ready: false, implemented: true },
       capabilities: { creditCommerce: false },

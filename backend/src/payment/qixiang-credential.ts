@@ -1,5 +1,5 @@
 import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 
 export const QIXIANG_MERCHANT_KEY_CREDENTIAL_NAME = 'qixiang-merchant-key';
 export const QIXIANG_CHECKOUT_KEY_CREDENTIAL_NAME = 'qixiang-checkout-key';
@@ -82,11 +82,20 @@ function credentialPath(directory: string, name: string) {
   return join(directory, name);
 }
 
+export function qixiangPrivateCredentialPermissionsSafe(path: string,
+  metadata: Readonly<{mode:number;uid:number;gid:number}>,credentialDirectory=process.env.CREDENTIALS_DIRECTORY) {
+  if ((metadata.mode & 0o077) === 0) return true;
+  return metadata.uid===0&&metadata.gid===0&&(metadata.mode&0o777)===0o440
+    &&typeof credentialDirectory==='string'&&/^\/run\/credentials\/[^/]+$/u.test(credentialDirectory)
+    &&dirname(path)===credentialDirectory;
+}
+
 function readCredential<T>(path: string, decode: (value: string) => T, minimum = 8, maximum = 4_096,
   publicReadable = false) {
   const linkMetadata = lstatSync(path);
   if (linkMetadata.isSymbolicLink() || !linkMetadata.isFile()) throw new Error('QIXIANG_MERCHANT_KEY_FILE_INVALID');
-  if (publicReadable ? (linkMetadata.mode & 0o022) !== 0 : (linkMetadata.mode & 0o077) !== 0) {
+  if (publicReadable ? (linkMetadata.mode & 0o022) !== 0
+    : !qixiangPrivateCredentialPermissionsSafe(path,linkMetadata)) {
     throw new Error('QIXIANG_MERCHANT_KEY_FILE_PERMISSIONS_UNSAFE');
   }
   const descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -94,7 +103,8 @@ function readCredential<T>(path: string, decode: (value: string) => T, minimum =
     const metadata = fstatSync(descriptor);
     if (!metadata.isFile() || metadata.dev !== linkMetadata.dev || metadata.ino !== linkMetadata.ino
       || metadata.size < minimum || metadata.size > maximum + 1
-      || (publicReadable ? (metadata.mode & 0o022) !== 0 : (metadata.mode & 0o077) !== 0)) {
+      || (publicReadable ? (metadata.mode & 0o022) !== 0
+        : !qixiangPrivateCredentialPermissionsSafe(path,metadata))) {
       throw new Error('QIXIANG_MERCHANT_KEY_FILE_CHANGED');
     }
     const raw = readFileSync(descriptor, 'utf8');

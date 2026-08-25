@@ -45,8 +45,8 @@ const candidateProtected = protectedLocations(candidate).map(({ raw }) => raw);
 const beforeCloudKai = cloudKaiServers(before).map(({ raw }) => raw);
 const candidateCloudKai = cloudKaiServers(candidate).map(({ raw }) => raw);
 const routeBlocks = Object.fromEntries(blocks(candidate, /^\s*location\s+([^\n{]+)\{/gmu).map((item) => [item.header, item.raw]));
-const required = ['= /mobile/v1', '= /mobile/v1/credits/topups/qixiang/notify', '^~ /mobile/v1/',
-  '= /privacy', '= /terms', '= /inquiry-terms', '= /account/delete'];
+const required = ['= /mobile/v1', '= /mobile/v1/credits/topups/qixiang/notify', '= /mobile/v1/auth/kai/callback',
+  '^~ /mobile/v1/', '= /payments/qixiang/return', '= /privacy', '= /terms', '= /inquiry-terms', '= /account/delete'];
 const failures = [];
 if (JSON.stringify(beforeProtected) !== JSON.stringify(candidateProtected)) failures.push('existing / or /api location bytes changed');
 if (JSON.stringify(beforeCloudKai) !== JSON.stringify(candidateCloudKai)) failures.push('cloud.kai.com server bytes changed');
@@ -66,6 +66,10 @@ for (const selector of required) {
 const qixiangNotify = routeBlocks['= /mobile/v1/credits/topups/qixiang/notify'];
 if (!qixiangNotify || !qixiangNotify.includes('access_log off;') || /\$(?:request_uri|args)\b/u.test(qixiangNotify)) {
   failures.push('qixiang notify: signed callback query logging is not disabled');
+}
+const kaiCallback = routeBlocks['= /mobile/v1/auth/kai/callback'];
+if (!kaiCallback || !kaiCallback.includes('access_log off;') || /\$(?:request_uri|args)\b/u.test(kaiCallback)) {
+  failures.push('kai callback: authorization query logging is not disabled');
 }
 if (Object.keys(routeBlocks).some((selector) => selector.includes('/internal/metrics'))) failures.push('internal metrics exposed');
 const report = { schemaVersion: 1, checkedAt: new Date().toISOString(),

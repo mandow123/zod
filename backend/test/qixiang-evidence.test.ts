@@ -93,4 +93,14 @@ describe('Qixiang runtime evidence readiness', () => {
       config({MOBILE_API_PROFILE:'inquiry_only'}));
     await expect(service.readiness()).resolves.toEqual({ ready: false, maxAmountCents: null, blockers: [] });
   });
+
+  it('opens only bootstrap evidence readiness for an explicitly pinned ¥5.01 technical canary', async () => {
+    const runtime=config({QIXIANG_TECHNICAL_CANARY_MODE:'on',QIXIANG_APPROVED_MAX_CENTS:'501',
+      QIXIANG_TECHNICAL_CANARY_USER_ID:'00000000-0000-4000-8000-000000000011',
+      QIXIANG_TECHNICAL_CANARY_SUBJECT_ID:'00000000-0000-4000-8000-000000000012',
+      QIXIANG_TECHNICAL_CANARY_TOPUP_ID:'00000000-0000-4000-8000-000000000010'});
+    const service=new QixiangEvidenceService({approved:async()=>{throw new Error('must not read');}} as never,runtime);
+    await expect(service.readiness('bootstrap_canary')).resolves.toEqual({ready:true,maxAmountCents:501,blockers:[]});
+    await expect(service.readiness('full')).rejects.toThrow('must not read');
+  });
 });

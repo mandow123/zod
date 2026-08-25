@@ -9,6 +9,8 @@ const MAX_LIFETIME_MS = 15 * 60_000;
 export const QIXIANG_GATE_ENV_KEYS = [
   'NODE_ENV', 'MOBILE_API_PROFILE', 'HOST', 'PORT', 'TRUST_PROXY_HOPS', 'DATABASE_URL', 'DATABASE_SSL',
   'PUBLIC_ORIGIN', 'QIXIANG_TOPUP_MODE', 'QIXIANG_RECOVERY_MODE', 'QIXIANG_PID',
+  'QIXIANG_TECHNICAL_CANARY_MODE', 'QIXIANG_TECHNICAL_CANARY_USER_ID',
+  'QIXIANG_TECHNICAL_CANARY_SUBJECT_ID', 'QIXIANG_TECHNICAL_CANARY_TOPUP_ID',
   'QIXIANG_APPROVED_MAX_CENTS', 'QIXIANG_CHECKOUT_KEY_ID', 'QIXIANG_CHECKOUT_CIPHER_VERSION',
   'QIXIANG_NOTIFY_URL', 'QIXIANG_RETURN_URL', 'QIXIANG_KEY_ROTATION_EVIDENCE_REF',
   'QIXIANG_OLD_KEY_REVOCATION_EVIDENCE_REF', 'QIXIANG_MERCHANT_ENTITY_EVIDENCE_REF',
@@ -42,10 +44,10 @@ export type QixiangProductionGateReceipt = Readonly<{
   database: Readonly<{ identitySha256: string; migrationSha256: string }>;
   credentials: Readonly<{ merchantSha256: string; checkoutSha256: string }>;
   provider: Readonly<{
-    pid: '4611'; currentKeyActive: true; accountActive: true; retiredKeyRejected: true; proofSha256: string;
+    pid: '4611'; currentKeyActive: true; accountActive: true; retiredKeyRejected: boolean; proofSha256: string;
   }>;
   approvals: Readonly<{
-    complianceManifestSha256: string; domainAppScene: true; serviceCategory: true; refundApi: true;
+    complianceManifestSha256: string; domainAppScene: boolean; serviceCategory: boolean; refundApi: boolean;
   }>;
   acceptance: Readonly<{
     dedicatedProbeSubjectSha256: string; appSessionReportSha256: string; fulfillmentReportSha256: string;
@@ -129,10 +131,10 @@ function parseReceipt(raw: string): QixiangProductionGateReceipt {
     || !HEX.test(String(credentials.merchantSha256)) || !HEX.test(String(credentials.checkoutSha256))
     || !provider || !exactKeys(provider, ['pid', 'currentKeyActive', 'accountActive', 'retiredKeyRejected', 'proofSha256'])
     || provider.pid !== '4611' || provider.currentKeyActive !== true || provider.accountActive !== true
-    || provider.retiredKeyRejected !== true || !HEX.test(String(provider.proofSha256))
+    || typeof provider.retiredKeyRejected !== 'boolean' || !HEX.test(String(provider.proofSha256))
     || !approvals || !exactKeys(approvals, ['complianceManifestSha256', 'domainAppScene', 'serviceCategory', 'refundApi'])
-    || !HEX.test(String(approvals.complianceManifestSha256)) || approvals.domainAppScene !== true
-    || approvals.serviceCategory !== true || approvals.refundApi !== true
+    || !HEX.test(String(approvals.complianceManifestSha256)) || typeof approvals.domainAppScene !== 'boolean'
+    || typeof approvals.serviceCategory !== 'boolean' || typeof approvals.refundApi !== 'boolean'
     || !acceptance || !exactKeys(acceptance, ['dedicatedProbeSubjectSha256', 'appSessionReportSha256',
       'fulfillmentReportSha256', 'reconciliationReportSha256', 'lotAccountingReportSha256'])
     || !SUBJECT_HEX.test(String(acceptance.dedicatedProbeSubjectSha256))
@@ -201,6 +203,8 @@ export class QixiangProductionGate {
       const issued=Date.parse(receipt.issuedAt);const expires=Date.parse(receipt.expiresAt);const now=this.now().getTime();
       if(!Number.isFinite(issued)||!Number.isFinite(expires)||expires<=issued||expires-issued>MAX_LIFETIME_MS
         ||issued>now+60_000||expires<=now)blockers.push('GATE_EXPIRED');
+      if(receipt.phase==='full_commerce'&&(!receipt.provider.retiredKeyRejected||!receipt.approvals.domainAppScene
+        ||!receipt.approvals.serviceCategory||!receipt.approvals.refundApi))blockers.push('GATE_FULL_COMMERCE_APPROVALS_REQUIRED');
       if(action==='refund'&&receipt.approvals.refundApi!==true)blockers.push('REFUND_API_NOT_APPROVED');}
     if(receipt&&this.runtimeBinding&&(receipt.phase!==this.runtimeBinding.phase
       ||receipt.canary.topupId!==this.runtimeBinding.canary.topupId

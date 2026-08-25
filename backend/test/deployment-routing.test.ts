@@ -14,23 +14,25 @@ describe('18 origin to 43 private inquiry-only deployment', () => {
       legacyOrigin:{publicIpv4:'18.163.148.84',privateIpv4:'172.31.33.227',port:8081},
       mobileSidecar:{publicIpv4:'43.198.97.0',privateIpv4:'172.31.31.78',edgePort:4154,
         loopbackHost:'127.0.0.1',loopbackPort:4100},cloudKaiComChangesAllowed:false });
-    expect(topology.forwardOnly).toEqual(['/mobile/v1','/mobile/v1/*','/privacy','/terms','/inquiry-terms','/account/delete']);
+    expect(topology.forwardOnly).toEqual(['/mobile/v1','/mobile/v1/*','/payments/qixiang/return',
+      '/privacy','/terms','/inquiry-terms','/account/delete']);
     expect(topology.preserveExactly).toEqual(['/','/api/*']);
   });
 
-  it('adds only seven Nginx locations with a query-silent exact payment callback', async () => {
+  it('adds only nine Nginx locations with query-silent auth and payment callbacks', async () => {
     const nginx = await text('cloudpay-mobile-nginx-routes.conf');
     expect([...nginx.matchAll(/^location\s+([^\n{]+)\{/gmu)].map((match)=>match[1]!.trim())).toEqual([
-      '= /mobile/v1','= /mobile/v1/credits/topups/qixiang/notify','^~ /mobile/v1/',
+      '= /mobile/v1','= /mobile/v1/credits/topups/qixiang/notify','= /mobile/v1/auth/kai/callback',
+      '^~ /mobile/v1/','= /payments/qixiang/return',
       '= /privacy','= /terms','= /inquiry-terms','= /account/delete',
     ]);
-    expect(nginx.match(/proxy_pass http:\/\/172\.31\.31\.78:4154;/gu)).toHaveLength(7);
-    expect(nginx.match(/proxy_set_header Host cloudpay\.kai\.com;/gu)).toHaveLength(7);
-    expect(nginx.match(/proxy_set_header X-Forwarded-Proto https;/gu)).toHaveLength(7);
-    expect(nginx.match(/set_real_ip_from 172\.31\.0\.0\/16;/gu)).toHaveLength(7);
-    expect(nginx.match(/real_ip_recursive on;/gu)).toHaveLength(7);
-    expect(nginx.match(/proxy_set_header X-Forwarded-For \$remote_addr;/gu)).toHaveLength(7);
-    expect(nginx.match(/access_log off;/gu)).toHaveLength(1);
+    expect(nginx.match(/proxy_pass http:\/\/172\.31\.31\.78:4154;/gu)).toHaveLength(9);
+    expect(nginx.match(/proxy_set_header Host cloudpay\.kai\.com;/gu)).toHaveLength(9);
+    expect(nginx.match(/proxy_set_header X-Forwarded-Proto https;/gu)).toHaveLength(9);
+    expect(nginx.match(/set_real_ip_from 172\.31\.0\.0\/16;/gu)).toHaveLength(9);
+    expect(nginx.match(/real_ip_recursive on;/gu)).toHaveLength(9);
+    expect(nginx.match(/proxy_set_header X-Forwarded-For \$remote_addr;/gu)).toHaveLength(9);
+    expect(nginx.match(/access_log off;/gu)).toHaveLength(2);
     expect(nginx).not.toMatch(/\$(?:request_uri|args)\b/u);
     expect(nginx).not.toContain('$http_x_forwarded_for');
     expect(nginx).not.toMatch(/^location[^\n]+(?:\/api|\/internal\/metrics)/gmu);
@@ -78,6 +80,11 @@ describe('18 origin to 43 private inquiry-only deployment', () => {
     expect(publicVerify).toContain("decision: failures.length === 0 ? 'technical_acceptance_passed' : 'technical_acceptance_failed'");
     expect(publicVerify).toContain("acceptanceMode: 'always_rollback'");
     expect(productionGate).toContain('config.readiness.startupBlockers');
+    expect(productionGate).toContain("config.mobileApiProfile==='full_commerce'&&config.qixiangTechnicalCanaryMode");
+    expect(productionGate).toContain('technicalCanaryToleratedStartupBlockers');
+    expect(productionGate).toContain("['QIXIANG_TECHNICAL_CANARY_TOPUPS_UNAVAILABLE']");
+    expect(productionGate).toContain("['QIXIANG_TECHNICAL_CANARY_RECOVERY_UNAVAILABLE']");
+    expect(productionGate).toContain('minAmountCents===501');
   });
 
   it('validates the real Docker edge and preserves current public/direct legacy baselines', async () => {
@@ -178,6 +185,8 @@ describe('18 origin to 43 private inquiry-only deployment', () => {
     expect(systemdVerifier).toContain('networkRuns===0');
     expect(JSON.parse(packageJson).scripts['production:routing:verify']).toContain('deploy/direct-ubuntu/');
     expect(bundle).toContain("'deploy/direct-ubuntu/verify-routing.mjs'");
+    expect(bundle).toContain("'deploy/direct-ubuntu/issue-qixiang-technical-canary-gate.mjs'");
+    expect(bundle).toContain("'deploy/direct-ubuntu/cloudpay-mobile-qixiang-technical-canary-gate-refresh.timer'");
     expect(bundle).not.toContain("'deploy/aws-ubuntu/verify-routing.mjs'");
   });
 

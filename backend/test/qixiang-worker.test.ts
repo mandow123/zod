@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { lookupHash } from '../src/account/crypto.js';
 import type { Database } from '../src/database.js';
 import { QixiangProvider } from '../src/payment/qixiang-provider.js';
+import { decryptQixiangCheckout } from '../src/payment/qixiang-checkout-crypto.js';
 import { migrationManifest } from '../src/schema.js';
 import { PostgresQixiangTopupStore } from '../src/topups/qixiang-store.js';
 import { QixiangQueryWorker } from '../src/topups/qixiang-worker.js';
@@ -40,6 +41,23 @@ function json(value:unknown){return new Response(JSON.stringify(value),{status:2
 function unpaid(reference:string){return{code:1,msg:'ok',pid:4611,out_trade_no:reference,status:0};}
 
 describe('Qixiang active-query worker',()=>{
+  it('recovers a checkout from the live unpaid query shape without creating a second provider order',async()=>{
+    const base=new Date(Date.now()-5_000);let reference='',topupId='';const paymentId='20260824184100001';
+    const fetcher=(async()=>json({code:1,msg:'succ',trade_no:paymentId,out_trade_no:reference,api_trade_no:null,
+      bill_trade_no:null,type:'alipay',pid:'4611',addtime:'2026-08-24 18:41:02',endtime:null,
+      name:`算力服务卡时权益（364天） ${reference.slice(-12)}`,money:'10.02',
+      param:lookupHash(`qixiang-attempt:${topupId}`,pepper),buyer:null,status:'0',payurl:null}))as typeof fetch;
+    const f=await fixture({now:base,fetcher});reference=f.providerReference;topupId=f.topup.id;
+    const checkoutKey=Buffer.alloc(32,9);const provider=new QixiangProvider('qixiang-worker-unit-test-key',pepper,fetcher);
+    const worker=new QixiangQueryWorker(f.store,provider,pepper,silent,15_000,
+      ()=>base,f.topup.id,{key:checkoutKey,keyId:'qixiang-test-key-v1'});
+    await expect(worker.runBatch(1)).resolves.toBe(1);const recovered=await f.store.get(f.subjectId,f.topup.id);
+    expect((await f.database.query<{error:string|null}>(`SELECT last_reconciliation_error error
+      FROM kai_credit_topups WHERE id=$1`,[f.topup.id])).rows[0]).toEqual({error:null});
+    expect(recovered).toMatchObject({status:'pending',providerPaymentId:paymentId});expect(recovered?.checkout).not.toBeNull();
+    expect(decryptQixiangCheckout(recovered!.checkout!,{topupId,providerReference:reference},checkoutKey))
+      .toBe(`https://api.payqixiang.cn/pay/submit/${paymentId}/`);
+  });
   it('bootstrap worker never claims or queries a historical non-canary topup',async()=>{
     const base=new Date(Date.now()-300_000);let reference='';let calls=0;
     const fetcher=(async()=>{calls+=1;return json(unpaid(reference));})as typeof fetch;

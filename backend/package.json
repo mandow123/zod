@@ -37,6 +37,8 @@
     "production:probe-refresh:enroll-host": "node deploy/direct-ubuntu/enroll-probe-refresh-credential.mjs",
     "production:qixiang-evidence:verify": "node deploy/direct-ubuntu/verify-qixiang-production-evidence.mjs",
     "production:qixiang-credentials:enroll-host": "node deploy/direct-ubuntu/enroll-qixiang-commerce-credentials.mjs",
+    "production:qixiang-technical-canary:enroll-host": "node deploy/direct-ubuntu/enroll-qixiang-technical-canary-credentials.mjs",
+    "production:qixiang-technical-canary:issue": "node deploy/direct-ubuntu/issue-qixiang-technical-canary-gate.mjs",
     "production:full-commerce:preflight": "node deploy/direct-ubuntu/preflight-full-commerce.mjs",
     "production:origin:preflight": "node deploy/direct-ubuntu/preflight-origin.mjs",
     "production:sidecar:verify": "node deploy/direct-ubuntu/verify-sidecar.mjs",

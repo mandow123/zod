@@ -34,10 +34,29 @@ const deployment = {
 const deploymentFailures = Object.entries(deployment)
   .filter(([, pass]) => !pass)
   .map(([name]) => name);
+const technicalCanaryToleratedStartupBlockers = new Set([
+  'SMS_PROVIDER','SMS_ACCESS_KEY_ID','SMS_ACCESS_KEY_SECRET','SMS_SIGN_NAME','SMS_TEMPLATE_CODE',
+  'PUSH_PROVIDER','PUSH_CREDENTIALS_JSON',
+  'OBJECT_STORAGE_PROVIDER','OBJECT_STORAGE_ENDPOINT','OBJECT_STORAGE_REGION','OBJECT_STORAGE_BUCKET',
+  'OBJECT_STORAGE_ACCESS_KEY','OBJECT_STORAGE_SECRET_KEY','CLAMAV_HOST','CLAMAV_PORT',
+  'BACKUP_S3_ENDPOINT','BACKUP_S3_REGION','BACKUP_S3_BUCKET','BACKUP_S3_ACCESS_KEY','BACKUP_S3_SECRET_KEY',
+  'KAI_CREDIT_TOPUP_PROVIDER_NOT_CONFIGURED','COMPUTE_PROVIDER_NOT_CONFIGURED',
+  'ICP_FILING_NOT_APPROVED','APP_FILING_NOT_APPROVED','INTERNET_SERVICE_CLASSIFICATION_REQUIRED',
+]);
+const technicalCanary=config.mobileApiProfile==='full_commerce'&&config.qixiangTechnicalCanaryMode;
+const startupBlockers=technicalCanary?config.readiness.startupBlockers.filter((item)=>
+  !technicalCanaryToleratedStartupBlockers.has(item)):config.readiness.startupBlockers;
+const technicalCanaryBlockers=technicalCanary?[
+  ...(config.readiness.capabilities.qixiangTopups.available?[]:['QIXIANG_TECHNICAL_CANARY_TOPUPS_UNAVAILABLE']),
+  ...(config.readiness.capabilities.qixiangRecovery.available?[]:['QIXIANG_TECHNICAL_CANARY_RECOVERY_UNAVAILABLE']),
+  ...(config.readiness.capabilities.qixiangTopups.minAmountCents===501
+    &&config.readiness.capabilities.qixiangTopups.maxAmountCents===501?[]:['QIXIANG_TECHNICAL_CANARY_AMOUNT']),
+]:[];
 const blockers = [...new Set([
   ...deploymentFailures,
-  ...config.readiness.startupBlockers,
-  ...(config.mobileApiProfile === 'full_commerce' ? config.readiness.capabilities.computeProvider.missing : []),
+  ...startupBlockers,
+  ...technicalCanaryBlockers,
+  ...(config.mobileApiProfile === 'full_commerce'&&!technicalCanary?config.readiness.capabilities.computeProvider.missing:[]),
 ])];
 
 if (blockers.length > 0) {

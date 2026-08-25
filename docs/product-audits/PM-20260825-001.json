@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-001",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T03:45:18Z",
+  "summary": "Import the Qixiang technical-canary candidate while preserving the approved navigation architecture.",
+  "baseCommit": "e3a18a4beb88924e8bc0e690309e14ff182a9686",
+  "stagedDiffSha256": "5f7a69e38861ed636e426cb1de2d24df8ab32013f50153fed32195c7f79e2065"
+}

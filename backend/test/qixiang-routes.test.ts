@@ -24,7 +24,9 @@ function fake(){return{create:vi.fn().mockResolvedValue({replayed:false,topup,ch
   notification:vi.fn().mockResolvedValue({result:'accepted'}),}as unknown as QixiangTopupService;}
 function config(mode:'off'|'shadow'|'on',profile:'inquiry_only'|'full_commerce'='full_commerce'){return loadConfig({
   NODE_ENV:'test',MOBILE_API_PROFILE:profile,QIXIANG_TOPUP_MODE:mode,LEGAL_ENTITY_NAME:'上海申比芯人工智能科技有限公司',
-  PUBLIC_ORIGIN:'https://cloudpay.kai.com',AUDIT_PEPPER:'a'.repeat(64),
+  PUBLIC_ORIGIN:'https://cloudpay.kai.com',AUDIT_PEPPER:'a'.repeat(64),CURSOR_SECRET:'c'.repeat(64),
+  PII_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),KAI_OIDC_SUBJECT_PEPPER:'i'.repeat(40),
+  KAI_RESOURCE_ACCESS_TOKEN_FORMAT:'opaque',
 });}
 
 describe('Qixiang exact mobile routes',()=>{
@@ -100,9 +102,22 @@ describe('Qixiang exact mobile routes',()=>{
     const app=await buildApp({config:config('on'),database,accountService:accounts,qixiangTopupService:service,
       qixiangBootstrapCanary:true,qixiangBootstrapCanaryTopupId:id,logger:false});
     const response=await app.inject('/mobile/v1/readiness');const body=response.json();
+    expect(response.statusCode).toBe(200);expect(body.ok).toBe(false);
     expect(body.release.ready).toBe(false);expect(body.release.blockers).toContain('QIXIANG_BOOTSTRAP_CANARY_ONLY');
     expect(body.capabilities.qixiangTopups).toMatchObject({available:true,canaryOnly:true,
       minAmountCents:501,maxAmountCents:501,blockers:[]});
+    await app.close();
+  });
+
+  it('keeps readiness unavailable when the signed canary payment service is not ready',async()=>{
+    const service={...fake(),startupReadiness:vi.fn().mockResolvedValue({ready:false,maxAmountCents:501,
+      blockers:['QIXIANG_PRODUCTION_GATE_EXPIRED'],phase:'bootstrap_canary'})}as unknown as QixiangTopupService;
+    const database={health:async()=>true,schemaReadiness:async()=>({ready:true,expected:null,applied:null,missing:[],
+      mismatched:[]})}as never;
+    const app=await buildApp({config:config('on'),database,accountService:accounts,qixiangTopupService:service,
+      qixiangBootstrapCanary:true,qixiangBootstrapCanaryTopupId:id,logger:false});
+    const response=await app.inject('/mobile/v1/readiness');
+    expect(response.statusCode).toBe(503);expect(response.json().ok).toBe(false);
     await app.close();
   });
 

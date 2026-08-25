@@ -34,7 +34,8 @@ export type QixiangQueryRequest = Readonly<{
 }>;
 
 export type QixiangQueryResult =
-  | Readonly<{ state: 'pending'; providerStatus: string; responseDigest: string; normalizedPayload: Record<string, unknown> }>
+  | Readonly<{ state: 'pending'; providerStatus: string; responseDigest: string; normalizedPayload: Record<string, unknown>;
+    providerPaymentId?:string;checkoutUrl?:string }>
   | Readonly<{
     state: 'paid'; providerStatus: '1'; providerTransactionId: string; providerReference: string;
     amountCents: number; paymentType: QixiangPaymentType; responseDigest: string;
@@ -50,7 +51,7 @@ export type QixiangRefundResult = Readonly<{
 const CREATE_RESPONSE_KEYS = new Set(['code', 'msg', 'trade_no', 'payurl', 'qrcode']);
 const QUERY_RESPONSE_KEYS = new Set([
   'code', 'msg', 'trade_no', 'out_trade_no', 'api_trade_no', 'type', 'pid', 'addtime', 'endtime',
-  'name', 'money', 'status', 'param', 'buyer',
+  'name', 'money', 'status', 'param', 'buyer', 'bill_trade_no', 'payurl',
 ]);
 const REFUND_RESPONSE_KEYS = new Set(['code', 'msg']);
 
@@ -80,6 +81,9 @@ function integerCode(value: unknown) {
   if (!Number.isInteger(value)) throw new AppError('QIXIANG_RESPONSE_INVALID', 502, '七相支付响应状态码无效。');
   return value as number;
 }
+
+function binaryStatus(value:unknown){if(value===0||value==='0')return 0;if(value===1||value==='1')return 1;
+  throw new AppError('QIXIANG_QUERY_RESPONSE_INVALID',502,'七相支付订单状态无效。');}
 
 function amountText(amountCents: number) {
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error('QIXIANG_AMOUNT_INVALID');
@@ -157,14 +161,31 @@ export class QixiangProvider {
     const code = integerCode(payload.code);
     stringField(payload.msg, 'msg', 512);
     if (code !== 1) throw new AppError('QIXIANG_QUERY_REJECTED', 502, '七相支付拒绝了订单查询。');
-    if (payload.status !== 0 && payload.status !== 1) throw new AppError('QIXIANG_QUERY_RESPONSE_INVALID', 502, '七相支付订单状态无效。');
+    const status=binaryStatus(payload.status);
     const returnedPid = payload.pid === 4611 ? '4611' : payload.pid === '4611' ? payload.pid : null;
     const providerReference = stringField(payload.out_trade_no, 'out_trade_no', 48);
     if (returnedPid !== QIXIANG_MERCHANT_ID || providerReference !== input.providerReference) {
       throw new AppError('QIXIANG_QUERY_SNAPSHOT_MISMATCH', 409, '七相支付查询结果与充值快照不一致。');
     }
-    if (payload.status === 0) return { state: 'pending', providerStatus: '0', responseDigest: digest,
-      normalizedPayload: { code: 1, status: 0, outTradeNo: providerReference, pid: QIXIANG_MERCHANT_ID } };
+    if (status === 0) {const normalizedPayload={code:1,status:0,outTradeNo:providerReference,pid:QIXIANG_MERCHANT_ID};
+      const recoveryKeys=['trade_no','type','addtime','name','money','param','buyer','payurl'];
+      if(!recoveryKeys.every((key)=>Object.hasOwn(payload,key)))return{state:'pending',providerStatus:'0',responseDigest:digest,
+        normalizedPayload};
+      const providerPaymentId=stringField(payload.trade_no,'trade_no',80);
+      const paymentType=payload.type;const returnedName=stringField(payload.name,'name',127);
+      const returnedAmount=amountCents(payload.money);this.providerTime(payload.addtime,'addtime');
+      const returnedParameter=payload.param===null?null:stringField(payload.param,'param',120);
+      if(payload.buyer!==null&&typeof payload.buyer!=='string')throw new AppError('QIXIANG_QUERY_RESPONSE_INVALID',502,
+        '七相支付订单查询字段无效。');
+      if(payload.bill_trade_no!==undefined&&payload.bill_trade_no!==null&&typeof payload.bill_trade_no!=='string')
+        throw new AppError('QIXIANG_QUERY_RESPONSE_INVALID',502,'七相支付订单查询字段无效。');
+      if(paymentType!==input.paymentType||returnedName!==input.name||returnedAmount!==input.amountCents
+        ||returnedParameter!==input.attemptToken)throw new AppError('QIXIANG_QUERY_SNAPSHOT_MISMATCH',409,
+        '七相支付查询结果与充值快照不一致。');
+      const checkoutUrl=payload.payurl===null
+        ?controlledQixiangCheckoutUrl(`${QIXIANG_API_ORIGIN}/pay/submit/${providerPaymentId}/`)
+        :controlledQixiangCheckoutUrl(payload.payurl);
+      return{state:'pending',providerStatus:'0',responseDigest:digest,normalizedPayload,providerPaymentId,checkoutUrl};}
     const providerTransactionId = stringField(payload.trade_no, 'trade_no', 80);
     const apiTradeNo = stringField(payload.api_trade_no, 'api_trade_no', 160);
     const addTime = this.providerTime(payload.addtime, 'addtime');
