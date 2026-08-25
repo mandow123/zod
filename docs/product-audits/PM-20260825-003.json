@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-003",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T03:51:17Z",
+  "summary": "Add a default-disabled internal Seedance video task route and its isolated persistence contract.",
+  "baseCommit": "82cd1cfb135826dcbedf62e2f16e1486ddc1863a",
+  "stagedDiffSha256": "d79891db9e1d8858377fd537d0965c564b0135bed942c98dea3d3d8c2679de07"
+}

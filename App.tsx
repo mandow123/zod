@@ -74,6 +74,7 @@ import {
 } from './src/creator-commissions';
 import { InquiryComposerSheet } from './src/InquiryComposerSheet';
 import { MyInquiriesSheet } from './src/MyInquiriesSheet';
+import { VideoGenerationScreen } from './src/screens/VideoGenerationScreen';
 import type { InquiryCatalogCandidate } from './src/resource-inquiries';
 import { startKaiOidcRevocationRetry } from './src/kai-revocation-queue';
 import { loadSession, reconcileCommittedKaiOidcSession, type StoredSession } from './src/session';
@@ -546,6 +547,8 @@ function CloudPayApp() {
           onOpenCreatorCollaboration={() => navigate('creator')}
           onOpenPayout={() => setPayoutVisible(true)}
           onOpenMessages={() => navigate('messages')} />;
+      case 'video':
+        return <VideoGenerationScreen snapshot={snapshot} onLogin={() => setAuthVisible(true)} />;
       case 'home':
       default:
         return <HomeScreen snapshot={snapshot} refreshing={refreshing} onRefresh={refresh} onNavigate={navigate}

@@ -127,6 +127,9 @@ const environmentSchema = z.object({
   KAI_CLOUD_PUBLIC_CLIENT_ID: optionalUntrimmedText,
   KAI_CLOUD_PUBLIC_CLIENT_SECRET: optionalUntrimmedText,
   KAI_CLOUD_PUBLIC_WEBHOOK_SECRET: optionalUntrimmedText,
+  SEEDANCE_VIDEO_ENABLED: z.enum(['true', 'false']).default('false'),
+  AI_API_KEY: optionalText,
+  AI_API_BASE_URL: z.string().url().default('https://gw.aiapiway.com/v1'),
   ADMIN_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
   ADMIN_WEB_ORIGIN: optionalUntrimmedText,
   ADMIN_API_ORIGIN: optionalUntrimmedText,
@@ -893,6 +896,9 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     kaiCloudPublicInvalid.push('KAI_CLOUD_PUBLIC_SECRETS(independent >=32 chars)');
   }
   const kaiCloudPublicApi = mergeCapability(kaiCloudPublicBase, kaiCloudPublicInvalid);
+  const seedance = mergeCapability(capability(environment, ['AI_API_KEY']), [
+    ...(parsed.AI_API_BASE_URL.startsWith('https://') ? [] : ['AI_API_BASE_URL(HTTPS)']),
+  ]);
   let vastPricingPolicy: z.infer<typeof vastPricingPolicySchema> | null = null;
   const vastInvalid: string[] = [];
   if (parsed.VAST_PRICING_POLICY_JSON) {
@@ -1136,6 +1142,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
     qixiangTopupMode:qixiangMode,
     qixiangRecoveryMode:qixiangRecoveryModeValue,
     qixiangTechnicalCanaryMode,
+    seedanceVideoEnabled: parsed.SEEDANCE_VIDEO_ENABLED === 'true',
     qixiangApprovedMaxCents:qixiangApprovedMax,
     honghuanSupplierCatalogMode:honghuanMode,
     readiness: {
@@ -1148,7 +1155,7 @@ export function loadConfig(input: NodeJS.ProcessEnv | Record<string, string | un
       startupBlockers: [...new Set(inquiryOnly ? serviceBlockers : commerceBlockers)],
       releaseBlockers: [...new Set(commerceBlockers)],
       capabilities: {
-        database, accountSecurity, legacyLocalAuth, kaiOidc, kaiResourceAccess, kaiCloudPublicApi, sms, alipay: alipayTopup, wechat, push,
+        database, accountSecurity, legacyLocalAuth, kaiOidc, kaiResourceAccess, kaiCloudPublicApi, seedance, sms, alipay: alipayTopup, wechat, push,
         objectStorage, malwareScanning, observability, backup, localBackup, offsiteBackup, legal,
         publicHttps, creditCommerce, qixiangTopups, qixiangRecovery, computeProvider, nodeEnrollment, computeFulfillment, vastAi, creatorCommissions,
         legacyCreatorMode, streamerRewards, inviteRewards, honghuanSupplierCatalog,

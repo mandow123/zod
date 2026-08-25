@@ -6,7 +6,8 @@ export type AppRouteKey = PrimaryTabKey
   | 'workspace'
   | 'resources'
   | 'publish'
-  | 'creator';
+  | 'creator'
+  | 'video';
 
 export const primaryTabFor: Readonly<Record<AppRouteKey, PrimaryTabKey>> = Object.freeze({
   home: 'home',
@@ -20,4 +21,5 @@ export const primaryTabFor: Readonly<Record<AppRouteKey, PrimaryTabKey>> = Objec
   resources: 'assets',
   publish: 'assets',
   creator: 'profile',
+  video: 'home',
 });

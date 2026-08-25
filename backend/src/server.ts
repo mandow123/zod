@@ -84,6 +84,9 @@ import { createKaiCloudPublicApi } from './kai-cloud/client.js';
 import { KaiCloudVerificationService } from './kai-cloud/service.js';
 import { KaiCloudVerificationStore } from './kai-cloud/store.js';
 import { KaiCloudWebhookVerifier } from './kai-cloud/webhook.js';
+import { AiApiWayVideoProvider } from './video-tasks/provider.js';
+import { VideoTaskService } from './video-tasks/service.js';
+import { PostgresVideoTaskStore } from './video-tasks/store.js';
 import { PostgresSupplierInquiryCatalogStore } from './supplier-inquiry-catalog/store.js';
 import { SupplierInquiryCatalogService } from './supplier-inquiry-catalog/service.js';
 import { PostgresSupplierQuoteDirectoryStore } from './supplier-quote-directory/store.js';
@@ -289,6 +292,10 @@ const kaiCloudVerificationService = database && accountStore && subjectService
         payloadDigest: secretHash(JSON.stringify(input.details), config.AUDIT_PEPPER!), metadata: input.details }),
     })
   : undefined;
+const videoTaskService = config.seedanceVideoEnabled && database && accountService
+  && config.readiness.capabilities.seedance.available
+  ? new VideoTaskService(new PostgresVideoTaskStore(database), new AiApiWayVideoProvider(config))
+  : undefined;
 const app = await buildApp({
   config,
   database,
@@ -309,6 +316,7 @@ const app = await buildApp({
   ...(fulfillmentService ? { fulfillmentService } : {}),
   ...(nodeEnrollmentService ? { nodeEnrollmentService } : {}),
   ...(kaiCloudVerificationService ? { kaiCloudVerificationService } : {}),
+  ...(videoTaskService ? { videoTaskService } : {}),
   ...(kaiOidc ? { kaiOidc } : {}),
   ...(assetPortfolioService ? { assetPortfolioService } : {}),
   ...(vastMarketService ? { vastMarketService } : {}),

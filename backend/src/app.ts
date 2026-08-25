@@ -69,6 +69,8 @@ import type { QixiangRefundService } from './topups/qixiang-refund-service.js';
 import type { QixiangTopupService } from './topups/qixiang-service.js';
 import { registerKaiCloudVerificationRoutes } from './kai-cloud/routes.js';
 import type { KaiCloudVerificationService } from './kai-cloud/service.js';
+import { registerVideoTaskRoutes } from './video-tasks/routes.js';
+import type { VideoTaskService } from './video-tasks/service.js';
 import {
   KAI_AUTH_ISSUER, KAI_AUTH_LOOPBACK_HOST, KAI_AUTH_LOOPBACK_PATH,
   KAI_AUTH_LOOPBACK_PORTS, KAI_AUTH_PUBLIC_CLIENT_ID, KAI_AUTH_REDIRECT_URIS,
@@ -110,6 +112,7 @@ type BuildAppOptions = Readonly<{
   supplierQuoteDirectoryService?: SupplierQuoteDirectoryService;
   qixiangTopupService?: QixiangTopupService;
   kaiCloudVerificationService?: KaiCloudVerificationService;
+  videoTaskService?: VideoTaskService;
   qixiangRefundService?: QixiangRefundService;
   qixiangNewTopupsAvailable?: () => boolean|Promise<boolean>;
   qixiangBootstrapCanary?: boolean;
@@ -136,7 +139,7 @@ export function applicationLoggerOptions(){return{
   ],censor:'[REDACTED]'},
 };}
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, adminMetrics = adminProcessMetrics, supplierInquiryCatalogService, supplierQuoteDirectoryService, qixiangTopupService, kaiCloudVerificationService, qixiangRefundService, qixiangNewTopupsAvailable, qixiangBootstrapCanary=false, qixiangBootstrapCanaryTopupId=null, creditLotExpiryHealth, qixiangQueryWorkerHealth, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, adminMetrics = adminProcessMetrics, supplierInquiryCatalogService, supplierQuoteDirectoryService, qixiangTopupService, kaiCloudVerificationService, videoTaskService, qixiangRefundService, qixiangNewTopupsAvailable, qixiangBootstrapCanary=false, qixiangBootstrapCanaryTopupId=null, creditLotExpiryHealth, qixiangQueryWorkerHealth, logger = true }: BuildAppOptions) {
   const inquiryOnly = config.mobileApiProfile === 'inquiry_only';
   const app = Fastify({
     logger: logger ? applicationLoggerOptions() : false,
@@ -456,6 +459,9 @@ export async function buildApp({ config, database, accountService, subjectServic
   }
   if (accountService && kaiCloudVerificationService) {
     await registerKaiCloudVerificationRoutes(app, accountService, kaiCloudVerificationService);
+  }
+  if (config.seedanceVideoEnabled && accountService && videoTaskService) {
+    await registerVideoTaskRoutes(app, accountService, videoTaskService);
   }
   if (config.adminAuthEnabled && config.readiness.capabilities.adminAuth.available
     && adminAuthService && adminAuthSettings) {
