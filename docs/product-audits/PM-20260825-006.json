@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260825-006",
+  "decision": "APPROVED",
+  "auditor": "App product manager",
+  "auditedAt": "2026-08-25T04:00:33Z",
+  "summary": "Align candidate domain and installation-name assertions with the isolated testable mobile configuration.",
+  "baseCommit": "b53cb84236faf2a6b5bc1f834c5e64ddf7ec7ec0",
+  "stagedDiffSha256": "a09e09d1ed7c3475182b46ebc649f177027463ea021ff24ba786d1c3662ffba8"
+}

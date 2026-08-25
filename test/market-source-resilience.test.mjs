@@ -41,7 +41,7 @@ test('compute market separates supplier inquiries, platform listings, and CloudP
   assert.match(klinePanel, /CloudPay 同源行情/u);
   assert.match(klinePanel, /<KlineChart candles=/u);
   assert.match(klinePanel, /payload\.notice/u);
-  assert.match(candles, /https:\/\/cloudpay\.kai\.com\/api\/market\/candles/u);
+  assert.match(candles, /https:\/\/api\.kaicloudpay\.com\/api\/market\/candles/u);
   assert.match(candles, /decodeCloudPayMarketPayload/u);
   assert.match(candles, /referenceOnly: payload\.reference_only === true/u);
   assert.match(market, /const platformDirectoryFallback =/u);

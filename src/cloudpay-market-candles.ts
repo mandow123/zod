@@ -1,6 +1,7 @@
-import { API_BASE_URL } from './api-client';
-
-const CLOUDPAY_MARKET_CANDLES_URL = `${API_BASE_URL}/api/market/candles`;
+// Keep this aligned with app.json's cloudPayBaseUrl. This module is also
+// exercised in isolated Node tests, where Expo's configuration module is not
+// available to import.
+const CLOUDPAY_MARKET_CANDLES_URL = 'https://api.kaicloudpay.com/api/market/candles';
 
 export type CloudPayMarketKind = 'gpu' | 'token' | 'rack' | 'server';
 export type CloudPayMarketInterval = '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1mo';

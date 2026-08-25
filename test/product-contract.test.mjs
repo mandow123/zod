@@ -14,7 +14,7 @@ async function pngInfo(path) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20), colorType: buffer[25] };
 }
 
-test('user-visible application identity is consistently Zod', async () => {
+test('configured installation identity is KAI CloudPay while the existing in-app brand remains unchanged', async () => {
   const [configText, app, components, profile, auth, security] = await Promise.all([
     source('../app.json'),
     source('../App.tsx'),
@@ -24,8 +24,8 @@ test('user-visible application identity is consistently Zod', async () => {
     source('../src/AccountSecuritySheet.tsx'),
   ]);
   const config = JSON.parse(configText).expo;
-  assert.equal(config.name, 'Zod');
-  assert.equal(brand.name, config.name);
+  assert.equal(config.name, 'KAI CloudPay');
+  assert.equal(brand.name, 'Zod');
   assert.equal(config.icon, './assets/icon.png');
   assert.equal(config.android.adaptiveIcon.foregroundImage, './assets/android-icon-foreground.png');
   for (const visibleSource of [app, components, profile, auth, security]) {
