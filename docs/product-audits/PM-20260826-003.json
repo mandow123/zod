@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-003",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T09:32:54Z",
+  "baseCommit": "a37ee3fd03953b8aa0e5fb4ba4345814114104e8",
+  "stagedDiffSha256": "c1da2a61a64367e37f98150e5994dd3c72eba9be410340af4e2f6aaac3b4f736",
+  "summary": "批准 staging sandbox HTTP 测试改用动态本地端口，避免固定 4197 端口与其他进程冲突；批准 backend release bundle 在干净 Git working tree 上构建，并将完整 source commit 与 tree 写入 release manifest、由目标机验证器校验。批准仅覆盖这三处 release-readiness 代码变更及独立 feature PR，不包含 production migration、真实 canary、full_commerce、支付、benchmark 或任何安全风险豁免。"
+}

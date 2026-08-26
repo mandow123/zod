@@ -42,6 +42,11 @@ if (!existsSync(manifestPath)) {
 }
 
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+if (/^[0-9a-f]{40}$/u.test(manifest.sourceCommit) && /^[0-9a-f]{40}$/u.test(manifest.sourceTree)) {
+  pass('source_provenance', `${manifest.sourceCommit} tree ${manifest.sourceTree}`);
+} else {
+  fail('source_provenance', 'source commit and tree must be full Git object IDs');
+}
 const minimumNode = String(manifest.node ?? '').match(/(\d+\.\d+\.\d+)/u)?.[1];
 if (minimumNode && versionAtLeast(process.versions.node, minimumNode)) pass('node_version', process.versions.node);
 else fail('node_version', `${process.versions.node}; requires ${manifest.node ?? 'a declared minimum'}`);
