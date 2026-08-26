@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T01:17:52Z",
+  "baseCommit": "4a6236ec9bc3ae04f54713617a388f0b0aed7a6f",
+  "stagedDiffSha256": "29aa303c4cbbdb55244ab78eec461db51406d154c385804b8b2e67c2435a80de",
+  "summary": "批准本批3个非审计暂存文件的 clean-checkout CI 基线修复。两个移动端测试不再读取基准提交中未跟踪的 android 生成目录，而是调用已经由 app.json 注册的同一生产 Expo 插件导出函数生成受检 manifest/Gradle 输入；OIDC Authorization Code + PKCE、loopback/state/issuer、无 auth intent、referral scheme、正式 release 禁用 debug signing、staging 包/API/文案/密钥/流量隔离等正反断言均未删除、跳过或放宽。backend/staging-sandbox/tsconfig.json 仅继承 backend 严格配置并将该 sandbox 的3个 TypeScript 文件纳入独立项目解析，不改变 Backend 业务代码、运行时路由、鉴权或生产配置。独立 targeted 复核共40项通过、0失败、0跳过；结合本次提交提供的 Mobile 272通过/2跳过、Backend 728通过/2跳过、Mobile/Backend typecheck、contract 184/160、backend build、deployment 47/47、Admin boundary 12/12、Admin 38/38及 typecheck/build/release archive 36文件二次校验证据，批准代码提交。差异范围与非审计 SHA-256 已核对，未触及 0066、benchmark、Admin 代码或 Compute Data Flywheel 业务实现。此批准仅覆盖当前代码提交，不代表生产数据库迁移、0066 应用、benchmark 结论、生产 canary、部署、发布、切流或任何生产权限扩张已经获准或完成。"
+}
