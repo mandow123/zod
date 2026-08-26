@@ -1,0 +1,83 @@
+{
+  "experimentId": "amazon23-industrial-5core-two-tower-metadata-v2",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "dataset": {
+    "name": "Amazon Reviews'23",
+    "category": "Industrial_and_Scientific",
+    "processing": "official 5-core de-duplicated leave-last-out with history",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "officialDocumentationUrl": "https://amazon-reviews-2023.github.io/main.html",
+    "rawDir": "data/raw/amazon-reviews-2023/Industrial_and_Scientific",
+    "files": {
+      "train": {"name": "Industrial_and_Scientific.train.csv.gz"},
+      "dev": {"name": "Industrial_and_Scientific.valid.csv.gz"},
+      "test": {"name": "Industrial_and_Scientific.test.csv.gz"}
+    }
+  },
+  "metadata": {
+    "file": "meta_Industrial_and_Scientific.jsonl.gz",
+    "officialUrl": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/raw/meta_categories/meta_Industrial_and_Scientific.jsonl.gz",
+    "expectedBytes": 281523932,
+    "expectedSha256": "0beb251cec166347a3ec3ef23e55ec89f7fb27a6e8e9a0737d6b34cdc184ebcb",
+    "fields": ["title", "main_category", "categories"],
+    "maxVocabulary": 20000,
+    "maxTitleTokens": 24,
+    "maxCategoryTokens": 12
+  },
+  "protocol": {
+    "selectionSplit": "dev",
+    "selectionSeed": 3407,
+    "selectionMetric": "ndcg@100",
+    "seeds": [3407, 6502, 9109],
+    "ks": [20, 50, 100],
+    "catalog": "all distinct train items",
+    "excludeSeen": true,
+    "testTuningForbidden": true,
+    "testExecutionLimit": 1
+  },
+  "candidateConfigs": [
+    {
+      "id": "metadata-d32-inbatch",
+      "embeddingDim": 32,
+      "hiddenDim": 64,
+      "outputDim": 32,
+      "negativeSampling": "in_batch",
+      "temperature": 0.07,
+      "epochs": 3,
+      "batchSize": 512,
+      "learningRate": 0.001,
+      "maxHistory": 50
+    },
+    {
+      "id": "metadata-d64-inbatch",
+      "embeddingDim": 64,
+      "hiddenDim": 128,
+      "outputDim": 64,
+      "negativeSampling": "in_batch",
+      "temperature": 0.07,
+      "epochs": 3,
+      "batchSize": 512,
+      "learningRate": 0.001,
+      "maxHistory": 50
+    },
+    {
+      "id": "metadata-d64-uniform",
+      "embeddingDim": 64,
+      "hiddenDim": 128,
+      "outputDim": 64,
+      "negativeSampling": "uniform_unseen",
+      "temperature": 0.07,
+      "epochs": 3,
+      "batchSize": 512,
+      "learningRate": 0.001,
+      "maxHistory": 50
+    }
+  ],
+  "artifactsDir": "artifacts/amazon-two-tower-v2",
+  "output": "reports/amazon-two-tower-v2-results.json",
+  "frozenV1Result": "reports/amazon-retrieval-v1-results.json",
+  "frozenV1Commit": "e1d91ab",
+  "frozenV1Tag": "offline-recsys-lab-v1.0.0"
+}

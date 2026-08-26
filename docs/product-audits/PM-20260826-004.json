@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-004",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T09:38:59Z",
+  "baseCommit": "e1d91ab7a2f2cab03c6cc8698fbf299d1594db8c",
+  "stagedDiffSha256": "ffd7739061b6a1b7ebd551caa8e15e456f4b02b87c5c50473055118e172993fe",
+  "summary": "批准独立 Amazon Two-Tower V2 public offline 研究提交。审计确认暂存产品差异仅包含 experiments/offline-recsys-lab 下的元数据 Item Tower、三项预注册配置、dev-only 选型、一次性 full-catalog test 门禁、checkpoint/脱敏用户级 Top-100 trace 契约、专用验证器、测试和结果报告；未修改冻结 V1 benchmark、Playground、Production、0066、Data Flywheel、订单、支付或业务 schema。官方 Amazon metadata 281523932 字节且 SHA-256 为 0beb251cec166347a3ec3ef23e55ec89f7fb27a6e8e9a0737d6b34cdc184ebcb，25,754 个冻结 catalog item 全部对齐；raw metadata、checkpoint、逐用户 trace 和 artifacts 均由 Git 忽略。dev NDCG@100 在测试集未打开时选择 metadata-d64-uniform，final test 仅执行一次并覆盖 3407/6502/9109 三个固定 seed、50,653 用户和 25,754 全目录商品；三个 checkpoint 均回载成功，每个 trace 50,653 行且不含原始 ID。V2 test NDCG@100 为 0.02085259980461297，冻结 V1 为 0.0008785368479014164；该提升仅是公开 review/rating proxy 数据上的离线结果，不代表点击、订单、KAI business data、线上效果或生产模型。73 项测试、6 份 public report 边界校验、V2 mean/std/delta/hash 重算、一次 test 防重放和差异检查均通过；允许将当前精确 base/diff 固定为 V2 commit/tag，不允许据此扩模型或继续 test 调参。"
+}
