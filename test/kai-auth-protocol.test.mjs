@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import {
   KAI_AUTH_LOOPBACK_PORTS,
@@ -12,6 +13,36 @@ import {
   validKaiAuthPending,
   validateKaiIdTokenClaims,
 } from '../src/kai-auth-protocol.ts';
+
+const require = createRequire(import.meta.url);
+const { insertSigningConfig, pinReferralManifest } = require('../plugins/with-android-release-signing.js');
+
+function generatedAndroidAuthContract() {
+  const manifest = { manifest: { application: [{ $: { 'android:name': '.MainApplication' }, activity: [{
+    'intent-filter': [{ data: [{ $: { 'android:scheme': 'kaicloudpay' } }] }],
+  }] }] } };
+  pinReferralManifest(manifest);
+  const gradle = insertSigningConfig(`android {
+    defaultConfig {
+        applicationId 'com.kaicloud.marketplace'
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        release {
+            // Caution! In production, you need to generate your own keystore file.
+            signingConfig signingConfigs.debug
+        }
+    }
+}`);
+  return { manifest: JSON.stringify(manifest), gradle };
+}
 
 const state = 's'.repeat(48);
 const callback = (parameters) => {
@@ -102,6 +133,7 @@ test('native terminal callback is adopted once after a process restart without l
 });
 
 test('production KAI login is direct public-client Authorization Code plus PKCE', async () => {
+  const generatedAndroid = generatedAndroidAuthContract();
   const [auth, oidc, protocol, loopback, keepAlive, recoveryStore, formalManifest, stagingManifest, formalPorts, stagingPorts, moduleGradle,
     apiClient, session, metro, localAuth, appJson, manifest, gradle] = await Promise.all([
     readFile(new URL('../src/kai-auth.ts', import.meta.url), 'utf8'),
@@ -120,8 +152,8 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
     readFile(new URL('../metro.config.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/kai-auth.local-e2e.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app.json', import.meta.url), 'utf8'),
-    readFile(new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8'),
-    readFile(new URL('../android/app/build.gradle', import.meta.url), 'utf8'),
+    generatedAndroid.manifest,
+    generatedAndroid.gradle,
   ]);
   const formalSource = `${auth}\n${oidc}`;
   assert.match(formalSource, /ResponseType\.Code/u);
@@ -191,7 +223,7 @@ test('production KAI login is direct public-client Authorization Code plus PKCE'
   assert.doesNotMatch(localAuth, /expo-auth-session|auth\.kai\.com|exchangeCodeAsync|refreshAsync/u);
   assert.match(appJson, /"scheme":\s*"kaicloudpay"/u);
   assert.doesNotMatch(appJson, /com\.kaicloud\.marketplace.*oauth2redirect|kaiAuthAppRedirect/u);
-  assert.match(manifest, /android:scheme="\$\{cloudPayReferralScheme\}"/u);
+  assert.match(manifest, /"android:scheme":"\$\{cloudPayReferralScheme\}"/u);
   assert.doesNotMatch(manifest, /oauth2redirect|cloudPayAuth|android:autoVerify="true"/u);
   assert.match(gradle, /cloudPayReferralScheme:\s*"kaicloudpay"/u);
   assert.doesNotMatch(gradle, /cloudPayAuth(?:Scheme|Host|Path)/u);

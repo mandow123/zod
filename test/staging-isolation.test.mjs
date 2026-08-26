@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import {
   cardHourProduct, normalizeStagingQuantity, stagingOrderActions, stagingOrderStatus, stagingPurchaseGate,
@@ -25,11 +26,32 @@ import {
 } from '../src/staging-supplier-draft-recovery-core.ts';
 
 const source = (path) => readFile(new URL(path, import.meta.url), 'utf8');
+const require = createRequire(import.meta.url);
+const { insertSigningConfig } = require('../plugins/with-android-release-signing.js');
+const generatedAndroidGradle = insertSigningConfig(`android {
+    defaultConfig {
+        applicationId 'com.kaicloud.marketplace'
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        release {
+            // Caution! In production, you need to generate your own keystore file.
+            signingConfig signingConfigs.debug
+        }
+    }
+}`);
 
 test('staging keeps its own package and API while rendering the original five-tab app', async () => {
   const [config, gradle, metro, shell, components, app] = await Promise.all([
     source('../app.config.js'),
-    source('../android/app/build.gradle'),
+    generatedAndroidGradle,
     source('../metro.config.js'),
     source('../src/StagingDemoShell.staging.tsx'),
     source('../src/components.tsx'),
@@ -351,7 +373,7 @@ test('order detail gates every mutation by allowedActions and terminal rejects c
 
 test('customer-facing staging bundle copy uses test environment terms and avoids banned wording', async () => {
   const sources = await Promise.all([
-    source('../app.config.js'), source('../android/app/build.gradle'),
+    source('../app.config.js'), generatedAndroidGradle,
     source('../plugins/with-android-release-signing.js'),
     source('../src/StagingEnvironmentBanner.staging.tsx'),
     source('../src/StagingDemoShell.staging.tsx'), source('../src/StagingProfileToolsSlot.staging.tsx'),
