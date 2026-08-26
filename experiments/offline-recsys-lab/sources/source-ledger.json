@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "productionBusinessDataAllowed": false,
+  "sources": [
+    {
+      "id": "amazon-reviews-2023",
+      "origin": "public",
+      "officialUrl": "https://amazon-reviews-2023.github.io/main.html",
+      "tasks": ["retrieval", "sequential_recommendation"],
+      "usageStatus": "research_only_license_not_assigned_by_dataset_provider",
+      "notes": "Provider discussion says the data is primarily for research and that the provider cannot assign a dataset license. Raw rows are not redistributed. Review interactions are not impression or click labels."
+    },
+    {
+      "id": "criteo-display-advertising",
+      "origin": "public",
+      "officialUrl": "https://ailab.criteo.com/ressources/",
+      "tasks": ["ctr"],
+      "usageStatus": "research_only_cc_by_nc_sa_4_0_fixed_public_subset"
+    },
+    {
+      "id": "criteo-sponsored-search-conversion",
+      "origin": "public",
+      "officialUrl": "https://ailab.criteo.com/criteo-sponsored-search-conversion-log-dataset/",
+      "tasks": ["post_click_conversion", "conversion_value"],
+      "usageStatus": "research_only_cc_by_nc_sa_4_0"
+    },
+    {
+      "id": "ali-ccp",
+      "origin": "public",
+      "officialUrl": "https://tianchi.aliyun.com/dataset/408",
+      "tasks": ["ctr", "post_click_conversion", "esmm"],
+      "usageStatus": "tianchi_login_and_dataset_terms_required"
+    },
+    {
+      "id": "criteo-counterfactual",
+      "origin": "public",
+      "officialUrl": "https://ailab.criteo.com/ressources/",
+      "tasks": ["counterfactual_evaluation", "position_bias"],
+      "usageStatus": "schema_and_terms_verification_required"
+    },
+    {
+      "id": "open-bandit-dataset",
+      "origin": "public",
+      "officialUrl": "https://research.zozo.com/data.html",
+      "tasks": ["off_policy_evaluation", "position_bias_validity"],
+      "usageStatus": "cc_by_4_0_full_archive_offline_research",
+      "notes": "The full archive README and official dataset publication identify CC BY 4.0. Logs include action-selection propensities, not examination propensities, and therefore do not identify latent position examination bias."
+    }
+  ]
+}

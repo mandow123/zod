@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN" data-report-base="../reports">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>推荐系统是怎样工作的</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳至主要内容</a>
+
+    <header class="hero">
+      <div class="topbar">
+        <strong>推荐算法互动实验室</strong>
+        <span class="boundary-tag">公开离线数据 · 本地演示</span>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">60 秒看懂推荐系统</p>
+        <h1>推荐系统是怎样工作的</h1>
+        <p class="hero-subtitle">从几万商品中找到你最可能喜欢的东西</p>
+        <p class="hero-intro">推荐系统不是直接给所有商品打分。它先缩小范围，再判断点击可能性，最后校正展示位置带来的误差。</p>
+      </div>
+
+      <div class="system-flow" aria-label="推荐系统五阶段流程">
+        <div class="flow-node flow-source">
+          <span>全部商品</span>
+          <strong id="pipeline-catalog">读取中…</strong>
+          <small>公开训练目录</small>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node">
+          <span>候选召回</span>
+          <strong>先找一批可能喜欢的</strong>
+          <small>双塔召回 / 近似检索</small>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node">
+          <span>点击预测</span>
+          <strong>判断更可能点哪个</strong>
+          <small>逻辑回归 / 深度模型</small>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node flow-accent">
+          <span>偏差校正</span>
+          <strong>校正位置带来的错觉</strong>
+          <small>逆倾向加权 / 归一化加权</small>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node flow-final">
+          <span>最终推荐</span>
+          <strong>精选结果</strong>
+          <small>最终推荐</small>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <a class="primary-action" id="demo-start" href="#retrieval">开始 60 秒演示</a>
+        <nav class="quick-nav" aria-label="三个演示入口">
+          <a href="#retrieval">找商品</a>
+          <a href="#ctr">预测点击</a>
+          <a href="#position-bias">校正偏差</a>
+        </nav>
+      </div>
+
+      <div class="demo-route" aria-label="招聘会演示顺序">
+        <span>选用户</span><b aria-hidden="true">→</b><span>召回商品</span><b aria-hidden="true">→</b><span>看点击预测</span><b aria-hidden="true">→</b><span>理解位置偏差</span><b aria-hidden="true">→</b><span>打开技术细节</span>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <div id="load-error" class="load-error" role="alert" hidden>无法读取本地数据。请用 README 中的命令从 localhost 启动。</div>
+
+      <section class="lesson" id="retrieval" aria-labelledby="retrieval-title">
+        <header class="lesson-heading">
+          <p class="step-label">STEP 1 · 第 1/3 步</p>
+          <h2 id="retrieval-title">找商品</h2>
+          <p>几万个商品不可能全部精排。先根据用户历史，从全量商品中快速找到最可能感兴趣的一批。</p>
+        </header>
+
+        <div class="demo-surface">
+          <div class="demo-control-row">
+            <div>
+              <p class="control-label">选择一位脱敏用户</p>
+              <div class="segmented" id="retrieval-histories" aria-label="选择脱敏用户历史"></div>
+            </div>
+            <button class="run-button" id="retrieval-run" type="button">给这个用户推荐</button>
+          </div>
+
+          <div class="history-block">
+            <div>
+              <span class="plain-label">他最近看过</span>
+              <div class="token-list" id="retrieval-history"></div>
+            </div>
+            <div class="next-item-wrap">
+              <span class="plain-label">公开测试集中的下一件商品</span>
+              <strong class="next-item" id="retrieval-target"></strong>
+            </div>
+          </div>
+
+          <div class="result-intro">
+            <div>
+              <p class="result-kicker">推荐结果</p>
+              <h3>从 <span id="retrieval-catalog">读取中…</span> 中找出的前 10 个</h3>
+            </div>
+            <span class="result-method" id="retrieval-result-kind">相似商品召回 · 精确检索</span>
+          </div>
+          <div class="run-state" id="retrieval-run-state" role="status" aria-live="polite">选择用户后，点击按钮生成推荐。</div>
+          <ol class="recommendation-list" id="retrieval-results"></ol>
+          <div class="blocked-trace" id="retrieval-blocked"></div>
+
+          <details class="tech-details" id="retrieval-details">
+            <summary><span>查看技术细节</span><small>召回算法、近似检索与真实离线指标</small></summary>
+            <div class="details-body">
+              <div class="advanced-controls">
+                <div><p class="control-label">召回算法</p><div class="segmented" id="retrieval-models" aria-label="选择召回模型"></div></div>
+                <div><p class="control-label">检索方式</p><div class="segmented compact" id="retrieval-modes" aria-label="选择精确检索或近似检索"></div></div>
+              </div>
+              <div class="metric-grid five" id="retrieval-metrics"></div>
+              <div class="ann-strip" id="retrieval-ann" hidden></div>
+              <dl class="evidence-list">
+                <div><dt>公开数据</dt><dd>亚马逊公开评论数据集 · 工业与科学品类</dd></div>
+                <div><dt>评估用户</dt><dd id="retrieval-cohort">读取中…</dd></div>
+                <div><dt>评估方式</dt><dd>保留最后一次行为 · 全训练商品目录</dd></div>
+              </dl>
+              <p class="panel-footnote">热门召回和相似商品召回的前 10 个结果，来自同一份冻结公开数据切分的确定性回放。矩阵分解与双塔召回没有保存用户级模型检查点，因此页面不会生成替代推荐。近似检索召回率表示近似结果对精确结果的覆盖程度，不等于推荐相关性召回率。</p>
+            </div>
+          </details>
+
+          <a class="next-step" href="#ctr">下一步：看系统怎样预测点击 <span aria-hidden="true">↓</span></a>
+        </div>
+      </section>
+
+      <section class="lesson" id="ctr" aria-labelledby="ctr-title">
+        <header class="lesson-heading">
+          <p class="step-label">STEP 2 · 第 2/3 步</p>
+          <h2 id="ctr-title">预测点击</h2>
+          <p>候选商品找出来以后，再预测用户最可能点击哪个。</p>
+        </header>
+
+        <div class="demo-surface">
+          <div class="demo-control-row">
+            <div>
+              <p class="control-label">选择离线模型</p>
+              <div class="segmented" id="ctr-models" aria-label="选择 CTR 模型"></div>
+            </div>
+            <button class="run-button" id="ctr-run" type="button">查看离线点击预测</button>
+          </div>
+
+          <div class="ctr-main-result">
+            <div>
+              <p class="result-kicker">公开测试数据中的相似样本</p>
+              <h3>模型给出的平均预测概率</h3>
+              <p>数值来自真实概率校准分组，不是这个人的单样本预测，也不是真实线上点击率。</p>
+            </div>
+            <div class="probability-panel">
+              <strong id="ctr-probability">—</strong>
+              <span id="ctr-probability-range">点击按钮读取冻结结果</span>
+            </div>
+          </div>
+          <div class="run-state" id="ctr-run-state" role="status" aria-live="polite">选择模型后查看公开离线结果。</div>
+
+          <details class="tech-details" id="ctr-details">
+            <summary><span>查看算法指标</span><small>ROC-AUC、LogLoss、Brier、ECE</small></summary>
+            <div class="details-body">
+              <div class="metric-grid five" id="ctr-metrics"></div>
+              <div class="ctr-workbench">
+                <div>
+                  <div class="results-header"><span>脱敏公开测试样本</span><span id="ctr-row-alias"></span></div>
+                  <dl class="feature-grid" id="ctr-features"></dl>
+                </div>
+                <dl class="evidence-list">
+                  <div><dt>公开数据</dt><dd>Criteo 公开点击日志 · 固定子集</dd></div>
+                  <div><dt>切分</dt><dd id="ctr-split">读取中…</dd></div>
+                  <div><dt>特征</dt><dd id="ctr-feature-counts">读取中…</dd></div>
+                </dl>
+              </div>
+              <p class="panel-footnote">冻结实验记录没有保存逐行预测。Criteo 对正负样本采用不同比例下采样，因此这里的概率不能直接解释为总体点击率。</p>
+            </div>
+          </details>
+
+          <a class="next-step" href="#position-bias">下一步：看看“排第一”为什么会骗人 <span aria-hidden="true">↓</span></a>
+        </div>
+      </section>
+
+      <section class="lesson lesson-featured" id="position-bias" aria-labelledby="position-title">
+        <header class="lesson-heading">
+          <p class="step-label">STEP 3 · 第 3/3 步</p>
+          <h2 id="position-title">为什么排第一的不一定最好</h2>
+          <p>排第一的商品天然更容易被点击，所以点击多不一定代表用户更喜欢。</p>
+        </header>
+
+        <div class="demo-surface">
+          <div class="bias-visual" aria-label="位置偏差示意图">
+            <div class="phone-list" aria-hidden="true">
+              <div class="rank-row rank-one"><b>1</b><span>商品 A</span><em>更容易被看见</em></div>
+              <div class="rank-row"><b>2</b><span>商品 B</span><em>曝光较少</em></div>
+              <div class="rank-row"><b>3</b><span>商品 C</span><em>曝光更少</em></div>
+            </div>
+            <div class="bias-message">
+              <span>位置偏差</span>
+              <strong>点击 = 用户兴趣 + 展示位置影响</strong>
+              <p>这是概念示意，不是实验数值。下面用公开实验结果比较校正方法。</p>
+            </div>
+          </div>
+
+          <div class="demo-control-row position-controls">
+            <div>
+              <p class="control-label">怎样估计真实效果</p>
+              <div class="segmented" id="position-methods" aria-label="选择估计器"></div>
+            </div>
+            <button class="run-button" id="position-run" type="button">校正位置偏差</button>
+          </div>
+          <div class="run-state" id="position-run-state" role="status" aria-live="polite">选择方法后读取冻结实验记录。</div>
+          <div class="metric-grid primary-metrics" id="position-primary-metrics"></div>
+          <p class="bias-explainer"><strong>一句话解释：</strong>排在第一位更容易被看见，因此“第一名点击更多”不等于商品本身更相关。</p>
+
+          <details class="tech-details" id="position-details">
+            <summary><span>查看技术细节</span><small>权重截断、有效样本量、倾向概率与实验范围</small></summary>
+            <div class="details-body">
+              <div class="advanced-controls">
+                <div><p class="control-label">最小倾向概率</p><div class="segmented compact" id="position-clipping" aria-label="选择权重截断阈值"></div></div>
+              </div>
+              <div class="metric-grid" id="position-technical-metrics"></div>
+              <dl class="evidence-list">
+                <div><dt>公开数据</dt><dd>Open Bandit 公开数据集 · 完整归档</dd></div>
+                <div><dt>BTS</dt><dd id="position-bts">读取中…</dd></div>
+                <div><dt>Random</dt><dd id="position-random">读取中…</dd></div>
+                <div><dt>Reference</dt><dd id="position-reference">读取中…</dd></div>
+              </dl>
+              <p class="panel-footnote">这里的倾向概率表示日志策略在某个位置选择某件商品的概率，不是用户查看该位置的概率。实验可以诊断策略选择偏差，但不证明已经消除所有位置查看偏差。</p>
+            </div>
+          </details>
+
+          <button class="secondary-action" id="open-technical-details" type="button">演示最后一步：打开技术细节</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span class="boundary-tag">公开离线数据 · 本地演示</span>
+      <details class="project-boundary">
+        <summary>项目边界</summary>
+        <p>页面只读取本地公开基准实验记录与脱敏派生样例；不连接生产环境，不代表线上点击率、业务收益或生产推荐效果。无登录、无密钥、无外部服务。</p>
+      </details>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

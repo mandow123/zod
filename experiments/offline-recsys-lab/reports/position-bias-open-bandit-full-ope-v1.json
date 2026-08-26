@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "position-bias-open-bandit-full-ope-v1",
+  "status": "COMPLETE",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "source": {
+    "id": "open-bandit-dataset-full-v1.0",
+    "officialUrl": "https://research.zozo.com/data.html",
+    "paperUrl": "https://arxiv.org/abs/2008.07146",
+    "terms": "CC BY 4.0 dataset license; citation requested by the official provider.",
+    "termsDetail": {
+      "repositoryLicense": "Apache-2.0",
+      "datasetLicense": "CC BY 4.0",
+      "datasetLicenseEvidence": "README inside the official full archive",
+      "datasetPageStatement": "Published for research use; cite the Open Bandit Dataset paper.",
+      "separateDatasetLicenseLocated": true,
+      "usageBoundary": "offline_research_no_production_performance_claim"
+    }
+  },
+  "evidence": {
+    "datasetFiles": [
+      {
+        "id": "open_bandit_dataset_full_v1_0",
+        "name": "Open Bandit Dataset full v1.0 archive",
+        "url": "https://research.zozo.com/data_release/open_bandit_dataset.zip",
+        "sha256": "e8ec18196582a5937381a1776382ca940689b90a18d2dcd1fb635be6df614d78",
+        "bytes": 412931917
+      }
+    ],
+    "configSha256": "49c1224d7616a13e1e3d2210a9dcbc1e5486f0b8eb0cc4f8c4415098d6dae36b",
+    "splitSha256": "25fbf5ffa8d3ee7dbc0d357140384cf24b2fb34116eb83ec0e7bc15eeff4e80c",
+    "splitManifest": {
+      "archiveSha256": "e8ec18196582a5937381a1776382ca940689b90a18d2dcd1fb635be6df614d78",
+      "method": "fixed_timestamp_cutoff",
+      "testStartTimestamp": "2019-11-29T14:24:00Z",
+      "members": {
+        "bts": {
+          "name": "open_bandit_dataset/bts/all/all.csv",
+          "rows": 12357200,
+          "testRows": 2055926
+        },
+        "random": {
+          "name": "open_bandit_dataset/random/all/all.csv",
+          "rows": 1374327,
+          "testRows": 229613
+        }
+      }
+    }
+  },
+  "protocol": {
+    "seeds": [
+      3407,
+      6502,
+      9109
+    ],
+    "seedUsage": "Full OPE is deterministic; seeds apply only to the separate small reward-model calibration run.",
+    "counts": {
+      "btsTestRows": 2055926,
+      "btsTestClicks": 11162,
+      "randomTestRows": 229613,
+      "randomTestClicks": 885,
+      "btsActions": 80,
+      "randomActions": 80,
+      "positions": 3
+    },
+    "countDetails": {
+      "btsTest": {
+        "rows": 2055926,
+        "clicks": 11162,
+        "actions": 80,
+        "positions": {
+          "1": {
+            "rows": 685269,
+            "clicks": 3479
+          },
+          "2": {
+            "rows": 685322,
+            "clicks": 3594
+          },
+          "3": {
+            "rows": 685335,
+            "clicks": 4089
+          }
+        },
+        "firstTimestamp": "2019-11-29T14:24:00.047192+00:00",
+        "lastTimestamp": "2019-11-30T23:59:59.920907+00:00",
+        "ctr": 0.00542918373521226,
+        "importanceWeights": {
+          "unclipped": {
+            "ips": 0.004047234444987065,
+            "snips": 0.004023223554538212,
+            "effectiveSampleSize": 24735.209150482005,
+            "weightVariance": 83.10047889534668,
+            "meanWeight": 1.0059680726470615,
+            "maxWeight": 2500.0,
+            "clippedCount": 0,
+            "clippingFloor": null,
+            "byPosition": {
+              "1": {
+                "rows": 685269,
+                "clicks": 3479,
+                "ips": 0.0031538920821769815,
+                "snips": 0.00306726293486114
+              },
+              "2": {
+                "rows": 685322,
+                "clicks": 3594,
+                "ips": 0.0037550254648066202,
+                "snips": 0.003596403309529466
+              },
+              "3": {
+                "rows": 685335,
+                "clicks": 4089,
+                "ips": 0.005232694213327694,
+                "snips": 0.005533973890306825
+              }
+            }
+          },
+          "0.01": {
+            "ips": 0.0018554448364735256,
+            "snips": 0.004794271462063073,
+            "effectiveSampleSize": 968751.0210372482,
+            "weightVariance": 0.16808854864562897,
+            "meanWeight": 0.3870128863489699,
+            "maxWeight": 1.25,
+            "clippedCount": 266755,
+            "clippingFloor": 0.01,
+            "byPosition": {
+              "1": {
+                "rows": 685269,
+                "clicks": 3479,
+                "ips": 0.001779269139133697,
+                "snips": 0.004238970830342635
+              },
+              "2": {
+                "rows": 685322,
+                "clicks": 3594,
+                "ips": 0.0017383331973595368,
+                "snips": 0.004632152875336012
+              },
+              "3": {
+                "rows": 685335,
+                "clicks": 4089,
+                "ips": 0.002048722615488523,
+                "snips": 0.005597215564247184
+              }
+            }
+          },
+          "0.02": {
+            "ips": 0.0014064778246138672,
+            "snips": 0.0049809000383956225,
+            "effectiveSampleSize": 1286255.1395805578,
+            "weightVariance": 0.04771204681716874,
+            "meanWeight": 0.28237423232185604,
+            "maxWeight": 0.625,
+            "clippedCount": 453015,
+            "clippingFloor": 0.02,
+            "byPosition": {
+              "1": {
+                "rows": 685269,
+                "clicks": 3479,
+                "ips": 0.00133432540698847,
+                "snips": 0.004436469871076548
+              },
+              "2": {
+                "rows": 685322,
+                "clicks": 3594,
+                "ips": 0.0013214610416611209,
+                "snips": 0.004811714817690417
+              },
+              "3": {
+                "rows": 685335,
+                "clicks": 4089,
+                "ips": 0.0015636384640099015,
+                "snips": 0.00575443929495767
+              }
+            }
+          },
+          "0.05": {
+            "ips": 0.0009032699263222588,
+            "snips": 0.005228709252447216,
+            "effectiveSampleSize": 1714486.461580962,
+            "weightVariance": 0.0059432755527851384,
+            "meanWeight": 0.17275198958509644,
+            "maxWeight": 0.25,
+            "clippedCount": 851148,
+            "clippingFloor": 0.05,
+            "byPosition": {
+              "1": {
+                "rows": 685269,
+                "clicks": 3479,
+                "ips": 0.0008362207258207757,
+                "snips": 0.0047573896225363245
+              },
+              "2": {
+                "rows": 685322,
+                "clicks": 3594,
+                "ips": 0.000852622657623612,
+                "snips": 0.005022831178170897
+              },
+              "3": {
+                "rows": 685335,
+                "clicks": 4089,
+                "ips": 0.0010209589777460805,
+                "snips": 0.005910592792841003
+              }
+            }
+          },
+          "0.1": {
+            "ips": 0.0005872482621996895,
+            "snips": 0.005366306999140105,
+            "effectiveSampleSize": 1954455.8079391778,
+            "weightVariance": 0.0006217346603107389,
+            "meanWeight": 0.10943247605733142,
+            "maxWeight": 0.125,
+            "clippedCount": 1309503,
+            "clippingFloor": 0.1,
+            "byPosition": {
+              "1": {
+                "rows": 685269,
+                "clicks": 3479,
+                "ips": 0.0005310600598083022,
+                "snips": 0.004937877781211379
+              },
+              "2": {
+                "rows": 685322,
+                "clicks": 3594,
+                "ips": 0.00056567316223994,
+                "snips": 0.005186193462169584
+              },
+              "3": {
+                "rows": 685335,
+                "clicks": 4089,
+                "ips": 0.000665005744189022,
+                "snips": 0.005954772242968366
+              }
+            }
+          }
+        }
+      },
+      "randomTest": {
+        "rows": 229613,
+        "clicks": 885,
+        "actions": 80,
+        "positions": {
+          "1": {
+            "rows": 76526,
+            "clicks": 294
+          },
+          "2": {
+            "rows": 76542,
+            "clicks": 264
+          },
+          "3": {
+            "rows": 76545,
+            "clicks": 327
+          }
+        },
+        "firstTimestamp": "2019-11-29T14:24:01.133830+00:00",
+        "lastTimestamp": "2019-11-30T23:59:59.408889+00:00",
+        "ctr": 0.0038543113848083514
+      }
+    },
+    "propensity": {
+      "column": "propensity_score",
+      "provenance": "Probability that the logging policy displays the observed item at the observed position. The authors describe BTS values as true action-choice probabilities computed by Monte Carlo simulation from production policy parameters.",
+      "isExaminationPropensity": false,
+      "causalBoundary": "Supports logged action-selection OPE under overlap/consistency assumptions; does not identify or remove latent position examination bias."
+    },
+    "targetPolicy": {
+      "name": "uniform_random",
+      "actionCount": 80,
+      "actionProbabilityAtEachPosition": 0.0125
+    },
+    "clippingThresholds": [
+      0.01,
+      0.02,
+      0.05,
+      0.1
+    ],
+    "testSetPolicy": "No model, feature, clipping-threshold, or estimator selection on test data."
+  },
+  "results": {
+    "policyValueEstimates": {
+      "on_policy_random": {
+        "estimate": 0.0038543113848083514,
+        "absoluteErrorToOnPolicy": 0.0
+      },
+      "naive_bts": {
+        "estimate": 0.00542918373521226,
+        "absoluteErrorToOnPolicy": 0.0015748723504039083
+      },
+      "position_stratified_associational": {
+        "estimate": 0.005429202826110445,
+        "absoluteErrorToOnPolicy": 0.0015748914413020935
+      },
+      "ips": {
+        "estimate": 0.004047234444987065,
+        "absoluteErrorToOnPolicy": 0.00019292306017871337,
+        "effectiveSampleSize": 24735.209150482005,
+        "weightVariance": 83.10047889534668,
+        "meanWeight": 1.0059680726470615,
+        "maxWeight": 2500.0,
+        "clippedCount": 0,
+        "clippingFloor": null,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.0031538920821769815,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0006879394522034906
+          },
+          "2": {
+            "estimate": 0.0037550254648066202,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0003059386889188724
+          },
+          "3": {
+            "estimate": 0.005232694213327694,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0009606973487382361
+          }
+        }
+      },
+      "snips": {
+        "estimate": 0.004023223554538212,
+        "absoluteErrorToOnPolicy": 0.00016891216972986017,
+        "effectiveSampleSize": 24735.209150482005,
+        "weightVariance": 83.10047889534668,
+        "meanWeight": 1.0059680726470615,
+        "maxWeight": 2500.0,
+        "clippedCount": 0,
+        "clippingFloor": null,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.00306726293486114,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.000774568599519332
+          },
+          "2": {
+            "estimate": 0.003596403309529466,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.00014731653364171825
+          },
+          "3": {
+            "estimate": 0.005533973890306825,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0012619770257173675
+          }
+        }
+      },
+      "ips_clipped_0p01": {
+        "estimate": 0.0018554448364735256,
+        "absoluteErrorToOnPolicy": 0.0019988665483348256,
+        "effectiveSampleSize": 968751.0210372482,
+        "weightVariance": 0.16808854864562897,
+        "meanWeight": 0.3870128863489699,
+        "maxWeight": 1.25,
+        "clippedCount": 266755,
+        "clippingFloor": 0.01,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.001779269139133697,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.002062562395246775
+          },
+          "2": {
+            "estimate": 0.0017383331973595368,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.001710753578528211
+          },
+          "3": {
+            "estimate": 0.002048722615488523,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0022232742491009342
+          }
+        }
+      },
+      "snips_clipped_0p01": {
+        "estimate": 0.004794271462063073,
+        "absoluteErrorToOnPolicy": 0.0009399600772547214,
+        "effectiveSampleSize": 968751.0210372482,
+        "weightVariance": 0.16808854864562897,
+        "meanWeight": 0.3870128863489699,
+        "maxWeight": 1.25,
+        "clippedCount": 266755,
+        "clippingFloor": 0.01,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.004238970830342635,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0003971392959621627
+          },
+          "2": {
+            "estimate": 0.004632152875336012,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0011830660994482638
+          },
+          "3": {
+            "estimate": 0.005597215564247184,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0013252186996577263
+          }
+        }
+      },
+      "ips_clipped_0p02": {
+        "estimate": 0.0014064778246138672,
+        "absoluteErrorToOnPolicy": 0.0024478335601944845,
+        "effectiveSampleSize": 1286255.1395805578,
+        "weightVariance": 0.04771204681716874,
+        "meanWeight": 0.28237423232185604,
+        "maxWeight": 0.625,
+        "clippedCount": 453015,
+        "clippingFloor": 0.02,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.00133432540698847,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.002507506127392002
+          },
+          "2": {
+            "estimate": 0.0013214610416611209,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0021276257342266267
+          },
+          "3": {
+            "estimate": 0.0015636384640099015,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0027083584005795558
+          }
+        }
+      },
+      "snips_clipped_0p02": {
+        "estimate": 0.0049809000383956225,
+        "absoluteErrorToOnPolicy": 0.001126588653587271,
+        "effectiveSampleSize": 1286255.1395805578,
+        "weightVariance": 0.04771204681716874,
+        "meanWeight": 0.28237423232185604,
+        "maxWeight": 0.625,
+        "clippedCount": 453015,
+        "clippingFloor": 0.02,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.004436469871076548,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0005946383366960757
+          },
+          "2": {
+            "estimate": 0.004811714817690417,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0013626280418026692
+          },
+          "3": {
+            "estimate": 0.00575443929495767,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.001482442430368213
+          }
+        }
+      },
+      "ips_clipped_0p05": {
+        "estimate": 0.0009032699263222588,
+        "absoluteErrorToOnPolicy": 0.0029510414584860926,
+        "effectiveSampleSize": 1714486.461580962,
+        "weightVariance": 0.0059432755527851384,
+        "meanWeight": 0.17275198958509644,
+        "maxWeight": 0.25,
+        "clippedCount": 851148,
+        "clippingFloor": 0.05,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.0008362207258207757,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0030056108085596963
+          },
+          "2": {
+            "estimate": 0.000852622657623612,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.002596464118264136
+          },
+          "3": {
+            "estimate": 0.0010209589777460805,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.003251037886843377
+          }
+        }
+      },
+      "snips_clipped_0p05": {
+        "estimate": 0.005228709252447216,
+        "absoluteErrorToOnPolicy": 0.0013743978676388643,
+        "effectiveSampleSize": 1714486.461580962,
+        "weightVariance": 0.0059432755527851384,
+        "meanWeight": 0.17275198958509644,
+        "maxWeight": 0.25,
+        "clippedCount": 851148,
+        "clippingFloor": 0.05,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.0047573896225363245,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0009155580881558523
+          },
+          "2": {
+            "estimate": 0.005022831178170897,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0015737444022831488
+          },
+          "3": {
+            "estimate": 0.005910592792841003,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0016385959282515456
+          }
+        }
+      },
+      "ips_clipped_0p1": {
+        "estimate": 0.0005872482621996895,
+        "absoluteErrorToOnPolicy": 0.0032670631226086617,
+        "effectiveSampleSize": 1954455.8079391778,
+        "weightVariance": 0.0006217346603107389,
+        "meanWeight": 0.10943247605733142,
+        "maxWeight": 0.125,
+        "clippedCount": 1309503,
+        "clippingFloor": 0.1,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.0005310600598083022,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.00331077147457217
+          },
+          "2": {
+            "estimate": 0.00056567316223994,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.002883413613647808
+          },
+          "3": {
+            "estimate": 0.000665005744189022,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0036069911204004356
+          }
+        }
+      },
+      "snips_clipped_0p1": {
+        "estimate": 0.005366306999140105,
+        "absoluteErrorToOnPolicy": 0.0015119956143317538,
+        "effectiveSampleSize": 1954455.8079391778,
+        "weightVariance": 0.0006217346603107389,
+        "meanWeight": 0.10943247605733142,
+        "maxWeight": 0.125,
+        "clippedCount": 1309503,
+        "clippingFloor": 0.1,
+        "calibrationByPosition": {
+          "1": {
+            "estimate": 0.004937877781211379,
+            "onPolicyRandomCtr": 0.003841831534380472,
+            "absoluteErrorToOnPolicy": 0.0010960462468309067
+          },
+          "2": {
+            "estimate": 0.005186193462169584,
+            "onPolicyRandomCtr": 0.003449086775887748,
+            "absoluteErrorToOnPolicy": 0.0017371066862818365
+          },
+          "3": {
+            "estimate": 0.005954772242968366,
+            "onPolicyRandomCtr": 0.0042719968645894574,
+            "absoluteErrorToOnPolicy": 0.0016827753783789081
+          }
+        }
+      }
+    }
+  },
+  "limitations": [
+    "The full-data OPE result evaluates the fixed final 20% time window of the seven-day ALL campaign only; traffic volume means this is not exactly 20% of rows, and it is not an online experiment.",
+    "The logged propensity is item-at-position action-selection probability, not examination propensity; causal position-examination debiasing is not identified.",
+    "The paper's OPE validity assumptions include overlap/consistency and a reward model depending on item and position; violations remain possible.",
+    "Clipping thresholds were preregistered and all are reported; none was selected on test results.",
+    "The deterministic full OPE has no between-seed variance; sampling uncertainty is not represented by the listed seeds.",
+    "No production, revenue-lift, or online-CTR claim follows from this offline public-data result."
+  ],
+  "resultSha256": "4ada23dbb5f3a434bdbef59f9d0b9f19e8241acdb1ae624324af4d30494ab2ef"
+}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "status": "PRE_REGISTERED_NOT_RUN",
+  "seeds": [3407, 6502, 9109],
+  "testSetPolicy": "No model, feature, negative-sampling or threshold selection on test data.",
+  "workstreams": {
+    "retrieval": {
+      "dataset": "amazon-reviews-2023",
+      "interactionMeaning": "review_or_verified_purchase_proxy_not_click",
+      "split": "official_leave_last_out",
+      "evaluationUsers": "known_train_users_with_test_positive_in_train_catalog",
+      "evaluationCatalog": "complete_train_item_catalog_minus_each_users_seen_train_items",
+      "coldStartPolicy": "report_excluded_unknown_user_and_unknown_item_counts_separately",
+      "parityGates": [
+        "same_evaluation_users",
+        "same_train_catalog",
+        "same_seen_item_exclusion",
+        "same_full_catalog_evaluation",
+        "same_temporal_split"
+      ],
+      "baselines": ["popularity", "item_knn", "matrix_factorization", "two_tower"],
+      "metrics": [
+        "Recall@20", "Recall@50", "Recall@100", "HitRate@20", "HitRate@50",
+        "MRR@100", "NDCG@20", "NDCG@50", "ANNRecall@20", "ANNRecall@50",
+        "latency_p50_ms", "latency_p95_ms", "qps", "index_bytes"
+      ]
+    },
+    "ctr": {
+      "dataset": "criteo-display-advertising",
+      "split": "fixed_source_order_blocks_not_claimed_chronological",
+      "preprocessing": "fit_train_only_transform_dev_test",
+      "parityGates": ["same_rows", "same_feature_set", "same_split", "same_seed_protocol"],
+      "baselines": ["logistic_regression", "deepfm", "dcnv2"],
+      "metrics": ["ROC_AUC", "PR_AUC", "LogLoss", "Brier", "ECE"]
+    },
+    "conversion": {
+      "primaryDataset": "ali-ccp",
+      "fallbackDataset": "criteo-sponsored-search-conversion",
+      "fallbackLimitation": "clicked_rows_only_no_impression_space_ctr",
+      "baselines": ["post_click_cvr", "esmm"],
+      "metrics": ["PostClickCVR_AUC", "PostClickCVR_LogLoss", "CTCVR_AUC", "CTCVR_LogLoss"]
+    },
+    "sequence": {
+      "dataset": "amazon-reviews-2023",
+      "dependencyGate": "retrieval_dataset_split_catalog_and_user_set_frozen",
+      "baselines": ["mean_pooling", "target_aware_attention"],
+      "metrics": ["NDCG@20", "HitRate@20", "MRR@100"]
+    },
+    "debias": {
+      "dataset": "criteo-counterfactual",
+      "schemaGate": "known_or_auditable_propensity_required",
+      "clippingThresholds": [0.01, 0.02, 0.05, 0.1],
+      "baselines": ["naive", "position_feature", "ips", "snips"],
+      "metrics": ["weighted_LogLoss", "weighted_NDCG", "effective_sample_size", "weight_variance"]
+    },
+    "ads": {
+      "dataset": "criteo-sponsored-search-conversion",
+      "rankers": ["pctr", "pcvr", "pctr_x_pcvr", "expected_value", "ecpm"],
+      "metrics": ["NDCG@K", "ExpectedConversion@K", "ExpectedValue@K"]
+    }
+  },
+  "naming": {
+    "constraintViolationRate": "ConstraintViolationRate",
+    "postClickConversionRate": "PostClickCVR",
+    "clickThroughConversionRate": "CTCVR"
+  }
+}

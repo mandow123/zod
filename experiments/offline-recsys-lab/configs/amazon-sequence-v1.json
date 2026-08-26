@@ -1,0 +1,57 @@
+{
+  "experimentId": "amazon23-industrial-5core-sequence-v1",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "dataset": {
+    "name": "Amazon Reviews'23",
+    "category": "Industrial_and_Scientific",
+    "processing": "official 5-core de-duplicated leave-last-out with history",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "officialDocumentationUrl": "https://amazon-reviews-2023.github.io/data_processing/5core.html",
+    "officialTermsEvidenceUrl": "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/discussions/1",
+    "rawDir": "data/raw/amazon-reviews-2023/Industrial_and_Scientific",
+    "files": {
+      "train": {
+        "name": "Industrial_and_Scientific.train.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.train.csv.gz"
+      },
+      "dev": {
+        "name": "Industrial_and_Scientific.valid.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.valid.csv.gz"
+      },
+      "test": {
+        "name": "Industrial_and_Scientific.test.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.test.csv.gz"
+      }
+    }
+  },
+  "protocol": {
+    "seeds": [3407, 6502, 9109],
+    "ks": [20, 50, 100],
+    "catalog": "all distinct train items",
+    "evaluationUsers": "same pre-filtered dev/test cohorts as retrieval v1",
+    "candidateGenerator": "frozen sparse ItemKNN full-catalog top-100 without target injection",
+    "candidateCount": 100,
+    "excludeSeen": true,
+    "negativeSampling": "one full-train-user-unseen item per positive; identical sample for both models within seed",
+    "testTuningForbidden": true
+  },
+  "itemKnn": {
+    "similarity": "binary user co-occurrence cosine",
+    "implementation": "batched scipy CSR full train catalog",
+    "topNeighborLimit": null,
+    "batchSize": 128
+  },
+  "model": {
+    "embeddingDim": 32,
+    "hiddenDim": 64,
+    "attentionDim": 32,
+    "maxHistory": 50,
+    "epochs": 2,
+    "batchSize": 2048,
+    "evaluationQueryBatchSize": 64,
+    "learningRate": 0.001
+  },
+  "output": "reports/amazon-sequence-v1-results.json"
+}

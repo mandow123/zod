@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-101",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T09:53:16Z",
+  "baseCommit": "57299818bead2a85aaccdb40983ba90f80df2c4e",
+  "stagedDiffSha256": "0097c22e5c6cf0b886605439dce70de1d26106b0216c5e5e2bded47a257a8ae2",
+  "summary": "重新批准 KAI Offline RecSys Lab Public Offline V1 及本地招聘演示的线性重放提交。原批准的产品差异摘要保持 0097c22e 不变；因 canonical main 新增 release provenance #13 并占用 PM-20260826-003 路径，本记录使用独立 audit ID 重新绑定最新基线 5729981，未修改任何 V1 产品文件、冻结指标或 artifact 边界。审计确认除本记录外，109 个暂存路径全部位于独立 experiments/offline-recsys-lab，未修改 Production、0066、Data Flywheel、订单、支付或业务 schema；原始数据、虚拟环境、模型权重、artifacts 和生成 ZIP 均由 Git 忽略。公开报告保留负结果、来源许可限制和 offline/no-production 边界；source/report boundary、五份公开报告、Playground 本地只读校验、70 项测试及可迁移 ZIP 完整性此前均已通过。批准当前精确 base/diff 作为线性 V1 重放提交；不批准线上效果声明、商业数据混入或 post-test 调参。"
+}

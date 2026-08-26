@@ -1,0 +1,630 @@
+{
+  "claimableOnlinePerformance": false,
+  "dataOrigin": "public",
+  "evidence": {
+    "configCanonicalSha256": "a5266080ed4c2c1636c852f4a45b3084de6c608f26512109cf1ba4ac5b72f00c",
+    "configSha256": "1c8c77d13e18a926b69977f6008a58d87d0bb77a024a1e57972cf12967b02938",
+    "datasetFiles": [
+      {
+        "bytes": 7129893,
+        "name": "Industrial_and_Scientific.train.csv.gz",
+        "sha256": "132fea283cae097a9a4980ce6d4b44371f8b2bb38763c620dcb9458962347f0f",
+        "split": "train"
+      },
+      {
+        "bytes": 3473533,
+        "name": "Industrial_and_Scientific.valid.csv.gz",
+        "sha256": "41414bdd6308edd619989fc347864ac6c359e1de4868cb719dd13889ca105877",
+        "split": "dev"
+      },
+      {
+        "bytes": 3747446,
+        "name": "Industrial_and_Scientific.test.csv.gz",
+        "sha256": "4c5479c4340ea6aef9bc39fe9a54782cfa81046f10a844c4955df35678ebd340",
+        "split": "test"
+      }
+    ],
+    "splitSha256": "0cc0485982d5974743150609976ca3606d84c688720ed773673f3e07a8ea996c"
+  },
+  "experimentId": "amazon23-industrial-5core-sequence-v1",
+  "limitations": [
+    "The provider has not assigned a dataset license; this run is isolated research-only use.",
+    "A review/rating is an interaction proxy, not an impression, click, order, or verified business event.",
+    "The train catalog contains tens of thousands of items, so this run does not support a million-item claim.",
+    "Cold targets absent from the train catalog are excluded once before evaluation and counted explicitly.",
+    "One official user has equal dev/test timestamps; the provider's published split membership is authoritative for that tie.",
+    "Offline public-data metrics are not evidence of KAI Compute or online performance.",
+    "Sequence models rerank a frozen ItemKNN Top-100 and cannot recover a target absent from that candidate set.",
+    "The target is never injected into a candidate set; end-to-end metrics retain retrieval misses.",
+    "Mean pooling and DIN use the same positives, per-seed negatives, histories, candidates, optimizer settings, and evaluation users."
+  ],
+  "protocol": {
+    "candidateCount": 100,
+    "candidateGenerator": "frozen sparse ItemKNN full-catalog top-100 without target injection",
+    "counts": {
+      "devColdItems": 210,
+      "devColdUsers": 0,
+      "devEvaluationUsers": 50775,
+      "devExcludedTotal": 210,
+      "devRows": 50985,
+      "devTestEqualTimestampUsers": 1,
+      "testColdItems": 332,
+      "testColdUsers": 0,
+      "testEvaluationUsers": 50653,
+      "testExcludedTotal": 332,
+      "testRows": 50985,
+      "trainCatalogItems": 25754,
+      "trainDevEqualTimestampUsers": 0,
+      "trainRows": 310977,
+      "trainUsers": 50985
+    },
+    "excludeSeen": true,
+    "fullTrainCatalogEvaluation": true,
+    "ks": [
+      20,
+      50,
+      100
+    ],
+    "sameCandidateSetAcrossSequenceModels": true,
+    "sameItemsAcrossModels": true,
+    "sameNegativesWithinSeed": true,
+    "sameTemporalSplitAcrossModels": true,
+    "sameUsersAcrossModels": true,
+    "sampledNegativeEvaluation": false,
+    "seeds": [
+      3407,
+      6502,
+      9109
+    ],
+    "trainingRowsWithNonEmptyHistory": 259992
+  },
+  "results": {
+    "candidateGeneration": {
+      "metrics": {
+        "dev": {
+          "100": {
+            "hitRate": 0.08189069423929099,
+            "mrr": 0.014959924889223406,
+            "ndcg": 0.027081742201947243,
+            "queryCount": 50775,
+            "recall": 0.08189069423929099
+          },
+          "20": {
+            "hitRate": 0.03806991629739045,
+            "mrr": 0.013993188455302773,
+            "ndcg": 0.019270794496894186,
+            "queryCount": 50775,
+            "recall": 0.03806991629739045
+          },
+          "50": {
+            "hitRate": 0.05898572131954702,
+            "mrr": 0.014640266713696224,
+            "ndcg": 0.02338653324763677,
+            "queryCount": 50775,
+            "recall": 0.05898572131954702
+          }
+        },
+        "test": {
+          "100": {
+            "hitRate": 0.06633368211162222,
+            "mrr": 0.011435513414223098,
+            "ndcg": 0.02129569288512262,
+            "queryCount": 50653,
+            "recall": 0.06633368211162222
+          },
+          "20": {
+            "hitRate": 0.029396087102442105,
+            "mrr": 0.010627809964713807,
+            "ndcg": 0.014727787827440265,
+            "queryCount": 50653,
+            "recall": 0.029396087102442105
+          },
+          "50": {
+            "hitRate": 0.04625589797247942,
+            "mrr": 0.011155466401130059,
+            "ndcg": 0.018056563884512312,
+            "queryCount": 50653,
+            "recall": 0.04625589797247942
+          }
+        }
+      },
+      "name": "itemKnn",
+      "targetInjected": false
+    },
+    "comparison": {
+      "contrast": "din_minus_mean_pooling_paired_by_seed",
+      "delta": {
+        "20": {
+          "recall": {
+            "mean": 6.580722431708448e-06,
+            "std": 0.0002304192762522987
+          },
+          "hitRate": {
+            "mean": 6.580722431708448e-06,
+            "std": 0.0002304192762522987
+          },
+          "mrr": {
+            "mean": -1.9788547662501037e-05,
+            "std": 6.479555821041186e-05
+          },
+          "ndcg": {
+            "mean": -1.5599933386524142e-05,
+            "std": 9.467587261348445e-05
+          }
+        },
+        "50": {
+          "recall": {
+            "mean": -0.00013819517106587972,
+            "std": 0.00012169889252302647
+          },
+          "hitRate": {
+            "mean": -0.00013819517106587972,
+            "std": 0.00012169889252302647
+          },
+          "mrr": {
+            "mean": -2.4732306680024078e-05,
+            "std": 6.064766705671728e-05
+          },
+          "ndcg": {
+            "mean": -4.474618229274516e-05,
+            "std": 7.12879004048708e-05
+          }
+        },
+        "100": {
+          "recall": {
+            "mean": 0.0,
+            "std": 0.0
+          },
+          "hitRate": {
+            "mean": 0.0,
+            "std": 0.0
+          },
+          "mrr": {
+            "mean": -2.22407610456597e-05,
+            "std": 5.8553875672305765e-05
+          },
+          "ndcg": {
+            "mean": -2.1027204783370668e-05,
+            "std": 5.19468060793862e-05
+          }
+        }
+      },
+      "outcome": "NO_STABLE_DIN_IMPROVEMENT_ON_FROZEN_PROTOCOL"
+    },
+    "models": {
+      "din": {
+        "perSeed": {
+          "3407": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.010844950903021029,
+                "ndcg": 0.02351388730620131,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.032594780896110294,
+                "mrr": 0.009732347081561198,
+                "ndcg": 0.014672927188706187,
+                "queryCount": 50775,
+                "recall": 0.032594780896110294
+              },
+              "50": {
+                "hitRate": 0.05668143771541113,
+                "mrr": 0.010486591873728959,
+                "ndcg": 0.01942942548933016,
+                "queryCount": 50775,
+                "recall": 0.05668143771541113
+              }
+            },
+            "elapsedSeconds": 52.58396245801123,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.00854993384746968,
+                "ndcg": 0.018867497493104846,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.0269283161905514,
+                "mrr": 0.007672164880116493,
+                "ndcg": 0.011823906888983663,
+                "queryCount": 50653,
+                "recall": 0.0269283161905514
+              },
+              "50": {
+                "hitRate": 0.04621641363788917,
+                "mrr": 0.008268696108383471,
+                "ndcg": 0.015620430364162042,
+                "queryCount": 50653,
+                "recall": 0.04621641363788917
+              }
+            }
+          },
+          "6502": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.011068852863794595,
+                "ndcg": 0.02372793548670806,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.033697685869030033,
+                "mrr": 0.010015551203909514,
+                "ndcg": 0.015155820613318226,
+                "queryCount": 50775,
+                "recall": 0.033697685869030033
+              },
+              "50": {
+                "hitRate": 0.056090595765632696,
+                "mrr": 0.010707282787666509,
+                "ndcg": 0.019560722150416886,
+                "queryCount": 50775,
+                "recall": 0.056090595765632696
+              }
+            },
+            "elapsedSeconds": 50.22968895899248,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.008716188582002463,
+                "ndcg": 0.01901276266460585,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.027204706532683157,
+                "mrr": 0.007867130337459631,
+                "ndcg": 0.012066502622736348,
+                "queryCount": 50653,
+                "recall": 0.027204706532683157
+              },
+              "50": {
+                "hitRate": 0.045209563105837756,
+                "mrr": 0.008421658067554605,
+                "ndcg": 0.015605319005878271,
+                "queryCount": 50653,
+                "recall": 0.045209563105837756
+              }
+            }
+          },
+          "9109": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.010818988019593285,
+                "ndcg": 0.023517432812772115,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.03296898079763663,
+                "mrr": 0.009742345610302496,
+                "ndcg": 0.01479695707419841,
+                "queryCount": 50775,
+                "recall": 0.03296898079763663
+              },
+              "50": {
+                "hitRate": 0.05591334318069916,
+                "mrr": 0.010449958829392215,
+                "ndcg": 0.019309136119484992,
+                "queryCount": 50775,
+                "recall": 0.05591334318069916
+              }
+            },
+            "elapsedSeconds": 47.829400584014365,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.00862926382189064,
+                "ndcg": 0.018946250995762033,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.026849347521370897,
+                "mrr": 0.007763785001808734,
+                "ndcg": 0.01191861959352361,
+                "queryCount": 50653,
+                "recall": 0.026849347521370897
+              },
+              "50": {
+                "hitRate": 0.044913430596410876,
+                "mrr": 0.008326805168809197,
+                "ndcg": 0.015481256478965576,
+                "queryCount": 50653,
+                "recall": 0.044913430596410876
+              }
+            }
+          }
+        },
+        "testSummary": {
+          "100": {
+            "hitRate": {
+              "mean": 0.06633368211162222,
+              "std": 0.0
+            },
+            "mrr": {
+              "mean": 0.008631795417120927,
+              "std": 6.789681347186107e-05
+            },
+            "ndcg": {
+              "mean": 0.01894217038449091,
+              "std": 5.937441117778752e-05
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.06633368211162222,
+              "std": 0.0
+            }
+          },
+          "20": {
+            "hitRate": {
+              "mean": 0.026994123414868485,
+              "std": 0.00015235473914398178
+            },
+            "mrr": {
+              "mean": 0.00776769340646162,
+              "std": 7.964227984955725e-05
+            },
+            "ndcg": {
+              "mean": 0.011936343035081209,
+              "std": 9.982906321719845e-05
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.026994123414868485,
+              "std": 0.00015235473914398178
+            }
+          },
+          "50": {
+            "hitRate": {
+              "mean": 0.04544646911337927,
+              "std": 0.0005576943869790754
+            },
+            "mrr": {
+              "mean": 0.008339053114915757,
+              "std": 6.304416111605031e-05
+            },
+            "ndcg": {
+              "mean": 0.01556900194966863,
+              "std": 6.235136464141723e-05
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.04544646911337927,
+              "std": 0.0005576943869790754
+            }
+          }
+        }
+      },
+      "meanPooling": {
+        "perSeed": {
+          "3407": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.010825334857654051,
+                "ndcg": 0.02350044321178062,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.03243722304283604,
+                "mrr": 0.009704707089035602,
+                "ndcg": 0.014622519095589216,
+                "queryCount": 50775,
+                "recall": 0.03243722304283604
+              },
+              "50": {
+                "hitRate": 0.0569177744953225,
+                "mrr": 0.01047062509985622,
+                "ndcg": 0.019455075543285634,
+                "queryCount": 50775,
+                "recall": 0.0569177744953225
+              }
+            },
+            "elapsedSeconds": 23.160065582982497,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.008490017622362428,
+                "ndcg": 0.018815614817254186,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.02661244151382939,
+                "mrr": 0.00760044706262596,
+                "ndcg": 0.011706472018777597,
+                "queryCount": 50653,
+                "recall": 0.02661244151382939
+              },
+              "50": {
+                "hitRate": 0.04621641363788917,
+                "mrr": 0.0082085678007324,
+                "ndcg": 0.015568084322036152,
+                "queryCount": 50653,
+                "recall": 0.04621641363788917
+              }
+            }
+          },
+          "6502": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.011088103790428154,
+                "ndcg": 0.023748952605595907,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.03354012801575579,
+                "mrr": 0.010026018460248422,
+                "ndcg": 0.015139113923599465,
+                "queryCount": 50775,
+                "recall": 0.03354012801575579
+              },
+              "50": {
+                "hitRate": 0.056011816838995566,
+                "mrr": 0.010725505912769951,
+                "ndcg": 0.01956927445082004,
+                "queryCount": 50775,
+                "recall": 0.056011816838995566
+              }
+            },
+            "elapsedSeconds": 20.52015462500276,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.008770535280520159,
+                "ndcg": 0.01906244622187108,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.027441612540224664,
+                "mrr": 0.007928472615584629,
+                "ndcg": 0.012161719082221873,
+                "queryCount": 50653,
+                "recall": 0.027441612540224664
+              },
+              "50": {
+                "hitRate": 0.045328016109608515,
+                "mrr": 0.00847804031124672,
+                "ndcg": 0.015675100194828206,
+                "queryCount": 50653,
+                "recall": 0.045328016109608515
+              }
+            }
+          },
+          "9109": {
+            "devMetrics": {
+              "100": {
+                "hitRate": 0.08189069423929099,
+                "mrr": 0.010824034606473389,
+                "ndcg": 0.023524917297715137,
+                "queryCount": 50775,
+                "recall": 0.08189069423929099
+              },
+              "20": {
+                "hitRate": 0.03296898079763663,
+                "mrr": 0.009743325032691248,
+                "ndcg": 0.014796529908231298,
+                "queryCount": 50775,
+                "recall": 0.03296898079763663
+              },
+              "50": {
+                "hitRate": 0.05585425898572132,
+                "mrr": 0.010452551987110998,
+                "ndcg": 0.019302934677660505,
+                "queryCount": 50775,
+                "recall": 0.05585425898572132
+              }
+            },
+            "elapsedSeconds": 22.345824708987493,
+            "testMetrics": {
+              "100": {
+                "hitRate": 0.06633368211162222,
+                "mrr": 0.008701555631617177,
+                "ndcg": 0.019011531728697573,
+                "queryCount": 50653,
+                "recall": 0.06633368211162222
+              },
+              "20": {
+                "hitRate": 0.026908574023256273,
+                "mrr": 0.007833526184161773,
+                "ndcg": 0.011987637804403725,
+                "queryCount": 50653,
+                "recall": 0.026908574023256273
+              },
+              "50": {
+                "hitRate": 0.045209563105837756,
+                "mrr": 0.008404748152808224,
+                "ndcg": 0.015598059879019766,
+                "queryCount": 50653,
+                "recall": 0.045209563105837756
+              }
+            }
+          }
+        },
+        "testSummary": {
+          "100": {
+            "hitRate": {
+              "mean": 0.06633368211162222,
+              "std": 0.0
+            },
+            "mrr": {
+              "mean": 0.008654036178166588,
+              "std": 0.00011934854552041086
+            },
+            "ndcg": {
+              "mean": 0.01896319758927428,
+              "std": 0.00010640669575307145
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.06633368211162222,
+              "std": 0.0
+            }
+          },
+          "20": {
+            "hitRate": {
+              "mean": 0.026987542692436778,
+              "std": 0.0003430822892421517
+            },
+            "mrr": {
+              "mean": 0.0077874819541241215,
+              "std": 0.0001378168934692705
+            },
+            "ndcg": {
+              "mean": 0.011951942968467731,
+              "std": 0.00018755988053247136
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.026987542692436778,
+              "std": 0.0003430822892421517
+            }
+          },
+          "50": {
+            "hitRate": {
+              "mean": 0.04558466428444515,
+              "std": 0.00044932409439682057
+            },
+            "mrr": {
+              "mean": 0.008363785421595781,
+              "std": 0.00011376091154114895
+            },
+            "ndcg": {
+              "mean": 0.015613748131961374,
+              "std": 4.507541989178586e-05
+            },
+            "queryCount": 50653,
+            "recall": {
+              "mean": 0.04558466428444515,
+              "std": 0.00044932409439682057
+            }
+          }
+        }
+      }
+    },
+    "trainingDevice": "mps"
+  },
+  "schemaVersion": 1,
+  "source": {
+    "category": "Industrial_and_Scientific",
+    "id": "mcauley-lab-amazon-reviews-2023",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "name": "Amazon Reviews'23",
+    "officialUrl": "https://amazon-reviews-2023.github.io/data_processing/5core.html",
+    "terms": "license not assigned by provider; isolated non-commercial research only; no raw-data redistribution",
+    "termsEvidenceUrl": "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/discussions/1"
+  },
+  "status": "COMPLETE"
+}

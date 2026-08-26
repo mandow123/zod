@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kai-offline-recsys-lab"
+version = "0.1.0"
+description = "Public-data offline retrieval, CTR, conversion and debiasing research"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "hnswlib==0.8.0",
+  "numpy==2.3.5",
+  "pandas==2.2.3",
+  "pytest==8.4.2",
+  "scikit-learn==1.9.0",
+  "scipy==1.18.1",
+  "torch==2.13.0",
+]
+
+[project.scripts]
+kai-recsys-lab = "kai_recsys_lab.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

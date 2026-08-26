@@ -1,0 +1,73 @@
+{
+  "experimentId": "amazon23-industrial-5core-retrieval-v1",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "dataset": {
+    "name": "Amazon Reviews'23",
+    "category": "Industrial_and_Scientific",
+    "processing": "official 5-core de-duplicated leave-last-out with history",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "officialDocumentationUrl": "https://amazon-reviews-2023.github.io/data_processing/5core.html",
+    "officialTermsEvidenceUrl": "https://huggingface.co/datasets/McAuley-Lab/Amazon-Reviews-2023/discussions/1",
+    "rawDir": "data/raw/amazon-reviews-2023/Industrial_and_Scientific",
+    "files": {
+      "train": {
+        "name": "Industrial_and_Scientific.train.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.train.csv.gz"
+      },
+      "dev": {
+        "name": "Industrial_and_Scientific.valid.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.valid.csv.gz"
+      },
+      "test": {
+        "name": "Industrial_and_Scientific.test.csv.gz",
+        "url": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/last_out_w_his/Industrial_and_Scientific.test.csv.gz"
+      }
+    }
+  },
+  "protocol": {
+    "seeds": [3407, 6502, 9109],
+    "ks": [20, 50, 100],
+    "catalog": "all distinct train items",
+    "evaluationUsers": "test rows with train-known user and train-known target",
+    "excludeSeen": true,
+    "testTuningForbidden": true
+  },
+  "itemKnn": {
+    "similarity": "binary user co-occurrence cosine",
+    "implementation": "batched scipy CSR query-profile times normalized item-user co-occurrence",
+    "topNeighborLimit": null,
+    "candidateCatalog": "complete train catalog including deterministic zero-score ties",
+    "batchSize": 128
+  },
+  "bpr": {
+    "factors": 32,
+    "epochs": 4,
+    "batchSize": 8192,
+    "learningRate": 0.03,
+    "regularization": 0.0001
+  },
+  "twoTower": {
+    "embeddingDim": 32,
+    "hiddenDim": 64,
+    "outputDim": 32,
+    "temperature": 0.07,
+    "epochs": 3,
+    "batchSize": 512,
+    "learningRate": 0.001,
+    "maxHistory": 50
+  },
+  "ann": {
+    "m": 16,
+    "efConstruction": 200,
+    "efSearch": 200,
+    "benchmarkKs": [20, 50, 100]
+  },
+  "sequence": {
+    "status": "GATED_UNTIL_RETRIEVAL_BASELINE_STABLE",
+    "models": ["mean_pooling", "din_target_aware_attention"],
+    "candidateProtocol": "same frozen retrieval candidate set for both models"
+  },
+  "output": "artifacts/amazon-retrieval/amazon-retrieval-v1.json"
+}
