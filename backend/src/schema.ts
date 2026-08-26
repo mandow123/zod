@@ -6,6 +6,7 @@ import type { QueryResultRow } from 'pg';
 
 export type MigrationDefinition = Readonly<{ version: string; checksum: string; sql: string }>;
 export const migrationFileNamePattern = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*\.sql$/u;
+export const currentSchemaVersion = '0066_compute_data_flywheel_v1.sql';
 
 let cachedManifest: Promise<MigrationDefinition[]> | null = null;
 

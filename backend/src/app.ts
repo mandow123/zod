@@ -67,6 +67,8 @@ import { registerQixiangTopupRoutes } from './topups/qixiang-routes.js';
 import { registerQixiangRefundRoutes } from './topups/qixiang-refund-routes.js';
 import type { QixiangRefundService } from './topups/qixiang-refund-service.js';
 import type { QixiangTopupService } from './topups/qixiang-service.js';
+import { registerComputeIntelligenceRoutes } from './compute-intelligence/routes.js';
+import type { ComputeIntelligenceService } from './compute-intelligence/service.js';
 import {
   KAI_AUTH_ISSUER, KAI_AUTH_LOOPBACK_HOST, KAI_AUTH_LOOPBACK_PATH,
   KAI_AUTH_LOOPBACK_PORTS, KAI_AUTH_PUBLIC_CLIENT_ID, KAI_AUTH_REDIRECT_URIS,
@@ -108,6 +110,7 @@ type BuildAppOptions = Readonly<{
   supplierQuoteDirectoryService?: SupplierQuoteDirectoryService;
   qixiangTopupService?: QixiangTopupService;
   qixiangRefundService?: QixiangRefundService;
+  computeIntelligenceService?: ComputeIntelligenceService;
   qixiangNewTopupsAvailable?: () => boolean|Promise<boolean>;
   qixiangBootstrapCanary?: boolean;
   qixiangBootstrapCanaryTopupId?: string|null;
@@ -133,7 +136,7 @@ export function applicationLoggerOptions(){return{
   ],censor:'[REDACTED]'},
 };}
 
-export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, adminMetrics = adminProcessMetrics, supplierInquiryCatalogService, supplierQuoteDirectoryService, qixiangTopupService, qixiangRefundService, qixiangNewTopupsAvailable, qixiangBootstrapCanary=false, qixiangBootstrapCanaryTopupId=null, creditLotExpiryHealth, qixiangQueryWorkerHealth, logger = true }: BuildAppOptions) {
+export async function buildApp({ config, database, accountService, subjectService, marketService, notificationService, listingAuditService, operationsService, resourceEvidenceService, creditLedgerService, creditTopupService, topupReversalService, creditPayoutService, deviceCommerceService, shippingAddressService, creditOrderService, fulfillmentService, nodeEnrollmentService, kaiOidc, assetPortfolioService, vastMarketService, creatorCommissionService, resourceInquiryService, adminAuthService, adminAuthSettings, adminP0Service, adminMetrics = adminProcessMetrics, supplierInquiryCatalogService, supplierQuoteDirectoryService, qixiangTopupService, qixiangRefundService, computeIntelligenceService, qixiangNewTopupsAvailable, qixiangBootstrapCanary=false, qixiangBootstrapCanaryTopupId=null, creditLotExpiryHealth, qixiangQueryWorkerHealth, logger = true }: BuildAppOptions) {
   const inquiryOnly = config.mobileApiProfile === 'inquiry_only';
   const app = Fastify({
     logger: logger ? applicationLoggerOptions() : false,
@@ -237,7 +240,7 @@ export async function buildApp({ config, database, accountService, subjectServic
       const restoreReady=backupRecoveryState.restore.ready;
       const releaseBlockers = [...new Set([
         ...(databaseConnected ? [] : ['DATABASE_CONNECTION']),
-        ...(databaseReady ? [] : ['DATABASE_SCHEMA_0065']),
+        ...(databaseReady ? [] : ['DATABASE_SCHEMA_0066']),
         ...(accountService ? [] : ['ACCOUNT_SERVICE']),
         ...(subjectService ? [] : ['SUBJECT_SERVICE']),
         ...(resourceInquiryService ? [] : ['RESOURCE_INQUIRY_SERVICE']),
@@ -291,7 +294,7 @@ export async function buildApp({ config, database, accountService, subjectServic
             mode: supplierCatalogState.mode,
             ready: catalogReady,
             blockers: [...new Set([
-              ...(databaseReady ? [] : ['DATABASE_SCHEMA_0065']), ...supplierCatalogState.blockers,
+              ...(databaseReady ? [] : ['DATABASE_SCHEMA_0066']), ...supplierCatalogState.blockers,
             ])],
           },
           legacyCreatorMode: { mode: 'off', ready: false, blockers: [] },
@@ -314,7 +317,7 @@ export async function buildApp({ config, database, accountService, subjectServic
       });
     }
     const supplierCatalogBlockers=config.honghuanSupplierCatalogMode==='off'?[]:[...supplierCatalogState.blockers,
-      ...(!databaseReady?['DATABASE_SCHEMA_0065']:[])];
+      ...(!databaseReady?['DATABASE_SCHEMA_0066']:[])];
     const deploymentBlockers = [
       ...(databaseConnected ? [] : ['DATABASE_CONNECTION']),
       ...(databaseConnected && !schema.ready ? ['DATABASE_SCHEMA'] : []),
@@ -391,7 +394,7 @@ export async function buildApp({ config, database, accountService, subjectServic
           ready: databaseReady && config.readiness.capabilities.streamerRewards.available,
           blockers: [
             ...config.readiness.capabilities.streamerRewards.missing,
-            ...(config.streamerRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0061'] : []),
+            ...(config.streamerRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0066'] : []),
           ],
         },
         inviteRewards: {
@@ -399,7 +402,7 @@ export async function buildApp({ config, database, accountService, subjectServic
           ready: databaseReady && config.readiness.capabilities.inviteRewards.available,
           blockers: [
             ...config.readiness.capabilities.inviteRewards.missing,
-            ...(config.inviteRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0061'] : []),
+            ...(config.inviteRewardsMode !== 'off' && !databaseReady ? ['DATABASE_SCHEMA_0066'] : []),
           ],
         },
         honghuanSupplierCatalog: {
@@ -490,6 +493,9 @@ export async function buildApp({ config, database, accountService, subjectServic
   }
   if (accountService && marketService) await registerMarketRoutes(app, accountService, marketService);
   if (accountService && listingAuditService) await registerListingAuditRoutes(app, accountService, listingAuditService);
+  if (accountService && computeIntelligenceService) {
+    await registerComputeIntelligenceRoutes(app, accountService, computeIntelligenceService);
+  }
   if (accountService && notificationService) await registerNotificationRoutes(app, accountService, notificationService);
   if (accountService && resourceEvidenceService) await registerResourceEvidenceRoutes(app, accountService, resourceEvidenceService);
   if (accountService && creditLedgerService) await registerCreditRoutes(app, accountService, creditLedgerService);

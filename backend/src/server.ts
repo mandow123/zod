@@ -101,6 +101,11 @@ import { mobileRuntimePolicy } from './runtime-profile.js';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ComputeRequirementParser } from './compute-intelligence/parser.js';
+import { ComputeIntelligenceService } from './compute-intelligence/service.js';
+import { rankingWeightsFromEnvironment } from './compute-intelligence/engine.js';
+import { ComputeDataFlywheelService } from './compute-data/service.js';
+import { PostgresComputeDataFlywheelStore } from './compute-data/store.js';
 
 const config = loadConfig(process.env);
 if (config.NODE_ENV === 'production' && !config.readiness.coreReady) {
@@ -140,6 +145,14 @@ const marketService = marketStore && accountStore && subjectService && config.re
 const listingAuditService = listingStore && accountStore && subjectService && config.readiness.capabilities.accountSecurity.available
   ? new ListingAuditService(listingStore, accountStore, config, subjectService)
   : undefined;
+const computeIntelligenceService = commerceRuntime && database && listingStore && subjectService
+  && config.readiness.capabilities.accountSecurity.available
+  ? new ComputeIntelligenceService(
+    listingStore, subjectService, new ComputeRequirementParser(),
+    new ComputeDataFlywheelService(new PostgresComputeDataFlywheelStore(database)),
+    rankingWeightsFromEnvironment(process.env.KAI_COMPUTE_RANKING_WEIGHTS),
+    config.NODE_ENV, config.NODE_ENV === 'production' ? 'business' : 'synthetic',
+  ) : undefined;
 const notificationService = commerceRuntime && database && accountStore && config.readiness.capabilities.accountSecurity.available
   ? new NotificationService(new PostgresNotificationStore(database), accountStore, config)
   : undefined;
@@ -278,6 +291,7 @@ const app = await buildApp({
   ...(subjectService ? { subjectService } : {}),
   ...(marketService ? { marketService } : {}),
   ...(listingAuditService ? { listingAuditService } : {}),
+  ...(computeIntelligenceService ? { computeIntelligenceService } : {}),
   ...(notificationService ? { notificationService } : {}),
   ...(operationsService ? { operationsService } : {}),
   ...(resourceEvidenceService ? { resourceEvidenceService } : {}),

@@ -5,6 +5,8 @@ import { PostgresSettlementFeeStore } from '../settlement-fees/store.js';
 import { KAI_CREDIT_CENT_MICROS, isCreditCentAligned } from '../credits/precision.js';
 import { CreditLotAllocator } from '../credits/lot-allocator.js';
 import type { FulfillmentAttestation, FulfillmentRecord, SafeConnectionDescriptor } from './types.js';
+import { recordComputeJourneyEventInTransaction } from '../compute-data/service.js';
+import type { ComputeDataOrigin, ComputeJourneyEventName, RecordComputeJourneyEventInput } from '../compute-data/types.js';
 
 type FulfillmentRow = {
   id: string; order_id: string; buyer_subject_id: string; supplier_subject_id: string; resource_id: string;
@@ -405,8 +407,16 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
           provider_lease_id = NULL, connection = NULL, attestation_digest = NULL,
           failure_code = $2, failure_retryable = $3, failed_at = $4, version = version + 1
         WHERE id = $1 RETURNING ${columns}`, [current.id, code, retryable, now]);
-      await this.event(client, current.id, null, 'system', 'FULFILLMENT_FAILED', current.status, 'failed', {
+      const domainEventId = await this.event(client, current.id, null, 'system', 'FULFILLMENT_FAILED', current.status, 'failed', {
         code, retryable, releasedCreditMicros: held.credit_micros,
+      });
+      await this.journeyEvent(client, current.id, 'refund_requested', `${domainEventId}:refund-requested`, now, {
+        refundId: transactionId, orderId: current.orderId, fulfillmentId: current.id,
+        payload: { trigger: 'automatic_provisioning_failure' },
+      });
+      await this.journeyEvent(client, current.id, 'refunded', `${domainEventId}:refunded`, now, {
+        refundId: transactionId, orderId: current.orderId, fulfillmentId: current.id,
+        payload: { reason: 'provisioning_failure', refundCreditMicros: held.credit_micros, unit: 'KAI_CARD_HOUR' },
       });
       return map(result.rows[0]!);
   }
@@ -605,15 +615,21 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
     return this.database.transaction(async (client) => {
       const due = await client.query<{
         id: string; fulfillment_id: string; order_id: string; supplier_subject_id: string;
-        captured_credit_micros: string; accepted_at: Date;
+        captured_credit_micros: string; accepted_at: Date; unit_credit_micros: string; reference_cny_micros: string;
       }>(`SELECT a.id, a.fulfillment_id, a.order_id, f.supplier_subject_id,
-          a.captured_credit_micros::text, a.accepted_at
+          a.captured_credit_micros::text, a.accepted_at, o.unit_credit_micros::text,
+          o.listing_snapshot->>'referenceCnyMicros' AS reference_cny_micros
         FROM compute_fulfillment_acceptances a JOIN compute_fulfillments f ON f.id = a.fulfillment_id
+        JOIN kai_credit_orders o ON o.id=a.order_id
         WHERE a.accepted_at + interval '7 days' <= $1
           AND NOT EXISTS (SELECT 1 FROM compute_fulfillment_supplier_settlements s WHERE s.acceptance_id = a.id)
         ORDER BY a.accepted_at, a.id FOR UPDATE OF a SKIP LOCKED LIMIT $2`, [now, limit]);
       for (const row of due.rows) {
         const credit = BigInt(row.captured_credit_micros);
+        const unitCreditMicros = BigInt(row.unit_credit_micros);
+        const referenceCnyMicros = BigInt(row.reference_cny_micros);
+        const finalCnyMicros = credit === 0n ? 0n
+          : (credit * referenceCnyMicros + unitCreditMicros - 1n) / unitCreditMicros;
         let transactionId: string | null = null;
         let serviceFeeCreditMicros = 0n;
         if (credit > 0n) {
@@ -658,13 +674,20 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
             await client.query(`UPDATE kai_credit_transactions SET status='posted', posted_at=$2 WHERE id=$1`, [transactionId, now]);
           }
         }
+        const settlementId = randomUUID();
         await client.query(`INSERT INTO compute_fulfillment_supplier_settlements(id,fulfillment_id,acceptance_id,
           order_id,supplier_subject_id,credit_micros,service_fee_credit_micros,settlement_transaction_id,available_at,settled_at)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [randomUUID(), row.fulfillment_id, row.id, row.order_id, row.supplier_subject_id, credit.toString(),
+        [settlementId, row.fulfillment_id, row.id, row.order_id, row.supplier_subject_id, credit.toString(),
           serviceFeeCreditMicros.toString(), transactionId, new Date(row.accepted_at.getTime() + 7 * 86_400_000), now]);
         await client.query(`UPDATE kai_credit_orders SET status='closed',closed_at=$2
           WHERE id=$1 AND status='accepted'`, [row.order_id, now]);
+        await this.journeyEvent(client, row.fulfillment_id, 'settlement_completed', `${settlementId}:settled`, now, {
+          settlementId, orderId: row.order_id, fulfillmentId: row.fulfillment_id,
+          finalCostMicros: finalCnyMicros.toString(), currency: 'CNY',
+          payload: { capturedCreditMicros: credit.toString(), capturedCreditUnit: 'KAI_CARD_HOUR',
+            serviceFeeCreditMicros: serviceFeeCreditMicros.toString() },
+        });
       }
       return due.rows.length;
     });
@@ -695,7 +718,7 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
         input.descriptionCiphertext, input.descriptionDigest, input.now]);
       await client.query(`UPDATE kai_credit_orders SET status='disputed' WHERE id=$1`, [row.order_id]);
       await this.event(client, row.id, input.userId, 'user', 'FULFILLMENT_ISSUE_OPENED', 'stopped', 'stopped', {
-        issueId: id, kind: input.kind, descriptionDigest: input.descriptionDigest,
+        issueId: id, kind: input.kind, descriptionDigest: input.descriptionDigest, openedAt: input.now.toISOString(),
       });
       return { id, status: 'open' as const, openedAt: input.now };
     });
@@ -838,6 +861,12 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
       await client.query(`INSERT INTO compute_fulfillment_issue_decision_requests(operator_id,client_request_id,
         order_id,payload_digest,decision_id) VALUES ($1,$2,$3,$4,$5)`,
       [input.operatorId, input.clientRequestId, input.orderId, input.payloadDigest, decisionId]);
+      if (remedy > 0n) {
+        await this.journeyEvent(client, issue.fulfillment_id, 'refunded', `${decisionId}:refunded`, input.now, {
+          refundId: issue.id, orderId: issue.order_id, fulfillmentId: issue.fulfillment_id,
+          payload: { outcome: input.outcome, refundCreditMicros: remedy.toString(), unit: 'KAI_CARD_HOUR' },
+        });
+      }
       const resolved = await client.query<IssueRow>(`SELECT ${issueColumns} FROM compute_fulfillment_issues i
         LEFT JOIN compute_fulfillment_issue_decisions d ON d.issue_id=i.id
         JOIN kai_credit_orders o ON o.id=i.order_id JOIN compute_fulfillment_metering m ON m.fulfillment_id=i.fulfillment_id
@@ -861,11 +890,83 @@ export class PostgresFulfillmentStore implements FulfillmentStore {
     return { available, reserved };
   }
 
-  private event(client: PoolClient, id: string, actorId: string | null, actorKind: 'user' | 'provider' | 'system',
+  private async event(client: PoolClient, id: string, actorId: string | null, actorKind: 'user' | 'provider' | 'system',
     type: string, from: string | null, to: string, payload: Record<string, unknown>) {
-    return client.query(`INSERT INTO compute_fulfillment_events(id, fulfillment_id, actor_id, actor_kind,
+    const domainEventId = randomUUID();
+    await client.query(`INSERT INTO compute_fulfillment_events(id, fulfillment_id, actor_id, actor_kind,
       event_type, from_status, to_status, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-    [randomUUID(), id, actorId, actorKind, type, from, to, JSON.stringify(payload)]).then(() => undefined);
+    [domainEventId, id, actorId, actorKind, type, from, to, JSON.stringify(payload)]);
+    const state = await client.query<{
+      order_id: string; provisioning_at: Date | null; ready_at: Date | null; running_at: Date | null;
+      stopped_at: Date | null; failed_at: Date | null;
+    }>(`SELECT order_id,provisioning_at,ready_at,running_at,stopped_at,failed_at
+      FROM compute_fulfillments WHERE id=$1`, [id]);
+    const row = state.rows[0];
+    if (!row) return domainEventId;
+    if (type === 'FULFILLMENT_PROVISIONING' && row.provisioning_at) {
+      await this.journeyEvent(client, id, 'provisioning_started', `${domainEventId}:provisioning-started`,
+        row.provisioning_at, { orderId: row.order_id, fulfillmentId: id,
+          payload: { providerKey: String(payload.providerKey ?? 'unknown') } });
+    } else if (type === 'FULFILLMENT_READY' && row.ready_at) {
+      const latencyMs = row.provisioning_at
+        ? String(Math.max(0, row.ready_at.getTime() - row.provisioning_at.getTime())) : undefined;
+      await this.journeyEvent(client, id, 'provisioning_succeeded', `${domainEventId}:provisioning-succeeded`,
+        row.ready_at, { orderId: row.order_id, fulfillmentId: id, ...(latencyMs ? { latencyMs } : {}),
+          payload: { attestationDigest: String(payload.attestationDigest ?? 'unknown') } });
+    } else if (type === 'FULFILLMENT_FAILED' && row.failed_at) {
+      const eventName: ComputeJourneyEventName = from === 'provisioning' ? 'provisioning_failed' : 'failed';
+      await this.journeyEvent(client, id, eventName, `${domainEventId}:${eventName}`, row.failed_at, {
+        orderId: row.order_id, fulfillmentId: id, reasonCode: String(payload.code ?? 'COMPUTE_FULFILLMENT_FAILED'),
+        payload: { retryable: payload.retryable === true, failureDomain: 'provider' },
+      });
+    } else if (type === 'FULFILLMENT_RUNNING' && row.running_at) {
+      await this.journeyEvent(client, id, 'fulfillment_started', `${domainEventId}:fulfillment-started`,
+        row.running_at, { orderId: row.order_id, fulfillmentId: id, payload: { accessStarted: true } });
+    } else if (type === 'FULFILLMENT_STOPPED' && row.stopped_at) {
+      await this.journeyEvent(client, id, 'telemetry_observed', `${domainEventId}:telemetry`, row.stopped_at, {
+        orderId: row.order_id, fulfillmentId: id,
+        payload: { consumedCapacityMicros: String(payload.consumedCapacityMicros ?? '0'),
+          evidenceDigest: String(payload.meteringEvidenceDigest ?? 'unknown') },
+      });
+      await this.journeyEvent(client, id, 'fulfillment_completed', `${domainEventId}:fulfillment-completed`,
+        new Date(row.stopped_at.getTime() + 1), { orderId: row.order_id, fulfillmentId: id,
+          payload: { consumedCapacityMicros: String(payload.consumedCapacityMicros ?? '0') } });
+    } else if (type === 'FULFILLMENT_ISSUE_OPENED' && row.stopped_at) {
+      await this.journeyEvent(client, id, 'refund_requested', `${domainEventId}:refund-requested`,
+        new Date(String(payload.openedAt)), {
+        refundId: String(payload.issueId), orderId: row.order_id, fulfillmentId: id,
+        payload: { kind: String(payload.kind ?? 'unknown') },
+      });
+    }
+    return domainEventId;
+  }
+
+  private async journeyEvent(
+    client: PoolClient, fulfillmentId: string, eventName: ComputeJourneyEventName,
+    sourceEventId: string, occurredAt: Date, values: Partial<RecordComputeJourneyEventInput>,
+  ) {
+    const lineage = await client.query<{
+      request_id: string; ranking_run_id: string; candidate_key: string; data_origin: string;
+    }>(`SELECT request.id AS request_id, candidate.ranking_run_id, candidate.candidate_key,
+        candidate.data_origin
+      FROM compute_fulfillments fulfillment
+      JOIN kai_credit_orders orders ON orders.id=fulfillment.order_id
+      JOIN compute_data_requests request
+        ON request.id::text=orders.listing_snapshot->>'recommendationRunId'
+      JOIN compute_ranking_candidates candidate
+        ON candidate.ranking_run_id=request.id
+       AND candidate.candidate_key=orders.listing_snapshot->>'recommendationCandidateKey'
+      WHERE fulfillment.id=$1
+        AND orders.listing_snapshot ? 'recommendationRunId'
+        AND candidate.data_origin=request.data_origin`, [fulfillmentId]);
+    const row = lineage.rows[0];
+    if (!row || !['business', 'demo', 'synthetic'].includes(row.data_origin)) return;
+    await recordComputeJourneyEventInTransaction(client, {
+      ...values, id: randomUUID(), requestId: row.request_id, rankingRunId: row.ranking_run_id,
+      candidateKey: row.candidate_key, eventName, sourceEventId, occurredAt,
+      source: 'compute-fulfillment', sourceVersion: 'compute-fulfillment-v1',
+      dataOrigin: row.data_origin as Exclude<ComputeDataOrigin, 'seed_reference'>,
+    } as RecordComputeJourneyEventInput);
   }
 }
 

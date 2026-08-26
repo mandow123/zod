@@ -24,6 +24,7 @@
     "release:verify": "node scripts/verify-release.mjs --install",
     "deployment:verify": "node scripts/verify-deployment-contract.mjs",
     "catalog:import": "tsx scripts/import-supplier-catalog.ts",
+    "data:export": "node dist/compute-data/export.js",
     "inquiry:acceptance": "tsx scripts/inquiry-acceptance-server.ts",
     "inquiry:acceptance:verify": "node scripts/verify-inquiry-acceptance.mjs",
     "staging:sandbox": "tsx staging-sandbox/server.ts",

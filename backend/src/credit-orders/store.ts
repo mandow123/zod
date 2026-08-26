@@ -6,6 +6,8 @@ import type { CreditOrderRecord } from './types.js';
 import { formatCreditMicros, totalCreditMicros } from './types.js';
 import { formatCreditDisplayMicros } from '../credits/display.js';
 import { CreditLotAllocator } from '../credits/lot-allocator.js';
+import { recordComputeJourneyEventInTransaction } from '../compute-data/service.js';
+import type { ComputeDataOrigin, ComputeJourneyEventName, RecordComputeJourneyEventInput } from '../compute-data/types.js';
 
 type OrderRow = QueryResultRow & {
   id: string; order_number: string; buyer_subject_id: string; supplier_subject_id: string; created_by_user_id: string;
@@ -46,7 +48,8 @@ function mapOrder(row: OrderRow): CreditOrderRecord {
 
 export type CreateCreditOrderResult =
   | Readonly<{ status: 'created' | 'replayed'; order: CreditOrderRecord }>
-  | Readonly<{ status: 'conflict' | 'commerce_unavailable' | 'listing_unavailable' | 'insufficient_credits' | 'self_purchase' }>;
+  | Readonly<{ status: 'conflict' | 'commerce_unavailable' | 'listing_unavailable' | 'insufficient_credits' | 'self_purchase'
+    | 'recommendation_invalid' }>;
 
 export type CreditOrderActionResult =
   | Readonly<{ status: 'confirmed' | 'cancelled' | 'provisioning' | 'acceptance_pending' | 'accepted' | 'disputed' | 'refunded' | 'settled' | 'escalated' | 'aftercare_pending' | 'aftercare_escalated' | 'replayed'; order: CreditOrderRecord }>
@@ -62,6 +65,7 @@ export interface CreditOrderStore {
     quantityScaled: bigint; clientRequestId: string; payloadDigest: string; expiresAt: Date; now: Date;
     requestId: string; ipHash: string; computeFulfillmentAvailable: boolean;
     autoConfirmCompute?: boolean; nodeAcceleratorCountFallback?: number;
+    recommendationRunId?: string;
   }>): Promise<CreateCreditOrderResult>;
   getForSubject(subjectId: string, orderId: string): Promise<CreditOrderRecord | null>;
   listForSubject(subjectId: string, limit: number, side?: CreditOrderListSide, cursor?: CreditOrderListCursor | null): Promise<CreditOrderRecord[]>;
@@ -210,6 +214,24 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
       }
       if (!input.computeFulfillmentAvailable) return this.retryable(client, input, 'commerce_unavailable');
 
+      const recommendation = input.recommendationRunId ? await client.query<{
+        data_origin: Exclude<ComputeDataOrigin, 'seed_reference'>;
+      }>(`SELECT candidate.data_origin
+        FROM compute_ranking_candidates candidate
+        JOIN compute_data_requests request ON request.id=candidate.request_id
+        WHERE candidate.ranking_run_id=$1 AND candidate.request_id=$1
+          AND candidate.candidate_key=$2::text AND candidate.listing_id=$2::uuid AND candidate.eligible=true
+          AND candidate.quantity=$3::numeric
+          AND request.buyer_subject_id=$4
+          AND candidate.data_origin=request.data_origin
+          AND NOT EXISTS (SELECT 1 FROM compute_journey_events used
+            WHERE used.ranking_run_id=candidate.ranking_run_id
+              AND used.event_name='reservation_succeeded')`, [input.recommendationRunId, input.listingId,
+        input.quantity, input.buyerSubjectId]) : null;
+      if (input.recommendationRunId && !recommendation?.rows[0]) {
+        return this.retryable(client, input, 'recommendation_invalid');
+      }
+
       const listingResult = await client.query<{
         id: string; offer_id: string; resource_id: string; supplier_id: string; supplier_subject_id: string;
         title: string; product_code: string; region: string; capacity_unit: string; minimum_quantity: string;
@@ -284,6 +306,11 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
         unitCreditMicros: listing.unit_credit_micros, referenceCnyMicros: listing.reference_cny_micros,
         audits: listing.audit_snapshot,
         fulfillmentMode: autoConfirmCompute ? 'compute_sidecar_v1' : 'legacy_delivery',
+        ...(input.recommendationRunId ? {
+          recommendationRunId: input.recommendationRunId,
+          recommendationCandidateKey: input.listingId,
+          recommendationDataOrigin: recommendation!.rows[0]!.data_origin,
+        } : {}),
       };
       const order = await client.query<OrderRow>(`INSERT INTO kai_credit_orders(id, order_number, buyer_subject_id,
           supplier_subject_id, created_by_user_id, listing_id, client_request_id, payload_digest, quantity,
@@ -296,23 +323,57 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
         totalMicros.toString(), JSON.stringify(snapshot), input.expiresAt,
         autoConfirmCompute ? 'confirmed' : 'reserved', autoConfirmCompute ? input.now : null,
         autoConfirmCompute ? listing.published_by : null]);
+      const reservationId = randomUUID();
       await client.query(`INSERT INTO kai_credit_order_reservations(id, order_id, listing_id, buyer_subject_id,
           quantity, credit_micros, reservation_transaction_id, expires_at, status, secured_at, secured_by_user_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [randomUUID(), input.id, listing.id, input.buyerSubjectId, input.quantity, totalMicros.toString(),
+      [reservationId, input.id, listing.id, input.buyerSubjectId, input.quantity, totalMicros.toString(),
         reservationTransactionId, input.expiresAt, autoConfirmCompute ? 'secured' : 'active',
         autoConfirmCompute ? input.now : null, autoConfirmCompute ? listing.published_by : null]);
       await client.query(`UPDATE credit_market_listings SET capacity_reserved = capacity_reserved + $2,
         status = CASE WHEN capacity_total - capacity_reserved - capacity_sold - $2 < minimum_quantity THEN 'sold_out' ELSE status END
         WHERE id = $1`, [listing.id, input.quantity]);
+      let orderDomainEventId: string;
       if (autoConfirmCompute) {
-        await this.event(client, input.id, listing.published_by, 'system', 'ORDER_AUTO_CONFIRMED', null, 'confirmed', {
+        orderDomainEventId = await this.event(client, input.id, listing.published_by, 'system', 'ORDER_AUTO_CONFIRMED', null, 'confirmed', {
           reason: 'active_listing_capacity_commitment', resourceId: listing.resource_id, quantity: input.quantity,
           capacityUnit: listing.capacity_unit, totalCreditMicros: totalMicros.toString(),
         });
       } else {
-        await this.event(client, input.id, input.userId, 'user', 'ORDER_RESERVED', null, 'reserved', {
+        orderDomainEventId = await this.event(client, input.id, input.userId, 'user', 'ORDER_RESERVED', null, 'reserved', {
           quantity: input.quantity, capacityUnit: listing.capacity_unit, totalCreditMicros: totalMicros.toString(),
+        });
+      }
+      if (input.recommendationRunId) {
+        const acceptedCnyMicros = ((BigInt(listing.reference_cny_micros) * input.quantityScaled + 999_999n)
+          / 1_000_000n).toString();
+        const base = {
+          requestId: input.recommendationRunId, rankingRunId: input.recommendationRunId,
+          candidateKey: input.listingId, occurredAt: input.now, source: 'credit-orders',
+          sourceVersion: 'credit-orders-v1', dataOrigin: recommendation!.rows[0]!.data_origin,
+        } as const;
+        const write = (eventName: ComputeJourneyEventName, suffix: string,
+          values: Partial<RecordComputeJourneyEventInput>) => recordComputeJourneyEventInTransaction(client, {
+            ...base, ...values, id: randomUUID(), eventName,
+            sourceEventId: `${orderDomainEventId}:${suffix}`,
+          } as RecordComputeJourneyEventInput);
+        const selected = await client.query(`SELECT 1 FROM compute_journey_events
+          WHERE ranking_run_id=$1 AND event_name='selected'`, [input.recommendationRunId]);
+        if (!selected.rowCount) await write('selected', 'selected', { orderId: input.id, occurredAt: input.now,
+          payload: { selectionChannel: 'compute-intelligence' } });
+        const quoteId = `order-quote:${input.id}`;
+        await write('quote_created', 'quote-created', { quoteId, orderId: input.id,
+          occurredAt: new Date(input.now.getTime() + 1),
+          payload: { unit: 'CNY_MICROS_PER_GPU_HOUR', unitPriceMicros: listing.reference_cny_micros,
+            offerId: listing.offer_id } });
+        await write('quote_accepted', 'quote-accepted', { quoteId, orderId: input.id,
+          occurredAt: new Date(input.now.getTime() + 2),
+          acceptedPriceMicros: acceptedCnyMicros, currency: 'CNY',
+          payload: { unit: 'CNY_MICROS_TOTAL', quantity: input.quantity,
+            reservedCreditMicros: totalMicros.toString(), reservedCreditUnit: 'KAI_CARD_HOUR' } });
+        await write('reservation_succeeded', 'reservation-succeeded', {
+          reservationId, orderId: input.id, occurredAt: new Date(input.now.getTime() + 3),
+          payload: { reservationStatus: autoConfirmCompute ? 'secured' : 'active' },
         });
       }
       await client.query(`INSERT INTO audit_events(id, actor_id, actor_kind, action, entity_type, entity_id,
@@ -1790,9 +1851,53 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
     for (const user of users.rows) await this.notifyUser(client, user.user_id, title, body, route, orderId, subjectId);
   }
 
-  private async retryable(client: PoolClient, input: Parameters<CreditOrderStore['createReservation']>[0], status: 'commerce_unavailable' | 'listing_unavailable' | 'insufficient_credits' | 'self_purchase') {
+  private async retryable(client: PoolClient, input: Parameters<CreditOrderStore['createReservation']>[0], status: 'commerce_unavailable' | 'listing_unavailable' | 'insufficient_credits' | 'self_purchase' | 'recommendation_invalid') {
     await client.query(`UPDATE kai_credit_order_requests SET state = 'retryable', last_result = $3
       WHERE buyer_subject_id = $1 AND client_request_id = $2`, [input.buyerSubjectId, input.clientRequestId, status]);
+    if (input.recommendationRunId && status !== 'recommendation_invalid') {
+      const recommendation = await client.query<{
+        data_origin: Exclude<ComputeDataOrigin, 'seed_reference'>; listed_price_micros: string;
+      }>(`SELECT candidate.data_origin,candidate.listed_price_micros::text
+        FROM compute_ranking_candidates candidate
+        JOIN compute_data_requests request ON request.id=candidate.request_id
+        WHERE candidate.ranking_run_id=$1 AND candidate.request_id=$1
+          AND candidate.candidate_key=$2::text AND candidate.listing_id=$2::uuid AND candidate.eligible=true
+          AND candidate.quantity=$3::numeric AND request.buyer_subject_id=$4
+          AND candidate.listed_price_micros IS NOT NULL
+          AND candidate.data_origin=request.data_origin`, [input.recommendationRunId, input.listingId,
+        input.quantity, input.buyerSubjectId]);
+      const row = recommendation.rows[0];
+      if (row) {
+        const base = {
+          requestId: input.recommendationRunId, rankingRunId: input.recommendationRunId,
+          candidateKey: input.listingId, occurredAt: input.now, source: 'credit-orders',
+          sourceVersion: 'credit-orders-v1', dataOrigin: row.data_origin,
+        } as const;
+        const write = (eventName: ComputeJourneyEventName, suffix: string,
+          values: Partial<RecordComputeJourneyEventInput>) => recordComputeJourneyEventInTransaction(client, {
+            ...base, ...values, id: randomUUID(), eventName, sourceEventId: `${input.id}:${suffix}`,
+          } as RecordComputeJourneyEventInput);
+        const selected = await client.query(`SELECT 1 FROM compute_journey_events
+          WHERE ranking_run_id=$1 AND event_name='selected'`, [input.recommendationRunId]);
+        if (!selected.rowCount) await write('selected', 'selected', { occurredAt: input.now,
+          payload: { selectionChannel: 'compute-intelligence' },
+        });
+        const quoteId = `order-quote-attempt:${input.id}`;
+        const acceptedCnyMicros = ((BigInt(row.listed_price_micros) * input.quantityScaled + 999_999n)
+          / 1_000_000n).toString();
+        await write('quote_created', 'quote-created', { quoteId, occurredAt: new Date(input.now.getTime() + 1),
+          payload: { unit: 'CNY_MICROS_PER_GPU_HOUR', unitPriceMicros: row.listed_price_micros } });
+        await write('quote_accepted', 'quote-accepted', { quoteId, occurredAt: new Date(input.now.getTime() + 2),
+          acceptedPriceMicros: acceptedCnyMicros, currency: 'CNY',
+          payload: { unit: 'CNY_MICROS_TOTAL', quantity: input.quantity } });
+        await write('reservation_failed', 'reservation-failed', {
+          reservationId: `reservation-attempt:${input.id}`, reasonCode: status,
+          occurredAt: new Date(input.now.getTime() + 3),
+          payload: { failureDomain: status === 'self_purchase' ? 'user' : status === 'commerce_unavailable'
+            ? 'platform' : status === 'listing_unavailable' ? 'inventory' : 'credit' },
+        });
+      }
+    }
     return { status } as const;
   }
 
@@ -1830,11 +1935,13 @@ export class PostgresCreditOrderStore implements CreditOrderStore {
     return { buyerReserved, supplierReceivable };
   }
 
-  private event(client: PoolClient, orderId: string, actorId: string | null, actorKind: 'user' | 'operator' | 'system' | 'provider',
+  private async event(client: PoolClient, orderId: string, actorId: string | null, actorKind: 'user' | 'operator' | 'system' | 'provider',
     eventType: string, fromStatus: string | null, toStatus: string, payload: Record<string, unknown>) {
-    return client.query(`INSERT INTO kai_credit_order_events(id, order_id, actor_id, actor_kind, event_type,
+    const id = randomUUID();
+    await client.query(`INSERT INTO kai_credit_order_events(id, order_id, actor_id, actor_kind, event_type,
       from_status, to_status, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-    [randomUUID(), orderId, actorId, actorKind, eventType, fromStatus, toStatus, JSON.stringify(payload)]).then(() => undefined);
+    [id, orderId, actorId, actorKind, eventType, fromStatus, toStatus, JSON.stringify(payload)]);
+    return id;
   }
 
   private async notifySupplier(client: PoolClient, subjectId: string, orderId: string, orderNumber: string,

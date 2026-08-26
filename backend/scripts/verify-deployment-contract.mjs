@@ -207,7 +207,7 @@ for (const [name, unit] of [['backend', backend], ['migration', migrate], ['back
 check('migration_before_loopback_backend', backend.includes('Requires=cloudpay-mobile-migrate.service')
   && backend.includes('ExecStartPre=/usr/bin/node scripts/verify-production-env.mjs')
   && backend.includes('ExecStart=/usr/bin/node dist/server.js') && migrate.includes('ExecStart=/usr/bin/node dist/migrate.js'),
-  '0065 migration gate before 127.0.0.1:4100 service');
+  '0066 migration gate before 127.0.0.1:4100 service');
 check('local_encrypted_backup_schedule', backupService.includes('ExecStart=/usr/bin/node dist/backups/backup.js')
   && backupService.includes('ReadWritePaths=/var/lib/kai-cloudpay-backup')
   && backupTimer.includes('OnCalendar=*-*-* *:17:00') && backupTimer.includes('Persistent=yes'),

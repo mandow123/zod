@@ -36,7 +36,7 @@ export class CreditOrderService {
   }
 
   async create(principal: AccountPrincipal, input: Readonly<{
-    listingId: string; quantity: string; idempotencyKey: string;
+    listingId: string; quantity: string; idempotencyKey: string; recommendationRunId?: string;
   }>, context: RequestContext) {
     if (!/^[A-Za-z0-9:_-]{16,120}$/u.test(input.idempotencyKey)) {
       throw new AppError('IDEMPOTENCY_KEY_INVALID', 400, '下单请求缺少有效的幂等标识。');
@@ -46,6 +46,7 @@ export class CreditOrderService {
     const subject = await this.subjects.current(principal.userId, 'orders.buy');
     const payloadDigest = secretHash(JSON.stringify({
       subjectId: subject.subjectId, listingId: input.listingId, quantity: quantity.normalized,
+      recommendationRunId: input.recommendationRunId ?? null,
     }), this.auditPepper);
     const now = this.now();
     const orderId = randomUUID();
@@ -58,6 +59,7 @@ export class CreditOrderService {
       ipHash: secretHash(context.ip || 'unknown', this.auditPepper),
       computeFulfillmentAvailable: this.computeFulfillmentAvailable, autoConfirmCompute: true,
       nodeAcceleratorCountFallback: this.nodeAcceleratorCountFallback,
+      ...(input.recommendationRunId ? { recommendationRunId: input.recommendationRunId } : {}),
     });
     if (result.status === 'conflict') throw new AppError('IDEMPOTENCY_KEY_CONFLICT', 409, '同一请求标识对应了不同的订单内容。');
     if (result.status === 'commerce_unavailable') throw new AppError('COMPUTE_FULFILLMENT_UNAVAILABLE', 503,
@@ -65,6 +67,8 @@ export class CreditOrderService {
     if (result.status === 'listing_unavailable') throw new AppError('LISTING_CAPACITY_UNAVAILABLE', 409, '当前可售数量不足，或该资源已停止接单。');
     if (result.status === 'insufficient_credits') throw new AppError('KAI_CREDIT_INSUFFICIENT', 409, '可用卡时不足，请先充值或减少购买数量。');
     if (result.status === 'self_purchase') throw new AppError('SELF_PURCHASE_NOT_ALLOWED', 409, '不能购买当前交易主体自己上架的资源。');
+    if (result.status === 'recommendation_invalid') throw new AppError('RECOMMENDATION_SELECTION_INVALID', 409,
+      '推荐已失效，或所选资源不在该次推荐候选中。');
     if (result.status !== 'created' && result.status !== 'replayed') throw new Error('KAI_CREDIT_ORDER_RESULT_INVALID');
     let responseOrder = result.order;
     if (result.order.status === 'confirmed' && this.fulfillment) {

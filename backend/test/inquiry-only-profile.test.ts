@@ -34,8 +34,8 @@ const config = loadConfig(inquiryEnvironment);
 const database = {
   health: async () => true,
   schemaReadiness: async () => ({
-    ready: true, expected: '0065_credit_order_transition_closure.sql',
-    applied: '0065_credit_order_transition_closure.sql', missing: [], mismatched: [],
+    ready: true, expected: '0066_compute_data_flywheel_v1.sql',
+    applied: '0066_compute_data_flywheel_v1.sql', missing: [], mismatched: [],
   }),
 };
 

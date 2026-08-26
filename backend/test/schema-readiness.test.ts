@@ -2,7 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { migrationManifest, verifySchema } from '../src/schema.js';
+import { currentSchemaVersion, migrationManifest, verifySchema } from '../src/schema.js';
 
 describe('database schema release gate', () => {
   it('requires every bundled migration with its original checksum while allowing forward-compatible additions', { timeout: 30_000 }, async () => {
@@ -11,6 +11,8 @@ describe('database schema release gate', () => {
       version text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now()
     )`);
     const migrations = await migrationManifest();
+    expect(migrations).toHaveLength(67);
+    expect(migrations.at(-1)?.version).toBe(currentSchemaVersion);
     for (const migration of migrations.slice(0, -1)) {
       await database.query('INSERT INTO schema_migrations(version, checksum) VALUES ($1, $2)', [migration.version, migration.checksum]);
     }
