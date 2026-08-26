@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "position-bias-open-bandit-small-v1",
+  "status": "PRE_REGISTERED_NOT_RUN",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "dataset": {
+    "name": "Open Bandit Dataset small",
+    "provider": "ZOZO, Inc. / Open Bandit Project",
+    "campaign": "all",
+    "behaviorPolicies": ["bts", "random"],
+    "officialSourceUrl": "https://research.zozo.com/data.html",
+    "officialRepositoryUrl": "https://github.com/st-tech/zr-obp/tree/master/obd",
+    "paperUrl": "https://arxiv.org/abs/2008.07146",
+    "repositoryRevision": "8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4",
+    "terms": {
+      "repositoryLicense": "Apache-2.0",
+      "datasetLicense": "CC BY 4.0",
+      "datasetLicenseEvidence": "README inside the official full archive",
+      "datasetPageStatement": "Published for research use; cite the Open Bandit Dataset paper.",
+      "separateDatasetLicenseLocated": true,
+      "usageBoundary": "offline_research_no_production_performance_claim"
+    },
+    "fullArchive": {
+      "id": "open_bandit_dataset_full_v1_0",
+      "relativePath": "data/raw/position-bias/open_bandit_dataset.zip",
+      "url": "https://research.zozo.com/data_release/open_bandit_dataset.zip",
+      "sha256": "e8ec18196582a5937381a1776382ca940689b90a18d2dcd1fb635be6df614d78",
+      "bytes": 412931917,
+      "version": "1.0",
+      "allCampaign": {
+        "btsMember": "open_bandit_dataset/bts/all/all.csv",
+        "btsRows": 12357200,
+        "randomMember": "open_bandit_dataset/random/all/all.csv",
+        "randomRows": 1374327
+      }
+    },
+    "files": [
+      {
+        "id": "bts_all",
+        "relativePath": "data/raw/position-bias/open-bandit-small/bts/all/all.csv",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/bts/all/all.csv",
+        "sha256": "0ad874e4dbf6902f0845dd478ad8dde5ef6903583d3ffaace78411bdad064106",
+        "bytes": 5084456
+      },
+      {
+        "id": "random_all",
+        "relativePath": "data/raw/position-bias/open-bandit-small/random/all/all.csv",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/random/all/all.csv",
+        "sha256": "7168295b6e0a9eabcf3392320a5dd434e542b68e705d5cd9491499af589812f1",
+        "bytes": 5039451
+      },
+      {
+        "id": "item_context",
+        "relativePath": "data/raw/position-bias/open-bandit-small/bts/all/item_context.csv",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/bts/all/item_context.csv",
+        "sha256": "5d4359ba1cfa3ae88f0f1bae66bd633859fe6323817183632ee57b83539d9153",
+        "bytes": 10041
+      }
+    ]
+  },
+  "propensity": {
+    "column": "propensity_score",
+    "provenance": "Probability that the logging policy displays the observed item at the observed position. The authors describe BTS values as true action-choice probabilities computed by Monte Carlo simulation from production policy parameters.",
+    "isExaminationPropensity": false,
+    "causalBoundary": "Supports logged action-selection OPE under overlap/consistency assumptions; does not identify or remove latent position examination bias."
+  },
+  "split": {
+    "method": "within_policy_stable_timestamp_order",
+    "trainFraction": 0.6,
+    "devFraction": 0.2,
+    "testFraction": 0.2,
+    "testSetPolicy": "No model, feature, clipping-threshold, or estimator selection on test data."
+  },
+  "seeds": [3407, 6502, 9109],
+  "targetPolicy": {
+    "name": "uniform_random",
+    "actionCount": 80,
+    "actionProbabilityAtEachPosition": 0.0125
+  },
+  "models": {
+    "family": "logistic_regression_reward_model",
+    "maxIterations": 500,
+    "regularizationC": 1.0,
+    "baseFeatures": [
+      "item_id",
+      "user_feature_0",
+      "user_feature_1",
+      "user_feature_2",
+      "user_feature_3",
+      "selected_user_item_affinity",
+      "item_feature_0",
+      "item_feature_1",
+      "item_feature_2",
+      "item_feature_3"
+    ],
+    "positionFeature": "position"
+  },
+  "baselines": [
+    "naive",
+    "position_as_feature",
+    "ips",
+    "snips",
+    "ips_clipped"
+  ],
+  "clippingThresholds": [0.01, 0.02, 0.05, 0.1],
+  "metrics": [
+    "on_policy_random_ctr",
+    "off_policy_value",
+    "absolute_error_to_on_policy",
+    "random_test_log_loss",
+    "random_test_brier",
+    "random_test_ece",
+    "weighted_bts_test_log_loss",
+    "effective_sample_size",
+    "weight_variance",
+    "clipped_count",
+    "calibration_by_position"
+  ],
+  "fullOpe": {
+    "status": "PRE_REGISTERED_NOT_RUN",
+    "scope": "all_campaign_full_archive_test_partition",
+    "splitMethod": "fixed_timestamp_cutoff",
+    "testStartTimestamp": "2019-11-29T14:24:00Z",
+    "chunkRows": 250000,
+    "rewardModelScope": "small_quickstart_only",
+    "reason": "Full OPE uses every held-out row; the small reward-model run remains a separate calibration/code-path result."
+  }
+}

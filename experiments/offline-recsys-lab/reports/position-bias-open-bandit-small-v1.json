@@ -1,0 +1,2079 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "position-bias-open-bandit-small-v1",
+  "status": "COMPLETE",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "datasetScope": "official_quickstart_sample_10000_rows_per_policy_not_full_26m",
+  "source": {
+    "id": "open-bandit-dataset-small",
+    "officialUrl": "https://research.zozo.com/data.html",
+    "officialSourceUrl": "https://research.zozo.com/data.html",
+    "officialRepositoryUrl": "https://github.com/st-tech/zr-obp/tree/master/obd",
+    "paperUrl": "https://arxiv.org/abs/2008.07146",
+    "repositoryRevision": "8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4",
+    "terms": "CC BY 4.0 dataset license; citation requested by the official provider.",
+    "termsDetail": {
+      "repositoryLicense": "Apache-2.0",
+      "datasetLicense": "CC BY 4.0",
+      "datasetLicenseEvidence": "README inside the official full archive",
+      "datasetPageStatement": "Published for research use; cite the Open Bandit Dataset paper.",
+      "separateDatasetLicenseLocated": true,
+      "usageBoundary": "offline_research_no_production_performance_claim"
+    }
+  },
+  "evidence": {
+    "datasetFiles": [
+      {
+        "id": "bts_all",
+        "name": "bts_all",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/bts/all/all.csv",
+        "sha256": "0ad874e4dbf6902f0845dd478ad8dde5ef6903583d3ffaace78411bdad064106",
+        "bytes": 5084456
+      },
+      {
+        "id": "random_all",
+        "name": "random_all",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/random/all/all.csv",
+        "sha256": "7168295b6e0a9eabcf3392320a5dd434e542b68e705d5cd9491499af589812f1",
+        "bytes": 5039451
+      },
+      {
+        "id": "item_context",
+        "name": "item_context",
+        "url": "https://raw.githubusercontent.com/st-tech/zr-obp/8cbd5fa4558b7ad2ba4781546d6604e4cc3e07c4/obd/bts/all/item_context.csv",
+        "sha256": "5d4359ba1cfa3ae88f0f1bae66bd633859fe6323817183632ee57b83539d9153",
+        "bytes": 10041
+      }
+    ],
+    "configSha256": "49c1224d7616a13e1e3d2210a9dcbc1e5486f0b8eb0cc4f8c4415098d6dae36b",
+    "splitSha256": "c2d1164e7ad9a816051898f1bb482e45fcb31f6116c20ad5eaf144b74ed6ff44"
+  },
+  "protocol": {
+    "seeds": [
+      3407,
+      6502,
+      9109
+    ],
+    "counts": {
+      "btsRows": 10000,
+      "btsClicks": 42,
+      "btsTrainRows": 6000,
+      "btsDevRows": 2000,
+      "btsTestRows": 2000,
+      "randomRows": 10000,
+      "randomClicks": 38,
+      "randomTrainRows": 6000,
+      "randomDevRows": 2000,
+      "randomTestRows": 2000,
+      "actions": 80,
+      "positions": 3
+    },
+    "countDetails": {
+      "bts": {
+        "rows": 10000,
+        "actions": 80,
+        "positions": {
+          "1": 3362,
+          "2": 3317,
+          "3": 3321
+        },
+        "clicks": 42,
+        "splitRows": {
+          "train": 6000,
+          "dev": 2000,
+          "test": 2000
+        },
+        "testClicks": 5
+      },
+      "random": {
+        "rows": 10000,
+        "actions": 80,
+        "positions": {
+          "1": 3322,
+          "2": 3412,
+          "3": 3266
+        },
+        "clicks": 38,
+        "splitRows": {
+          "train": 6000,
+          "dev": 2000,
+          "test": 2000
+        },
+        "testClicks": 6
+      }
+    },
+    "propensity": {
+      "column": "propensity_score",
+      "provenance": "Probability that the logging policy displays the observed item at the observed position. The authors describe BTS values as true action-choice probabilities computed by Monte Carlo simulation from production policy parameters.",
+      "isExaminationPropensity": false,
+      "causalBoundary": "Supports logged action-selection OPE under overlap/consistency assumptions; does not identify or remove latent position examination bias."
+    },
+    "targetPolicy": {
+      "name": "uniform_random",
+      "actionCount": 80,
+      "actionProbabilityAtEachPosition": 0.0125
+    },
+    "clippingThresholds": [
+      0.01,
+      0.02,
+      0.05,
+      0.1
+    ],
+    "featureParity": {
+      "naive_ips_snips_and_clipped": "same_base_features_without_position",
+      "position_as_feature": "same_base_features_plus_position_only"
+    },
+    "split": {
+      "method": "within_policy_stable_timestamp_order",
+      "trainFraction": 0.6,
+      "devFraction": 0.2,
+      "testFraction": 0.2,
+      "testSetPolicy": "No model, feature, clipping-threshold, or estimator selection on test data."
+    }
+  },
+  "results": {
+    "policyValueEstimates": {
+      "on_policy_random": {
+        "estimate": 0.003,
+        "absoluteErrorToOnPolicy": 0.0
+      },
+      "naive_bts": {
+        "estimate": 0.0025,
+        "absoluteErrorToOnPolicy": 0.0005
+      },
+      "position_as_feature_standardization": {
+        "estimate": 0.002544263157894737,
+        "absoluteErrorToOnPolicy": 0.0004557368421052631
+      },
+      "ips": {
+        "estimate": 0.0006064483139692485,
+        "absoluteErrorToOnPolicy": 0.0023935516860307516,
+        "effectiveSampleSize": 45.06842201173994,
+        "weightVariance": 66.96883987191538,
+        "maxWeight": 277.77777777777777,
+        "meanWeight": 1.2425297131926327,
+        "clippedCount": 0,
+        "clippingFloor": null
+      },
+      "snips": {
+        "estimate": 0.00048807550236444863,
+        "absoluteErrorToOnPolicy": 0.0025119244976355513,
+        "effectiveSampleSize": 45.06842201173994,
+        "weightVariance": 66.96883987191538,
+        "maxWeight": 277.77777777777777,
+        "meanWeight": 1.2425297131926327,
+        "clippedCount": 0,
+        "clippingFloor": null
+      },
+      "ips_clipped_0p01": {
+        "estimate": 0.0006064483139692485,
+        "absoluteErrorToOnPolicy": 0.0023935516860307516,
+        "effectiveSampleSize": 897.9621593147092,
+        "weightVariance": 0.17602935335782113,
+        "maxWeight": 1.25,
+        "meanWeight": 0.37872442163447806,
+        "clippedCount": 269,
+        "clippingFloor": 0.01
+      },
+      "snips_clipped_0p01": {
+        "estimate": 0.0016012918083074023,
+        "absoluteErrorToOnPolicy": 0.0013987081916925978,
+        "effectiveSampleSize": 897.9621593147092,
+        "weightVariance": 0.17602935335782113,
+        "maxWeight": 1.25,
+        "meanWeight": 0.37872442163447806,
+        "clippedCount": 269,
+        "clippingFloor": 0.01
+      },
+      "ips_clipped_0p02": {
+        "estimate": 0.0005831073682411437,
+        "absoluteErrorToOnPolicy": 0.0024168926317588565,
+        "effectiveSampleSize": 1191.9693368924977,
+        "weightVariance": 0.05004138861584887,
+        "maxWeight": 0.625,
+        "meanWeight": 0.27169603286492816,
+        "clippedCount": 441,
+        "clippingFloor": 0.02
+      },
+      "snips_clipped_0p02": {
+        "estimate": 0.002146175496537454,
+        "absoluteErrorToOnPolicy": 0.000853824503462546,
+        "effectiveSampleSize": 1191.9693368924977,
+        "weightVariance": 0.05004138861584887,
+        "maxWeight": 0.625,
+        "meanWeight": 0.27169603286492816,
+        "clippedCount": 441,
+        "clippingFloor": 0.02
+      },
+      "ips_clipped_0p05": {
+        "estimate": 0.00035046989716451364,
+        "absoluteErrorToOnPolicy": 0.0026495301028354864,
+        "effectiveSampleSize": 1607.106756857862,
+        "weightVariance": 0.006582523256596486,
+        "maxWeight": 0.25,
+        "meanWeight": 0.1640896862431756,
+        "clippedCount": 792,
+        "clippingFloor": 0.05
+      },
+      "snips_clipped_0p05": {
+        "estimate": 0.0021358435450058,
+        "absoluteErrorToOnPolicy": 0.0008641564549941999,
+        "effectiveSampleSize": 1607.106756857862,
+        "weightVariance": 0.006582523256596486,
+        "maxWeight": 0.25,
+        "meanWeight": 0.1640896862431756,
+        "clippedCount": 792,
+        "clippingFloor": 0.05
+      },
+      "ips_clipped_0p1": {
+        "estimate": 0.0002254698971645137,
+        "absoluteErrorToOnPolicy": 0.0027745301028354865,
+        "effectiveSampleSize": 1863.7882743115276,
+        "weightVariance": 0.0008068919034133956,
+        "maxWeight": 0.125,
+        "meanWeight": 0.1050748355148207,
+        "clippedCount": 1161,
+        "clippingFloor": 0.1
+      },
+      "snips_clipped_0p1": {
+        "estimate": 0.0021458029989750624,
+        "absoluteErrorToOnPolicy": 0.0008541970010249376,
+        "effectiveSampleSize": 1863.7882743115276,
+        "weightVariance": 0.0008068919034133956,
+        "maxWeight": 0.125,
+        "meanWeight": 0.1050748355148207,
+        "clippedCount": 1161,
+        "clippingFloor": 0.1
+      }
+    },
+    "rewardModelsBySeed": {
+      "3407": {
+        "naive": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02230424583290736,
+            "brier": 0.0030313368124402643,
+            "ece": 0.0023605527154743075,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0054424792651582565,
+                "absoluteCalibrationGap": 0.0008970247197037113
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005020191011774168,
+                "absoluteCalibrationGap": 0.002057228048811205
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005624722079694141,
+                "absoluteCalibrationGap": 0.0041209626811979
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.00764467457684542,
+            "brier": 0.0005200690737905897,
+            "ece": 0.0027683147764851874,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005239612703092757,
+                "absoluteCalibrationGap": 0.005239612703092757
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005203933854091536,
+                "absoluteCalibrationGap": 0.0008179689418108347
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.005370506270295471,
+                "absoluteCalibrationGap": 0.0021705062702954705
+              }
+            }
+          }
+        },
+        "position_as_feature": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022149961573918152,
+            "brier": 0.0030293973501406782,
+            "ece": 0.002219196097444723,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0058711605887091746,
+                "absoluteCalibrationGap": 0.0013257060432546293
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0047227841346062106,
+                "absoluteCalibrationGap": 0.0017598211716432477
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005076010399221348,
+                "absoluteCalibrationGap": 0.0035722510007251077
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007689057646358353,
+            "brier": 0.0005216733291897703,
+            "ece": 0.002727946672410843,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.0057424558824177505,
+                "absoluteCalibrationGap": 0.0057424558824177505
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00497813529010885,
+                "absoluteCalibrationGap": 0.0005921703778281485
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0049324988666185066,
+                "absoluteCalibrationGap": 0.0017324988666185064
+              }
+            }
+          }
+        },
+        "ips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 18.09867247544767,
+            "maxWeight": 138.88888888888889,
+            "meanWeight": 0.9274671877508973,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.025123567103768826,
+            "brier": 0.003365967029926028,
+            "ece": 0.0017314981449783118,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.003907492854655966,
+                "absoluteCalibrationGap": 0.0006379616907985792
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004420838990025319,
+                "absoluteCalibrationGap": 0.0014578760270623566
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005864638627994878,
+                "absoluteCalibrationGap": 0.004360879229498637
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005937526633526008,
+            "brier": 0.000508526252144183,
+            "ece": 0.0015942095847115013,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004044270982919289,
+                "absoluteCalibrationGap": 0.004044270982919289
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004098272849508123,
+                "absoluteCalibrationGap": 0.0002876920627725788
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.004144974865859548,
+                "absoluteCalibrationGap": 0.000944974865859548
+              }
+            }
+          }
+        },
+        "snips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 21.040187851075117,
+            "maxWeight": 149.75073050906917,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02522479706033338,
+            "brier": 0.00337780127081366,
+            "ece": 0.0017012964863172473,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0038599469710047917,
+                "absoluteCalibrationGap": 0.0006855075744497535
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004382955944247846,
+                "absoluteCalibrationGap": 0.001419992981284883
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005859447683314338,
+                "absoluteCalibrationGap": 0.004355688284818097
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005870568603278937,
+            "brier": 0.0005081874014159385,
+            "ece": 0.0015754214224035026,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004019512686689823,
+                "absoluteCalibrationGap": 0.004019512686689823
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004079062247196256,
+                "absoluteCalibrationGap": 0.00030690266508444537
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0041332496019553565,
+                "absoluteCalibrationGap": 0.0009332496019553564
+              }
+            }
+          }
+        },
+        "ips_clipped_0p01": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 2774.526322270879,
+            "weightVariance": 0.17512251011974597,
+            "maxWeight": 1.25,
+            "meanWeight": 0.38812235728619515,
+            "clippedCount": 770,
+            "clippingFloor": 0.01
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022312387619760354,
+            "brier": 0.003018519348557904,
+            "ece": 0.0019591625447928293,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.004871449884868048,
+                "absoluteCalibrationGap": 0.00032599533941350244
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004792529508517616,
+                "absoluteCalibrationGap": 0.0018295665455546535
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005215354507253168,
+                "absoluteCalibrationGap": 0.003711595108756927
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007880347258878501,
+            "brier": 0.000519500964958765,
+            "ece": 0.0033563257851416182,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005778429766212064,
+                "absoluteCalibrationGap": 0.005778429766212064
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005869545452896291,
+                "absoluteCalibrationGap": 0.0014835805406155896
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0059279800192794194,
+                "absoluteCalibrationGap": 0.0027279800192794193
+              }
+            }
+          }
+        },
+        "ips_clipped_0p02": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 3611.009281269063,
+            "weightVariance": 0.052266332271810434,
+            "maxWeight": 0.625,
+            "meanWeight": 0.2810723233793275,
+            "clippedCount": 1382,
+            "clippingFloor": 0.02
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02241316771536583,
+            "brier": 0.0030180464504789236,
+            "ece": 0.0027410329598603544,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.005731727306302662,
+                "absoluteCalibrationGap": 0.0011862727608481166
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005562994040496372,
+                "absoluteCalibrationGap": 0.002600031077533409
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005930984842444964,
+                "absoluteCalibrationGap": 0.004427225443948723
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.009010777251775858,
+            "brier": 0.0005341113335170664,
+            "ece": 0.004057498974773584,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.006495981260384646,
+                "absoluteCalibrationGap": 0.006495981260384646
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.006556762004033226,
+                "absoluteCalibrationGap": 0.0021707970917525243
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.006626319500580244,
+                "absoluteCalibrationGap": 0.003426319500580244
+              }
+            }
+          }
+        },
+        "ips_clipped_0p05": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 4729.937906494314,
+            "weightVariance": 0.007395671392636859,
+            "maxWeight": 0.25,
+            "meanWeight": 0.16596023675878074,
+            "clippedCount": 2572,
+            "clippingFloor": 0.05
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022779922679271855,
+            "brier": 0.0030252930442881106,
+            "ece": 0.004238005235258779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.007249243721716661,
+                "absoluteCalibrationGap": 0.002703789176262116
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0070638187565714465,
+                "absoluteCalibrationGap": 0.004100855793608483
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.007403657072930581,
+                "absoluteCalibrationGap": 0.00589989767443434
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.010442031424308197,
+            "brier": 0.0005525702710406182,
+            "ece": 0.004844766070485772,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.007364618912279262,
+                "absoluteCalibrationGap": 0.007364618912279262
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.007291049939135046,
+                "absoluteCalibrationGap": 0.0029050850268543442
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.007381603702749128,
+                "absoluteCalibrationGap": 0.004181603702749127
+              }
+            }
+          }
+        },
+        "ips_clipped_0p1": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 5436.085811303528,
+            "weightVariance": 0.0010899340696508618,
+            "maxWeight": 0.125,
+            "meanWeight": 0.10250304216043732,
+            "clippedCount": 3650,
+            "clippingFloor": 0.1
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.023462952887598233,
+            "brier": 0.003040115567875276,
+            "ece": 0.005616782559530779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.008621286788271317,
+                "absoluteCalibrationGap": 0.004075832242816772
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.008466022922560346,
+                "absoluteCalibrationGap": 0.005503059959597384
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.008765338896352268,
+                "absoluteCalibrationGap": 0.007261579497856027
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.012096200498412986,
+            "brier": 0.0005857663791772349,
+            "ece": 0.005719356820835403,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.008262087231531125,
+                "absoluteCalibrationGap": 0.008262087231531125
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00818996743885432,
+                "absoluteCalibrationGap": 0.003804002526573619
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.008204277818410316,
+                "absoluteCalibrationGap": 0.005004277818410317
+              }
+            }
+          }
+        }
+      },
+      "6502": {
+        "naive": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02230424583290736,
+            "brier": 0.0030313368124402643,
+            "ece": 0.0023605527154743075,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0054424792651582565,
+                "absoluteCalibrationGap": 0.0008970247197037113
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005020191011774168,
+                "absoluteCalibrationGap": 0.002057228048811205
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005624722079694141,
+                "absoluteCalibrationGap": 0.0041209626811979
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.00764467457684542,
+            "brier": 0.0005200690737905897,
+            "ece": 0.0027683147764851874,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005239612703092757,
+                "absoluteCalibrationGap": 0.005239612703092757
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005203933854091536,
+                "absoluteCalibrationGap": 0.0008179689418108347
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.005370506270295471,
+                "absoluteCalibrationGap": 0.0021705062702954705
+              }
+            }
+          }
+        },
+        "position_as_feature": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022149961573918152,
+            "brier": 0.0030293973501406782,
+            "ece": 0.002219196097444723,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0058711605887091746,
+                "absoluteCalibrationGap": 0.0013257060432546293
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0047227841346062106,
+                "absoluteCalibrationGap": 0.0017598211716432477
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005076010399221348,
+                "absoluteCalibrationGap": 0.0035722510007251077
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007689057646358353,
+            "brier": 0.0005216733291897703,
+            "ece": 0.002727946672410843,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.0057424558824177505,
+                "absoluteCalibrationGap": 0.0057424558824177505
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00497813529010885,
+                "absoluteCalibrationGap": 0.0005921703778281485
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0049324988666185066,
+                "absoluteCalibrationGap": 0.0017324988666185064
+              }
+            }
+          }
+        },
+        "ips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 18.09867247544767,
+            "maxWeight": 138.88888888888889,
+            "meanWeight": 0.9274671877508973,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.025123567103768826,
+            "brier": 0.003365967029926028,
+            "ece": 0.0017314981449783118,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.003907492854655966,
+                "absoluteCalibrationGap": 0.0006379616907985792
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004420838990025319,
+                "absoluteCalibrationGap": 0.0014578760270623566
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005864638627994878,
+                "absoluteCalibrationGap": 0.004360879229498637
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005937526633526008,
+            "brier": 0.000508526252144183,
+            "ece": 0.0015942095847115013,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004044270982919289,
+                "absoluteCalibrationGap": 0.004044270982919289
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004098272849508123,
+                "absoluteCalibrationGap": 0.0002876920627725788
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.004144974865859548,
+                "absoluteCalibrationGap": 0.000944974865859548
+              }
+            }
+          }
+        },
+        "snips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 21.040187851075117,
+            "maxWeight": 149.75073050906917,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02522479706033338,
+            "brier": 0.00337780127081366,
+            "ece": 0.0017012964863172473,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0038599469710047917,
+                "absoluteCalibrationGap": 0.0006855075744497535
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004382955944247846,
+                "absoluteCalibrationGap": 0.001419992981284883
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005859447683314338,
+                "absoluteCalibrationGap": 0.004355688284818097
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005870568603278937,
+            "brier": 0.0005081874014159385,
+            "ece": 0.0015754214224035026,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004019512686689823,
+                "absoluteCalibrationGap": 0.004019512686689823
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004079062247196256,
+                "absoluteCalibrationGap": 0.00030690266508444537
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0041332496019553565,
+                "absoluteCalibrationGap": 0.0009332496019553564
+              }
+            }
+          }
+        },
+        "ips_clipped_0p01": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 2774.526322270879,
+            "weightVariance": 0.17512251011974597,
+            "maxWeight": 1.25,
+            "meanWeight": 0.38812235728619515,
+            "clippedCount": 770,
+            "clippingFloor": 0.01
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022312387619760354,
+            "brier": 0.003018519348557904,
+            "ece": 0.0019591625447928293,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.004871449884868048,
+                "absoluteCalibrationGap": 0.00032599533941350244
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004792529508517616,
+                "absoluteCalibrationGap": 0.0018295665455546535
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005215354507253168,
+                "absoluteCalibrationGap": 0.003711595108756927
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007880347258878501,
+            "brier": 0.000519500964958765,
+            "ece": 0.0033563257851416182,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005778429766212064,
+                "absoluteCalibrationGap": 0.005778429766212064
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005869545452896291,
+                "absoluteCalibrationGap": 0.0014835805406155896
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0059279800192794194,
+                "absoluteCalibrationGap": 0.0027279800192794193
+              }
+            }
+          }
+        },
+        "ips_clipped_0p02": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 3611.009281269063,
+            "weightVariance": 0.052266332271810434,
+            "maxWeight": 0.625,
+            "meanWeight": 0.2810723233793275,
+            "clippedCount": 1382,
+            "clippingFloor": 0.02
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02241316771536583,
+            "brier": 0.0030180464504789236,
+            "ece": 0.0027410329598603544,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.005731727306302662,
+                "absoluteCalibrationGap": 0.0011862727608481166
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005562994040496372,
+                "absoluteCalibrationGap": 0.002600031077533409
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005930984842444964,
+                "absoluteCalibrationGap": 0.004427225443948723
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.009010777251775858,
+            "brier": 0.0005341113335170664,
+            "ece": 0.004057498974773584,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.006495981260384646,
+                "absoluteCalibrationGap": 0.006495981260384646
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.006556762004033226,
+                "absoluteCalibrationGap": 0.0021707970917525243
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.006626319500580244,
+                "absoluteCalibrationGap": 0.003426319500580244
+              }
+            }
+          }
+        },
+        "ips_clipped_0p05": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 4729.937906494314,
+            "weightVariance": 0.007395671392636859,
+            "maxWeight": 0.25,
+            "meanWeight": 0.16596023675878074,
+            "clippedCount": 2572,
+            "clippingFloor": 0.05
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022779922679271855,
+            "brier": 0.0030252930442881106,
+            "ece": 0.004238005235258779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.007249243721716661,
+                "absoluteCalibrationGap": 0.002703789176262116
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0070638187565714465,
+                "absoluteCalibrationGap": 0.004100855793608483
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.007403657072930581,
+                "absoluteCalibrationGap": 0.00589989767443434
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.010442031424308197,
+            "brier": 0.0005525702710406182,
+            "ece": 0.004844766070485772,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.007364618912279262,
+                "absoluteCalibrationGap": 0.007364618912279262
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.007291049939135046,
+                "absoluteCalibrationGap": 0.0029050850268543442
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.007381603702749128,
+                "absoluteCalibrationGap": 0.004181603702749127
+              }
+            }
+          }
+        },
+        "ips_clipped_0p1": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 5436.085811303528,
+            "weightVariance": 0.0010899340696508618,
+            "maxWeight": 0.125,
+            "meanWeight": 0.10250304216043732,
+            "clippedCount": 3650,
+            "clippingFloor": 0.1
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.023462952887598233,
+            "brier": 0.003040115567875276,
+            "ece": 0.005616782559530779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.008621286788271317,
+                "absoluteCalibrationGap": 0.004075832242816772
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.008466022922560346,
+                "absoluteCalibrationGap": 0.005503059959597384
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.008765338896352268,
+                "absoluteCalibrationGap": 0.007261579497856027
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.012096200498412986,
+            "brier": 0.0005857663791772349,
+            "ece": 0.005719356820835403,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.008262087231531125,
+                "absoluteCalibrationGap": 0.008262087231531125
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00818996743885432,
+                "absoluteCalibrationGap": 0.003804002526573619
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.008204277818410316,
+                "absoluteCalibrationGap": 0.005004277818410317
+              }
+            }
+          }
+        }
+      },
+      "9109": {
+        "naive": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02230424583290736,
+            "brier": 0.0030313368124402643,
+            "ece": 0.0023605527154743075,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0054424792651582565,
+                "absoluteCalibrationGap": 0.0008970247197037113
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005020191011774168,
+                "absoluteCalibrationGap": 0.002057228048811205
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005624722079694141,
+                "absoluteCalibrationGap": 0.0041209626811979
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.00764467457684542,
+            "brier": 0.0005200690737905897,
+            "ece": 0.0027683147764851874,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005239612703092757,
+                "absoluteCalibrationGap": 0.005239612703092757
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005203933854091536,
+                "absoluteCalibrationGap": 0.0008179689418108347
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.005370506270295471,
+                "absoluteCalibrationGap": 0.0021705062702954705
+              }
+            }
+          }
+        },
+        "position_as_feature": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 6000.0,
+            "weightVariance": 0.0,
+            "maxWeight": 1.0,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022149961573918152,
+            "brier": 0.0030293973501406782,
+            "ece": 0.002219196097444723,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0058711605887091746,
+                "absoluteCalibrationGap": 0.0013257060432546293
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0047227841346062106,
+                "absoluteCalibrationGap": 0.0017598211716432477
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005076010399221348,
+                "absoluteCalibrationGap": 0.0035722510007251077
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007689057646358353,
+            "brier": 0.0005216733291897703,
+            "ece": 0.002727946672410843,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.0057424558824177505,
+                "absoluteCalibrationGap": 0.0057424558824177505
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00497813529010885,
+                "absoluteCalibrationGap": 0.0005921703778281485
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0049324988666185066,
+                "absoluteCalibrationGap": 0.0017324988666185064
+              }
+            }
+          }
+        },
+        "ips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 18.09867247544767,
+            "maxWeight": 138.88888888888889,
+            "meanWeight": 0.9274671877508973,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.025123567103768826,
+            "brier": 0.003365967029926028,
+            "ece": 0.0017314981449783118,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.003907492854655966,
+                "absoluteCalibrationGap": 0.0006379616907985792
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004420838990025319,
+                "absoluteCalibrationGap": 0.0014578760270623566
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005864638627994878,
+                "absoluteCalibrationGap": 0.004360879229498637
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005937526633526008,
+            "brier": 0.000508526252144183,
+            "ece": 0.0015942095847115013,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004044270982919289,
+                "absoluteCalibrationGap": 0.004044270982919289
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004098272849508123,
+                "absoluteCalibrationGap": 0.0002876920627725788
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.004144974865859548,
+                "absoluteCalibrationGap": 0.000944974865859548
+              }
+            }
+          }
+        },
+        "snips": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 272.22998463269994,
+            "weightVariance": 21.040187851075117,
+            "maxWeight": 149.75073050906917,
+            "meanWeight": 1.0,
+            "clippedCount": 0,
+            "clippingFloor": null
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02522479706033338,
+            "brier": 0.00337780127081366,
+            "ece": 0.0017012964863172473,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.0038599469710047917,
+                "absoluteCalibrationGap": 0.0006855075744497535
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004382955944247846,
+                "absoluteCalibrationGap": 0.001419992981284883
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005859447683314338,
+                "absoluteCalibrationGap": 0.004355688284818097
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.005870568603278937,
+            "brier": 0.0005081874014159385,
+            "ece": 0.0015754214224035026,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.004019512686689823,
+                "absoluteCalibrationGap": 0.004019512686689823
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.004079062247196256,
+                "absoluteCalibrationGap": 0.00030690266508444537
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0041332496019553565,
+                "absoluteCalibrationGap": 0.0009332496019553564
+              }
+            }
+          }
+        },
+        "ips_clipped_0p01": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 2774.526322270879,
+            "weightVariance": 0.17512251011974597,
+            "maxWeight": 1.25,
+            "meanWeight": 0.38812235728619515,
+            "clippedCount": 770,
+            "clippingFloor": 0.01
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022312387619760354,
+            "brier": 0.003018519348557904,
+            "ece": 0.0019591625447928293,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.004871449884868048,
+                "absoluteCalibrationGap": 0.00032599533941350244
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.004792529508517616,
+                "absoluteCalibrationGap": 0.0018295665455546535
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005215354507253168,
+                "absoluteCalibrationGap": 0.003711595108756927
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.007880347258878501,
+            "brier": 0.000519500964958765,
+            "ece": 0.0033563257851416182,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.005778429766212064,
+                "absoluteCalibrationGap": 0.005778429766212064
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.005869545452896291,
+                "absoluteCalibrationGap": 0.0014835805406155896
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.0059279800192794194,
+                "absoluteCalibrationGap": 0.0027279800192794193
+              }
+            }
+          }
+        },
+        "ips_clipped_0p02": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 3611.009281269063,
+            "weightVariance": 0.052266332271810434,
+            "maxWeight": 0.625,
+            "meanWeight": 0.2810723233793275,
+            "clippedCount": 1382,
+            "clippingFloor": 0.02
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.02241316771536583,
+            "brier": 0.0030180464504789236,
+            "ece": 0.0027410329598603544,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.005731727306302662,
+                "absoluteCalibrationGap": 0.0011862727608481166
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.005562994040496372,
+                "absoluteCalibrationGap": 0.002600031077533409
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.005930984842444964,
+                "absoluteCalibrationGap": 0.004427225443948723
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.009010777251775858,
+            "brier": 0.0005341113335170664,
+            "ece": 0.004057498974773584,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.006495981260384646,
+                "absoluteCalibrationGap": 0.006495981260384646
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.006556762004033226,
+                "absoluteCalibrationGap": 0.0021707970917525243
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.006626319500580244,
+                "absoluteCalibrationGap": 0.003426319500580244
+              }
+            }
+          }
+        },
+        "ips_clipped_0p05": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 4729.937906494314,
+            "weightVariance": 0.007395671392636859,
+            "maxWeight": 0.25,
+            "meanWeight": 0.16596023675878074,
+            "clippedCount": 2572,
+            "clippingFloor": 0.05
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.022779922679271855,
+            "brier": 0.0030252930442881106,
+            "ece": 0.004238005235258779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.007249243721716661,
+                "absoluteCalibrationGap": 0.002703789176262116
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.0070638187565714465,
+                "absoluteCalibrationGap": 0.004100855793608483
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.007403657072930581,
+                "absoluteCalibrationGap": 0.00589989767443434
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.010442031424308197,
+            "brier": 0.0005525702710406182,
+            "ece": 0.004844766070485772,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.007364618912279262,
+                "absoluteCalibrationGap": 0.007364618912279262
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.007291049939135046,
+                "absoluteCalibrationGap": 0.0029050850268543442
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.007381603702749128,
+                "absoluteCalibrationGap": 0.004181603702749127
+              }
+            }
+          }
+        },
+        "ips_clipped_0p1": {
+          "weightDiagnostics": {
+            "effectiveSampleSize": 5436.085811303528,
+            "weightVariance": 0.0010899340696508618,
+            "maxWeight": 0.125,
+            "meanWeight": 0.10250304216043732,
+            "clippedCount": 3650,
+            "clippingFloor": 0.1
+          },
+          "randomTest": {
+            "rows": 2000,
+            "clicks": 6,
+            "logLoss": 0.023462952887598233,
+            "brier": 0.003040115567875276,
+            "ece": 0.005616782559530779,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 660,
+                "clicks": 3,
+                "observedCtr": 0.004545454545454545,
+                "meanPredictedCtr": 0.008621286788271317,
+                "absoluteCalibrationGap": 0.004075832242816772
+              },
+              "2": {
+                "rows": 675,
+                "clicks": 2,
+                "observedCtr": 0.002962962962962963,
+                "meanPredictedCtr": 0.008466022922560346,
+                "absoluteCalibrationGap": 0.005503059959597384
+              },
+              "3": {
+                "rows": 665,
+                "clicks": 1,
+                "observedCtr": 0.0015037593984962407,
+                "meanPredictedCtr": 0.008765338896352268,
+                "absoluteCalibrationGap": 0.007261579497856027
+              }
+            }
+          },
+          "btsTestWeightedToRandom": {
+            "rows": 2000,
+            "clicks": 5,
+            "logLoss": 0.012096200498412986,
+            "brier": 0.0005857663791772349,
+            "ece": 0.005719356820835403,
+            "calibrationByPosition": {
+              "1": {
+                "rows": 691,
+                "clicks": 0,
+                "observedCtr": 0.0,
+                "meanPredictedCtr": 0.008262087231531125,
+                "absoluteCalibrationGap": 0.008262087231531125
+              },
+              "2": {
+                "rows": 684,
+                "clicks": 3,
+                "observedCtr": 0.0043859649122807015,
+                "meanPredictedCtr": 0.00818996743885432,
+                "absoluteCalibrationGap": 0.003804002526573619
+              },
+              "3": {
+                "rows": 625,
+                "clicks": 2,
+                "observedCtr": 0.0032,
+                "meanPredictedCtr": 0.008204277818410316,
+                "absoluteCalibrationGap": 0.005004277818410317
+              }
+            }
+          }
+        }
+      }
+    },
+    "rewardModelAggregate": {
+      "ips": {
+        "randomTest_logLoss_mean": 0.025123567103768826,
+        "randomTest_logLoss_std": 0.0,
+        "randomTest_brier_mean": 0.003365967029926028,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.0017314981449783118,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.005937526633526008,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.0006379616907985792,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.0014578760270623568,
+        "position2CalibrationGap_std": 2.168404344971009e-19,
+        "position3CalibrationGap_mean": 0.004360879229498637,
+        "position3CalibrationGap_std": 0.0
+      },
+      "ips_clipped_0p01": {
+        "randomTest_logLoss_mean": 0.022312387619760354,
+        "randomTest_logLoss_std": 0.0,
+        "randomTest_brier_mean": 0.003018519348557904,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.0019591625447928293,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.007880347258878501,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.00032599533941350244,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.0018295665455546537,
+        "position2CalibrationGap_std": 2.168404344971009e-19,
+        "position3CalibrationGap_mean": 0.003711595108756927,
+        "position3CalibrationGap_std": 0.0
+      },
+      "ips_clipped_0p02": {
+        "randomTest_logLoss_mean": 0.02241316771536583,
+        "randomTest_logLoss_std": 0.0,
+        "randomTest_brier_mean": 0.0030180464504789236,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.002741032959860354,
+        "randomTest_ece_std": 4.336808689942018e-19,
+        "btsTestWeightedLogLoss_mean": 0.009010777251775858,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.0011862727608481166,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.002600031077533409,
+        "position2CalibrationGap_std": 0.0,
+        "position3CalibrationGap_mean": 0.004427225443948723,
+        "position3CalibrationGap_std": 0.0
+      },
+      "ips_clipped_0p05": {
+        "randomTest_logLoss_mean": 0.022779922679271855,
+        "randomTest_logLoss_std": 0.0,
+        "randomTest_brier_mean": 0.003025293044288111,
+        "randomTest_brier_std": 4.336808689942018e-19,
+        "randomTest_ece_mean": 0.004238005235258779,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.010442031424308197,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.002703789176262116,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.004100855793608483,
+        "position2CalibrationGap_std": 0.0,
+        "position3CalibrationGap_mean": 0.00589989767443434,
+        "position3CalibrationGap_std": 0.0
+      },
+      "ips_clipped_0p1": {
+        "randomTest_logLoss_mean": 0.023462952887598237,
+        "randomTest_logLoss_std": 3.469446951953614e-18,
+        "randomTest_brier_mean": 0.003040115567875276,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.005616782559530779,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.012096200498412986,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.004075832242816772,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.005503059959597383,
+        "position2CalibrationGap_std": 8.673617379884035e-19,
+        "position3CalibrationGap_mean": 0.007261579497856027,
+        "position3CalibrationGap_std": 0.0
+      },
+      "naive": {
+        "randomTest_logLoss_mean": 0.022304245832907365,
+        "randomTest_logLoss_std": 3.469446951953614e-18,
+        "randomTest_brier_mean": 0.0030313368124402647,
+        "randomTest_brier_std": 4.336808689942018e-19,
+        "randomTest_ece_mean": 0.0023605527154743075,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.00764467457684542,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.0008970247197037113,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.002057228048811205,
+        "position2CalibrationGap_std": 0.0,
+        "position3CalibrationGap_mean": 0.0041209626811979,
+        "position3CalibrationGap_std": 0.0
+      },
+      "position_as_feature": {
+        "randomTest_logLoss_mean": 0.02214996157391815,
+        "randomTest_logLoss_std": 3.469446951953614e-18,
+        "randomTest_brier_mean": 0.0030293973501406782,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.002219196097444723,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.007689057646358352,
+        "btsTestWeightedLogLoss_std": 8.673617379884035e-19,
+        "position1CalibrationGap_mean": 0.0013257060432546293,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.0017598211716432475,
+        "position2CalibrationGap_std": 2.168404344971009e-19,
+        "position3CalibrationGap_mean": 0.0035722510007251077,
+        "position3CalibrationGap_std": 0.0
+      },
+      "snips": {
+        "randomTest_logLoss_mean": 0.02522479706033338,
+        "randomTest_logLoss_std": 0.0,
+        "randomTest_brier_mean": 0.00337780127081366,
+        "randomTest_brier_std": 0.0,
+        "randomTest_ece_mean": 0.0017012964863172473,
+        "randomTest_ece_std": 0.0,
+        "btsTestWeightedLogLoss_mean": 0.005870568603278937,
+        "btsTestWeightedLogLoss_std": 0.0,
+        "position1CalibrationGap_mean": 0.0006855075744497535,
+        "position1CalibrationGap_std": 0.0,
+        "position2CalibrationGap_mean": 0.0014199929812848827,
+        "position2CalibrationGap_std": 2.168404344971009e-19,
+        "position3CalibrationGap_mean": 0.004355688284818097,
+        "position3CalibrationGap_std": 0.0
+      }
+    }
+  },
+  "limitations": [
+    "The official small files contain only 10,000 rows per policy and very few clicks; estimates and calibration bins have high sampling uncertainty.",
+    "The logged propensity is item-at-position action-selection probability, not user examination propensity; this run does not causally identify or remove position examination bias.",
+    "Position-as-feature may learn the presentation shortcut and is an associational baseline, not a debiasing method.",
+    "The reward models are trained only on the BTS train partition and evaluated on a temporally later random-policy sample; no test result selected a feature, clipping threshold, or model.",
+    "The official full archive identifies the dataset license as CC BY 4.0; this offline run still makes no production-performance claim.",
+    "Offline OPE and calibration results are not evidence of online CTR or revenue lift.",
+    "The three seed runs use a deterministic convex LR solver, so zero between-seed standard deviation is not a sampling-uncertainty estimate."
+  ],
+  "resultSha256": "4aa39b082a1da8ecd4e2411afa547d7ca5af7e9ee00a6b336c24ad4c3cf936b1"
+}

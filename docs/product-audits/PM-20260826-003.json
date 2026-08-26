@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-003",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T09:14:36Z",
+  "baseCommit": "a37ee3fd03953b8aa0e5fb4ba4345814114104e8",
+  "stagedDiffSha256": "0097c22e5c6cf0b886605439dce70de1d26106b0216c5e5e2bded47a257a8ae2",
+  "summary": "批准 KAI Offline RecSys Lab Public Offline V1 及本地招聘演示候选提交。审计确认除本批准记录外，109 个暂存文件全部位于独立 experiments/offline-recsys-lab，未修改 Production、0066、Data Flywheel、订单、支付或业务 schema；原始数据、虚拟环境、模型权重、artifacts 和生成 ZIP 均由 Git 忽略。公开结果保留 Two-Tower 近随机、DIN 无稳定提升、深度 CTR 未全面超过 LR、clipping 增加估计误差及 CVR/ESMM 未运行等负结果，没有通过测试集调参或伪造指标。来源账本明确 Amazon 研究用途且未获数据集许可、Criteo 非商业相同方式共享、Open Bandit 署名要求，productionBusinessDataAllowed=false；本批准只覆盖代码和本地离线研究提交，不批准公开网站发布、商业使用、生产接入或线上效果声明。重新执行 source/report boundary、五份公开报告校验、Playground 本地只读校验、70 项测试、可迁移 ZIP 完整性均通过；中文页面从冻结 JSON 和明确派生 fixture 读取数字，缺少 BPR/Two-Tower 用户级 trace 时 fail closed，不生成替代推荐。批准当前精确 base/diff 摘要形成 V1 commit/tag；后续 Two-Tower V2 必须作为独立提交，仅用 dev 选择配置并保留一次固定 full-catalog test 的正负结果。"
+}

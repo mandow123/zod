@@ -1,0 +1,65 @@
+{
+  "experimentId": "criteo-ctr-public-fixed-subset-v1",
+  "seeds": [3407, 6502, 9109],
+  "source": {
+    "id": "criteo-1tb-click-logs",
+    "dataset": "Criteo 1TB Click Logs",
+    "publisher": "Criteo AI Lab",
+    "officialUrl": "https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/",
+    "officialRepository": "https://huggingface.co/datasets/criteo/CriteoClickLogs",
+    "termsUrl": "https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/",
+    "terms": "Criteo official terms apply CC BY-NC-SA 4.0 and limit licensed use to noncommercial purposes with attribution and share-alike conditions.",
+    "license": "CC-BY-NC-SA-4.0",
+    "usage": "noncommercial_offline_research_only"
+  },
+  "dataset": {
+    "rawFile": "data/raw/criteo-ctr/day-2015-02-15-part-00079.parquet",
+    "inputTsv": "data/processed/criteo-ctr/day-2015-02-15-part-00079-first-60000.tsv",
+    "rowLimit": 60000,
+    "samplingRule": "first 60000 physical rows from the pinned day=2015-02-15 part-00079 parquet shard; no label-conditioned sampling"
+  },
+  "split": {
+    "trainFraction": 0.7,
+    "devFraction": 0.15,
+    "testFraction": 0.15,
+    "semantics": "fixed contiguous source-order blocks; not described as chronological because parquet conversion order was not independently audited"
+  },
+  "preprocessing": {
+    "numeric": "log1p_nonnegative_then_train_zscore",
+    "categorical": "train_frequency_cap_then_oov",
+    "minCategoryCount": 2,
+    "maxCategoriesPerFeature": 10000,
+    "fitScope": "train_only"
+  },
+  "training": {
+    "device": "auto",
+    "epochs": 3,
+    "batchSize": 2048,
+    "learningRate": 0.001,
+    "weightDecay": 0.00001,
+    "selection": "minimum dev LogLoss checkpoint only; test never selects epochs or hyperparameters"
+  },
+  "models": {
+    "lr": {"maxIter": 200},
+    "deepfm": {
+      "embeddingDim": 8,
+      "hiddenDims": [64, 32],
+      "initialization": "zero first-order embeddings and Normal(0,0.01) factor embeddings"
+    },
+    "dcnv2": {"embeddingDim": 8, "crossDepth": 2, "hiddenDims": [64, 32]}
+  },
+  "metrics": ["ROC-AUC", "PR-AUC", "LogLoss", "Brier Score", "ECE"],
+  "implementationAudit": {
+    "priorRunStatus": "INVALIDATED_IMPLEMENTATION_RUN_NO_CLAIM",
+    "reason": "Default unit-scale categorical factor embeddings caused 39-field FM initial logits and train/dev LogLoss to explode; corrected from train/dev evidence before the final run.",
+    "priorRunDeepFmTrainingDigest": "11a2dbae709f90c918491986b17e5ddda846b8beb283dbbda6ff8782f5a7016c"
+  },
+  "limitations": [
+    "This is a fixed 60000-row prefix of one official parquet shard, not the full 1TB or 24-day dataset.",
+    "The shard belongs to one published day, but the Hugging Face parquet conversion order was not independently audited; the split is source-order, not claimed temporal.",
+    "Criteo states positive and negative examples were subsampled at different rates, so raw probabilities are not population CTR without correction.",
+    "Hashed categorical feature semantics are undisclosed.",
+    "Offline public-data metrics do not establish KAI production, online lift, or business performance.",
+    "CC BY-NC-SA 4.0 restricts this dataset use to noncommercial purposes under its terms."
+  ]
+}

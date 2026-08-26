@@ -1,0 +1,1165 @@
+{
+  "claimableOnlinePerformance": false,
+  "dataOrigin": "public",
+  "dataset": {
+    "positiveRows": 1786,
+    "rowsRead": 60000,
+    "samplingRule": "first 60000 physical rows from the pinned day=2015-02-15 part-00079 parquet shard; no label-conditioned sampling",
+    "scope": "one_official_parquet_shard_fixed_prefix_not_full_1tb_dataset"
+  },
+  "evidence": {
+    "configSha256": "f8f6b7be473ae28d5f0f27104c50f10fa7d831defba7230559e1cdd16142d6c1",
+    "datasetFiles": [
+      {
+        "bytes": 47872279,
+        "name": "day-2015-02-15-part-00079.parquet",
+        "role": "official_raw_parquet_shard",
+        "sha256": "d0733ed6b4925d0dceadca865e50cfefbccfe8c2f2e5a2d49166aa6368e2435d"
+      },
+      {
+        "bytes": 16285356,
+        "name": "day-2015-02-15-part-00079-first-60000.tsv",
+        "role": "deterministic_fixed_prefix_tsv",
+        "sha256": "be0cbeacaedb579f64d4d2d0c6243e4240e5fb1581df9a1d75861dcd5e66502b"
+      }
+    ],
+    "splitSha256": "857c6be8314aba44e9edf7acbf93e6421abfc75888dc63db9bd32545de629064"
+  },
+  "experimentId": "criteo-ctr-public-fixed-subset-v1",
+  "limitations": [
+    "This is a fixed 60000-row prefix of one official parquet shard, not the full 1TB or 24-day dataset.",
+    "The shard belongs to one published day, but the Hugging Face parquet conversion order was not independently audited; the split is source-order, not claimed temporal.",
+    "Criteo states positive and negative examples were subsampled at different rates, so raw probabilities are not population CTR without correction.",
+    "Hashed categorical feature semantics are undisclosed.",
+    "Offline public-data metrics do not establish KAI production, online lift, or business performance.",
+    "CC BY-NC-SA 4.0 restricts this dataset use to noncommercial purposes under its terms."
+  ],
+  "protocol": {
+    "counts": {
+      "allPositiveRows": 1786,
+      "allRows": 60000,
+      "categoricalFeatures": 26,
+      "devPositiveRows": 251,
+      "devRows": 9000,
+      "numericFeatures": 13,
+      "testPositiveRows": 281,
+      "testRows": 9000,
+      "trainPositiveRows": 1254,
+      "trainRows": 42000
+    },
+    "features": {
+      "categorical": 26,
+      "numeric": 13,
+      "sameFeatureSetForAllModels": true
+    },
+    "implementationAudit": {
+      "priorRunDeepFmTrainingDigest": "11a2dbae709f90c918491986b17e5ddda846b8beb283dbbda6ff8782f5a7016c",
+      "priorRunStatus": "INVALIDATED_IMPLEMENTATION_RUN_NO_CLAIM",
+      "reason": "Default unit-scale categorical factor embeddings caused 39-field FM initial logits and train/dev LogLoss to explode; corrected from train/dev evidence before the final run."
+    },
+    "positiveRows": {
+      "dev": 251,
+      "test": 281,
+      "train": 1254
+    },
+    "preprocessing": {
+      "categoricalUnknown": "__OOV__",
+      "fitRows": 42000,
+      "keptCategories": {
+        "cat_1": 1522,
+        "cat_10": 1754,
+        "cat_11": 1659,
+        "cat_12": 3402,
+        "cat_13": 9,
+        "cat_14": 490,
+        "cat_15": 1308,
+        "cat_16": 33,
+        "cat_17": 4,
+        "cat_18": 186,
+        "cat_19": 13,
+        "cat_2": 2052,
+        "cat_20": 1488,
+        "cat_21": 1932,
+        "cat_22": 1584,
+        "cat_23": 1517,
+        "cat_24": 2419,
+        "cat_25": 35,
+        "cat_26": 22,
+        "cat_3": 3271,
+        "cat_4": 753,
+        "cat_5": 1353,
+        "cat_6": 3,
+        "cat_7": 2225,
+        "cat_8": 588,
+        "cat_9": 22
+      },
+      "maxCategoriesPerFeature": 10000,
+      "minCategoryCount": 2,
+      "numericTransform": "log1p_nonnegative_then_train_zscore"
+    },
+    "rows": {
+      "dev": 9000,
+      "test": 9000,
+      "train": 42000
+    },
+    "seeds": [
+      3407,
+      6502,
+      9109
+    ],
+    "splitSemantics": "fixed_contiguous_source_order_not_claimed_chronological",
+    "testDataUsedForSelection": false
+  },
+  "resultSha256": "14b3e956e576dee5c3faa4e80bde3c78c34c5ed3734ccd3f45b4a18243079e08",
+  "results": {
+    "runs": [
+      {
+        "model": "logistic_regression",
+        "seed": 3407,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1307425217577977
+        },
+        "testMetrics": {
+          "averagePrecision": 0.09900702820228278,
+          "brierScore": 0.029982071193239094,
+          "calibration": [
+            {
+              "count": 8443,
+              "lower": 0.0,
+              "meanPrediction": 0.018213180978325562,
+              "positiveRate": 0.02534644083856449,
+              "upper": 0.1
+            },
+            {
+              "count": 384,
+              "lower": 0.1,
+              "meanPrediction": 0.14036423336660098,
+              "positiveRate": 0.0859375,
+              "upper": 0.2
+            },
+            {
+              "count": 93,
+              "lower": 0.2,
+              "meanPrediction": 0.24228594709302476,
+              "positiveRate": 0.17204301075268819,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 47,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.3453456135634442,
+              "positiveRate": 0.2127659574468085,
+              "upper": 0.4
+            },
+            {
+              "count": 15,
+              "lower": 0.4,
+              "meanPrediction": 0.44525799891951046,
+              "positiveRate": 0.13333333333333333,
+              "upper": 0.5
+            },
+            {
+              "count": 12,
+              "lower": 0.5,
+              "meanPrediction": 0.5537710755219615,
+              "positiveRate": 0.3333333333333333,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 5,
+              "lower": 0.6000000000000001,
+              "meanPrediction": 0.6527072282828562,
+              "positiveRate": 0.4,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 1,
+              "lower": 0.9,
+              "meanPrediction": 0.9240167432503602,
+              "positiveRate": 0.0,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.011489054589402895,
+          "logLoss": 0.13478559968704706,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.09658273650935104,
+          "rocAuc": 0.7103058359479175
+        },
+        "trainSeconds": 1.7944930829980876
+      },
+      {
+        "model": "deepfm",
+        "seed": 3407,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1244729604390082
+        },
+        "testMetrics": {
+          "averagePrecision": 0.06037827478842582,
+          "brierScore": 0.029980676398001543,
+          "calibration": [
+            {
+              "count": 8992,
+              "lower": 0.0,
+              "meanPrediction": 0.026536002618501385,
+              "positiveRate": 0.03113879003558719,
+              "upper": 0.1
+            },
+            {
+              "count": 8,
+              "lower": 0.1,
+              "meanPrediction": 0.10467710997909307,
+              "positiveRate": 0.125,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "lower": 0.2,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 0,
+              "lower": 0.30000000000000004,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "lower": 0.4,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 0,
+              "lower": 0.5,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.004616760841622533,
+          "logLoss": 0.13456136249360534,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.05908529543064414,
+          "rocAuc": 0.6764755581441765
+        },
+        "training": {
+          "bestDevLogLoss": 0.1244729604390082,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.4889779637518685,
+              "epoch": 1,
+              "trainLogLoss": 0.6426438257126581
+            },
+            {
+              "devLogLoss": 0.24038096276917056,
+              "epoch": 2,
+              "trainLogLoss": 0.37440133825937905
+            },
+            {
+              "devLogLoss": 0.1244729604390082,
+              "epoch": 3,
+              "trainLogLoss": 0.16743954447905224
+            }
+          ],
+          "trainSeconds": 4.254613834025804
+        }
+      },
+      {
+        "model": "dcnv2",
+        "seed": 3407,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.13260715597305864
+        },
+        "testMetrics": {
+          "averagePrecision": 0.05911469665150245,
+          "brierScore": 0.030434522563269405,
+          "calibration": [
+            {
+              "count": 8602,
+              "lower": 0.0,
+              "meanPrediction": 0.023243051455888182,
+              "positiveRate": 0.02824924436177633,
+              "upper": 0.1
+            },
+            {
+              "count": 320,
+              "lower": 0.1,
+              "meanPrediction": 0.13467387440614403,
+              "positiveRate": 0.0875,
+              "upper": 0.2
+            },
+            {
+              "count": 59,
+              "lower": 0.2,
+              "meanPrediction": 0.24073204600204856,
+              "positiveRate": 0.15254237288135594,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 15,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.33255226413408917,
+              "positiveRate": 0.06666666666666667,
+              "upper": 0.4
+            },
+            {
+              "count": 2,
+              "lower": 0.4,
+              "meanPrediction": 0.44642752408981323,
+              "positiveRate": 0.0,
+              "upper": 0.5
+            },
+            {
+              "count": 2,
+              "lower": 0.5,
+              "meanPrediction": 0.5954524278640747,
+              "positiveRate": 0.0,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.00771490508516177,
+          "logLoss": 0.1376156264607292,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.05824221599696749,
+          "rocAuc": 0.6631069954396644
+        },
+        "training": {
+          "bestDevLogLoss": 0.13260715597305864,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.16586349381369067,
+              "epoch": 1,
+              "trainLogLoss": 0.25935980860392255
+            },
+            {
+              "devLogLoss": 0.139416650728297,
+              "epoch": 2,
+              "trainLogLoss": 0.14706714103335425
+            },
+            {
+              "devLogLoss": 0.13260715597305864,
+              "epoch": 3,
+              "trainLogLoss": 0.12640491172813234
+            }
+          ],
+          "trainSeconds": 2.5742518329934683
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "seed": 6502,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1307425217577977
+        },
+        "testMetrics": {
+          "averagePrecision": 0.09900702820228278,
+          "brierScore": 0.029982071193239094,
+          "calibration": [
+            {
+              "count": 8443,
+              "lower": 0.0,
+              "meanPrediction": 0.018213180978325562,
+              "positiveRate": 0.02534644083856449,
+              "upper": 0.1
+            },
+            {
+              "count": 384,
+              "lower": 0.1,
+              "meanPrediction": 0.14036423336660098,
+              "positiveRate": 0.0859375,
+              "upper": 0.2
+            },
+            {
+              "count": 93,
+              "lower": 0.2,
+              "meanPrediction": 0.24228594709302476,
+              "positiveRate": 0.17204301075268819,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 47,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.3453456135634442,
+              "positiveRate": 0.2127659574468085,
+              "upper": 0.4
+            },
+            {
+              "count": 15,
+              "lower": 0.4,
+              "meanPrediction": 0.44525799891951046,
+              "positiveRate": 0.13333333333333333,
+              "upper": 0.5
+            },
+            {
+              "count": 12,
+              "lower": 0.5,
+              "meanPrediction": 0.5537710755219615,
+              "positiveRate": 0.3333333333333333,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 5,
+              "lower": 0.6000000000000001,
+              "meanPrediction": 0.6527072282828562,
+              "positiveRate": 0.4,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 1,
+              "lower": 0.9,
+              "meanPrediction": 0.9240167432503602,
+              "positiveRate": 0.0,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.011489054589402895,
+          "logLoss": 0.13478559968704706,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.09658273650935104,
+          "rocAuc": 0.7103058359479175
+        },
+        "trainSeconds": 2.1072610830015037
+      },
+      {
+        "model": "deepfm",
+        "seed": 6502,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1250006286962167
+        },
+        "testMetrics": {
+          "averagePrecision": 0.07978343435606354,
+          "brierScore": 0.02996561452214908,
+          "calibration": [
+            {
+              "count": 8982,
+              "lower": 0.0,
+              "meanPrediction": 0.01782399954837217,
+              "positiveRate": 0.031062124248496994,
+              "upper": 0.1
+            },
+            {
+              "count": 18,
+              "lower": 0.1,
+              "meanPrediction": 0.12357231146759456,
+              "positiveRate": 0.1111111111111111,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "lower": 0.2,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 0,
+              "lower": 0.30000000000000004,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "lower": 0.4,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 0,
+              "lower": 0.5,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.01323657085143754,
+          "logLoss": 0.13481825122295024,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.07880409850948644,
+          "rocAuc": 0.7131429336430971
+        },
+        "training": {
+          "bestDevLogLoss": 0.1250006286962167,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.3319146196663265,
+              "epoch": 1,
+              "trainLogLoss": 0.46774715098880587
+            },
+            {
+              "devLogLoss": 0.1365611883950639,
+              "epoch": 2,
+              "trainLogLoss": 0.2313269382828758
+            },
+            {
+              "devLogLoss": 0.1250006286962167,
+              "epoch": 3,
+              "trainLogLoss": 0.1284967839888164
+            }
+          ],
+          "trainSeconds": 2.8906435829994734
+        }
+      },
+      {
+        "model": "dcnv2",
+        "seed": 6502,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1321071416528934
+        },
+        "testMetrics": {
+          "averagePrecision": 0.06442427438905651,
+          "brierScore": 0.030269570703463342,
+          "calibration": [
+            {
+              "count": 8535,
+              "lower": 0.0,
+              "meanPrediction": 0.024361172606013608,
+              "positiveRate": 0.028588166373755126,
+              "upper": 0.1
+            },
+            {
+              "count": 394,
+              "lower": 0.1,
+              "meanPrediction": 0.1313507786105732,
+              "positiveRate": 0.06598984771573604,
+              "upper": 0.2
+            },
+            {
+              "count": 52,
+              "lower": 0.2,
+              "meanPrediction": 0.23998260096861765,
+              "positiveRate": 0.15384615384615385,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 11,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.3558436930179596,
+              "positiveRate": 0.2727272727272727,
+              "upper": 0.4
+            },
+            {
+              "count": 6,
+              "lower": 0.4,
+              "meanPrediction": 0.4392450998226802,
+              "positiveRate": 0.0,
+              "upper": 0.5
+            },
+            {
+              "count": 2,
+              "lower": 0.5,
+              "meanPrediction": 0.519934892654419,
+              "positiveRate": 0.0,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.007877590537561143,
+          "logLoss": 0.1350091351700968,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.06334500689826908,
+          "rocAuc": 0.6843176782083876
+        },
+        "training": {
+          "bestDevLogLoss": 0.1321071416528934,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.16061384544809207,
+              "epoch": 1,
+              "trainLogLoss": 0.22921963162081582
+            },
+            {
+              "devLogLoss": 0.1383687324686839,
+              "epoch": 2,
+              "trainLogLoss": 0.14160862752937134
+            },
+            {
+              "devLogLoss": 0.1321071416528934,
+              "epoch": 3,
+              "trainLogLoss": 0.12438965849081675
+            }
+          ],
+          "trainSeconds": 2.8079657909984235
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "seed": 9109,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.1307425217577977
+        },
+        "testMetrics": {
+          "averagePrecision": 0.09900702820228278,
+          "brierScore": 0.029982071193239094,
+          "calibration": [
+            {
+              "count": 8443,
+              "lower": 0.0,
+              "meanPrediction": 0.018213180978325562,
+              "positiveRate": 0.02534644083856449,
+              "upper": 0.1
+            },
+            {
+              "count": 384,
+              "lower": 0.1,
+              "meanPrediction": 0.14036423336660098,
+              "positiveRate": 0.0859375,
+              "upper": 0.2
+            },
+            {
+              "count": 93,
+              "lower": 0.2,
+              "meanPrediction": 0.24228594709302476,
+              "positiveRate": 0.17204301075268819,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 47,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.3453456135634442,
+              "positiveRate": 0.2127659574468085,
+              "upper": 0.4
+            },
+            {
+              "count": 15,
+              "lower": 0.4,
+              "meanPrediction": 0.44525799891951046,
+              "positiveRate": 0.13333333333333333,
+              "upper": 0.5
+            },
+            {
+              "count": 12,
+              "lower": 0.5,
+              "meanPrediction": 0.5537710755219615,
+              "positiveRate": 0.3333333333333333,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 5,
+              "lower": 0.6000000000000001,
+              "meanPrediction": 0.6527072282828562,
+              "positiveRate": 0.4,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 1,
+              "lower": 0.9,
+              "meanPrediction": 0.9240167432503602,
+              "positiveRate": 0.0,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.011489054589402895,
+          "logLoss": 0.13478559968704706,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.09658273650935104,
+          "rocAuc": 0.7103058359479175
+        },
+        "trainSeconds": 1.8949793750070967
+      },
+      {
+        "model": "deepfm",
+        "seed": 9109,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.12404435956890304
+        },
+        "testMetrics": {
+          "averagePrecision": 0.06473207398694622,
+          "brierScore": 0.029944124165617488,
+          "calibration": [
+            {
+              "count": 8995,
+              "lower": 0.0,
+              "meanPrediction": 0.02641924848317222,
+              "positiveRate": 0.0311284046692607,
+              "upper": 0.1
+            },
+            {
+              "count": 5,
+              "lower": 0.1,
+              "meanPrediction": 0.11549991369247437,
+              "positiveRate": 0.2,
+              "upper": 0.2
+            },
+            {
+              "count": 0,
+              "lower": 0.2,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 0,
+              "lower": 0.30000000000000004,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.4
+            },
+            {
+              "count": 0,
+              "lower": 0.4,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.5
+            },
+            {
+              "count": 0,
+              "lower": 0.5,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.004753484480600391,
+          "logLoss": 0.1340280934026041,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.06352307754285921,
+          "rocAuc": 0.6889606655240998
+        },
+        "training": {
+          "bestDevLogLoss": 0.12404435956890304,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.4344666908547081,
+              "epoch": 1,
+              "trainLogLoss": 0.5746776187306358
+            },
+            {
+              "devLogLoss": 0.21750158537108785,
+              "epoch": 2,
+              "trainLogLoss": 0.33470509489377337
+            },
+            {
+              "devLogLoss": 0.12404435956890304,
+              "epoch": 3,
+              "trainLogLoss": 0.1594660952942712
+            }
+          ],
+          "trainSeconds": 2.8952866670151707
+        }
+      },
+      {
+        "model": "dcnv2",
+        "seed": 9109,
+        "selectionMetric": {
+          "name": "devLogLoss",
+          "value": 0.13424265101107502
+        },
+        "testMetrics": {
+          "averagePrecision": 0.05959382385483547,
+          "brierScore": 0.03072278499224904,
+          "calibration": [
+            {
+              "count": 8438,
+              "lower": 0.0,
+              "meanPrediction": 0.024311311974402616,
+              "positiveRate": 0.02773168997392747,
+              "upper": 0.1
+            },
+            {
+              "count": 441,
+              "lower": 0.1,
+              "meanPrediction": 0.1348117854860094,
+              "positiveRate": 0.08163265306122448,
+              "upper": 0.2
+            },
+            {
+              "count": 86,
+              "lower": 0.2,
+              "meanPrediction": 0.24151646986950276,
+              "positiveRate": 0.11627906976744186,
+              "upper": 0.30000000000000004
+            },
+            {
+              "count": 24,
+              "lower": 0.30000000000000004,
+              "meanPrediction": 0.33745615060130757,
+              "positiveRate": 0.041666666666666664,
+              "upper": 0.4
+            },
+            {
+              "count": 9,
+              "lower": 0.4,
+              "meanPrediction": 0.4340300460656484,
+              "positiveRate": 0.0,
+              "upper": 0.5
+            },
+            {
+              "count": 2,
+              "lower": 0.5,
+              "meanPrediction": 0.5310556292533875,
+              "positiveRate": 0.0,
+              "upper": 0.6000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.6000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.7000000000000001
+            },
+            {
+              "count": 0,
+              "lower": 0.7000000000000001,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.8
+            },
+            {
+              "count": 0,
+              "lower": 0.8,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 0.9
+            },
+            {
+              "count": 0,
+              "lower": 0.9,
+              "meanPrediction": null,
+              "positiveRate": null,
+              "upper": 1.0
+            }
+          ],
+          "ece": 0.008350099183958565,
+          "logLoss": 0.13878105906117102,
+          "nExamples": 9000,
+          "positiveRate": 0.03122222222222222,
+          "prAuc": 0.058821572325155703,
+          "rocAuc": 0.6665012271233234
+        },
+        "training": {
+          "bestDevLogLoss": 0.13424265101107502,
+          "bestEpoch": 3,
+          "device": "mps",
+          "history": [
+            {
+              "devLogLoss": 0.17709890516055982,
+              "epoch": 1,
+              "trainLogLoss": 0.29188330066771734
+            },
+            {
+              "devLogLoss": 0.14205492487543075,
+              "epoch": 2,
+              "trainLogLoss": 0.15808308276675997
+            },
+            {
+              "devLogLoss": 0.13424265101107502,
+              "epoch": 3,
+              "trainLogLoss": 0.13127207467669533
+            }
+          ],
+          "trainSeconds": 3.8244144580094144
+        }
+      }
+    ],
+    "summary": {
+      "dcnv2": {
+        "brierScore": {
+          "mean": 0.03047562608632726,
+          "std": 0.000187292859083855
+        },
+        "ece": {
+          "mean": 0.007980864935560493,
+          "std": 0.0002694031511176316
+        },
+        "logLoss": {
+          "mean": 0.13713527356399902,
+          "std": 0.0015768970879677898
+        },
+        "prAuc": {
+          "mean": 0.06013626507346409,
+          "std": 0.002281217732183489
+        },
+        "rocAuc": {
+          "mean": 0.6713086335904584,
+          "std": 0.009302567157655707
+        },
+        "seeds": [
+          3407,
+          6502,
+          9109
+        ]
+      },
+      "deepfm": {
+        "brierScore": {
+          "mean": 0.02996347169525604,
+          "std": 1.4999115604698225e-05
+        },
+        "ece": {
+          "mean": 0.007535605391220154,
+          "std": 0.004031577749244709
+        },
+        "logLoss": {
+          "mean": 0.13446923570638655,
+          "std": 0.0003290925441837301
+        },
+        "prAuc": {
+          "mean": 0.06713749049432993,
+          "std": 0.00844613459729201
+        },
+        "rocAuc": {
+          "mean": 0.6928597191037911,
+          "std": 0.01522117101512865
+        },
+        "seeds": [
+          3407,
+          6502,
+          9109
+        ]
+      },
+      "logistic_regression": {
+        "brierScore": {
+          "mean": 0.029982071193239094,
+          "std": 0.0
+        },
+        "ece": {
+          "mean": 0.011489054589402895,
+          "std": 0.0
+        },
+        "logLoss": {
+          "mean": 0.13478559968704706,
+          "std": 0.0
+        },
+        "prAuc": {
+          "mean": 0.09658273650935105,
+          "std": 0.0
+        },
+        "rocAuc": {
+          "mean": 0.7103058359479175,
+          "std": 0.0
+        },
+        "seeds": [
+          3407,
+          6502,
+          9109
+        ]
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "source": {
+    "dataset": "Criteo 1TB Click Logs",
+    "id": "criteo-1tb-click-logs",
+    "license": "CC-BY-NC-SA-4.0",
+    "officialRepository": "https://huggingface.co/datasets/criteo/CriteoClickLogs",
+    "officialUrl": "https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/",
+    "publisher": "Criteo AI Lab",
+    "terms": "Criteo official terms apply CC BY-NC-SA 4.0 and limit licensed use to noncommercial purposes with attribution and share-alike conditions.",
+    "termsUrl": "https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/",
+    "usage": "noncommercial_offline_research_only"
+  },
+  "status": "COMPLETE"
+}
