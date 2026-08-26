@@ -10,6 +10,8 @@ import { PostgresCreditOrderStore } from '../src/credit-orders/store.js';
 import { PostgresFulfillmentStore } from '../src/fulfillment/store.js';
 import { encryptPii, secretHash } from '../src/account/crypto.js';
 import { PostgresSettlementFeeStore } from '../src/settlement-fees/store.js';
+import { ComputeDataFlywheelService } from '../src/compute-data/service.js';
+import { PostgresComputeDataFlywheelStore } from '../src/compute-data/store.js';
 
 function pgResult<T>(result: Results<T>) {
   return { ...result, rowCount: result.rows.length || result.affectedRows || 0, command: '', oid: 0, rowAsArray: false };
@@ -24,7 +26,7 @@ function adapter(pglite: PGlite): Database {
   } as unknown as Database;
 }
 
-async function fixture(autoConfirmCompute = false) {
+async function fixture(autoConfirmCompute = false, withFlywheel = false) {
   const pglite = new PGlite();
   for (const name of (await readdir(new URL('../migrations', import.meta.url))).filter((name) => name.endsWith('.sql')).sort()) {
     await pglite.exec(await readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8'));
@@ -118,6 +120,10 @@ async function fixture(autoConfirmCompute = false) {
       31200000,1002000,now()-interval '1 minute',now()+interval '7 days',$7::jsonb,$8)`,
   [listingId, offerId, resourceId, supplierSubjectId, resourceAuditId, priceAuditId,
     JSON.stringify({ resourceAuditId, priceAuditId }), supplierUserId]);
+  const canaryBase = withFlywheel ? new Date(Date.now() - 8 * 86_400_000) : new Date();
+  if (withFlywheel) await database.query(`UPDATE credit_market_listings
+    SET starts_at=$2,expires_at=$3 WHERE id=$1`, [listingId,
+    new Date(canaryBase.getTime() - 86_400_000), new Date(Date.now() + 7 * 86_400_000)]);
   const ledger = new PostgresCreditLedgerStore(database);
   const buyerAccounts = await ledger.ensureSubjectAccounts(buyerSubjectId);
   const buyerAvailable = buyerAccounts.find((account) => account.kind === 'available')!.accountId;
@@ -130,12 +136,47 @@ async function fixture(autoConfirmCompute = false) {
     ],
   });
   const orders = new PostgresCreditOrderStore(database);
+  const flywheel = new ComputeDataFlywheelService(new PostgresComputeDataFlywheelStore(database));
+  const recommendationRunId = randomUUID();
+  if (withFlywheel) {
+    const rankedAt = new Date(canaryBase.getTime() - 1_000);
+    await flywheel.captureRanking({
+      request: { id: recommendationRunId, buyerSubjectId, sourceEntityType: 'compute-recommendation',
+        sourceEntityId: recommendationRunId,
+        requirement: { gpuModel: 'ANY_COMPATIBLE', gpuCount: 1, region: '华东-上海', durationHours: 1 },
+        parsedRequirement: { gpuModel: 'ANY_COMPATIBLE', gpuCount: 1, region: '华东-上海', durationHours: 1 },
+        requirementVersion: 'compute-requirement-v1', occurredAt: rankedAt,
+        source: 'compute-intelligence', sourceVersion: 'compute-intelligence-v1',
+        environment: 'production', dataOrigin: 'business' },
+      ranking: { id: recommendationRunId, sourceEventId: `recommendation:${recommendationRunId}`,
+        algorithmVersion: 'explainable-weighted-baseline-v1', policyVersion: 'weighted-policy-v1.test',
+        context: { candidatePool: { source: 'verified-public-listings', limit: 200 } }, occurredAt: rankedAt,
+        source: 'compute-intelligence', sourceVersion: 'compute-intelligence-v1' },
+      candidates: [
+        { candidateKey: listingId, resourceId, supplierId: supplierSubjectId, listingId,
+          featureSnapshot: { gpuModel: 'H100', region: '华东-上海', memoryGiBPerGpu: 98 },
+          score: '92.000000', componentScores: { cost: 0.8, reliability: 0.99 }, rankPosition: 1,
+          eligible: true, rejectionReasons: [], listedPriceMicros: '31200000', quotedPriceMicros: '31200000',
+          currency: 'CNY', quantity: '1', durationSeconds: '3600', availabilitySnapshot: { availableGpuHours: 10 },
+          slaSnapshot: { availabilityPercent: 99.9 }, priceObservedAt: rankedAt, inventoryObservedAt: rankedAt,
+          capturedAt: rankedAt, dataOrigin: 'business' },
+        { candidateKey: 'unselected-candidate', featureSnapshot: { gpuModel: 'A100', region: '华北', memoryGiBPerGpu: 40 },
+          score: '0.000000', componentScores: { cost: 0, reliability: 0 }, rankPosition: 2,
+          eligible: false, rejectionReasons: [{ code: 'REGION_MISMATCH' }], listedPriceMicros: '20000000',
+          currency: 'CNY', quantity: '1', durationSeconds: '3600', availabilitySnapshot: { availableGpuHours: 20 },
+          slaSnapshot: { availabilityPercent: 99 }, priceObservedAt: rankedAt, inventoryObservedAt: rankedAt,
+          capturedAt: rankedAt, dataOrigin: 'business' },
+      ],
+    });
+  }
   const reservationInput = {
     id: randomUUID(), orderNumber: `KC20260814${randomUUID().slice(0, 12).replaceAll('-', '').toUpperCase()}`,
     buyerSubjectId, userId: buyerUserId, listingId, quantity: '1.000000', quantityScaled: 1_000_000n,
     clientRequestId: `order-${randomUUID()}`, payloadDigest: `sha512:${'o'.repeat(64)}`,
-    expiresAt: new Date(Date.now() + 1_800_000), now: new Date(), requestId: randomUUID(), ipHash: `sha512:${'i'.repeat(64)}`,
+    expiresAt: new Date(canaryBase.getTime() + 1_800_000), now: canaryBase,
+    requestId: randomUUID(), ipHash: `sha512:${'i'.repeat(64)}`,
     computeFulfillmentAvailable: true, autoConfirmCompute, nodeAcceleratorCountFallback: 1,
+    ...(withFlywheel ? { recommendationRunId } : {}),
   };
   const created = await orders.createReservation(reservationInput);
   if (created.status !== 'created') throw new Error(`order fixture failed: ${created.status}`);
@@ -149,7 +190,8 @@ async function fixture(autoConfirmCompute = false) {
   return { database, buyerUserId, supplierUserId, operatorUserId: reviewerOne, buyerSubjectId, supplierSubjectId,
     resourceId, listingId, orderId: created.order.id, reservationInput, orders, ledger, buyerAvailable,
     bindingId, nodeId, policyDigest,
-    store: new PostgresFulfillmentStore(database) };
+    store: new PostgresFulfillmentStore(database), flywheel, canaryBase,
+    ...(withFlywheel ? { recommendationRunId } : {}) };
 }
 
 async function createAutoConfirmedOrder(f: Awaited<ReturnType<typeof fixture>>, sequence: number) {
@@ -213,6 +255,94 @@ async function stopAndOpenIssue(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('compute fulfillment postgres lifecycle', () => {
+  it('records a recommendation reservation failure without creating a biased success-only label',
+    { timeout: 30_000 }, async () => {
+      const f = await fixture(true);
+      const runId = randomUUID(); const rankedAt = new Date(Date.now() - 1_000);
+      await f.flywheel.captureRanking({
+        request: { id: runId, buyerSubjectId: f.buyerSubjectId, sourceEntityType: 'compute-recommendation',
+          sourceEntityId: runId,
+          requirement: { gpuModel: 'ANY_COMPATIBLE', gpuCount: 1, region: '华东-上海', durationHours: 1 },
+          parsedRequirement: { gpuModel: 'ANY_COMPATIBLE', gpuCount: 1, region: '华东-上海', durationHours: 1 },
+          requirementVersion: 'compute-requirement-v1', occurredAt: rankedAt,
+          source: 'compute-intelligence', sourceVersion: 'compute-intelligence-v1',
+          environment: 'production', dataOrigin: 'business' },
+        ranking: { id: runId, sourceEventId: `recommendation:${runId}`,
+          algorithmVersion: 'explainable-weighted-baseline-v1', policyVersion: 'weighted-policy-v1.test',
+          context: { candidatePool: { source: 'verified-public-listings', limit: 200 } }, occurredAt: rankedAt,
+          source: 'compute-intelligence', sourceVersion: 'compute-intelligence-v1' },
+        candidates: [{ candidateKey: f.listingId, resourceId: f.resourceId, supplierId: f.supplierSubjectId,
+          listingId: f.listingId, featureSnapshot: { gpuModel: 'H100', region: '华东-上海' },
+          score: '90.000000', componentScores: { cost: 0.8 }, rankPosition: 1, eligible: true,
+          rejectionReasons: [], listedPriceMicros: '31200000', quotedPriceMicros: '31200000',
+          currency: 'CNY', quantity: '1', durationSeconds: '3600', availabilitySnapshot: { availableGpuHours: 9 },
+          slaSnapshot: { availabilityPercent: 99.9 }, capturedAt: rankedAt, dataOrigin: 'business' }],
+      });
+      await f.database.query(`UPDATE credit_market_listings SET status='paused' WHERE id=$1`, [f.listingId]);
+      const attemptId = randomUUID();
+      expect(await f.orders.createReservation({
+        id: attemptId, orderNumber: `KCFAIL${randomUUID().slice(0, 12).replaceAll('-', '').toUpperCase()}`,
+        buyerSubjectId: f.buyerSubjectId, userId: f.buyerUserId, listingId: f.listingId,
+        quantity: '1.000000', quantityScaled: 1_000_000n, clientRequestId: `failed-${randomUUID()}`,
+        payloadDigest: `sha512:${'q'.repeat(64)}`, expiresAt: new Date(Date.now() + 1_800_000), now: new Date(),
+        requestId: randomUUID(), ipHash: `sha512:${'i'.repeat(64)}`, computeFulfillmentAvailable: true,
+        autoConfirmCompute: true, nodeAcceleratorCountFallback: 8, recommendationRunId: runId,
+      })).toEqual({ status: 'listing_unavailable' });
+      const trace = await f.flywheel.trace(runId);
+      expect(trace.events.map((event) => event.event_name)).toEqual([
+        'selected', 'quote_created', 'quote_accepted', 'reservation_failed',
+      ]);
+      expect(trace.events.at(-1)).toMatchObject({ reason_code: 'listing_unavailable' });
+      expect((await f.database.query(`SELECT id FROM kai_credit_orders WHERE id=$1`, [attemptId])).rowCount).toBe(0);
+      expect(await f.flywheel.qualityIssues()).toEqual([]);
+      await f.database.close();
+    });
+
+  it('traces one production-shaped canary from demand through settlement and keeps the unselected candidate',
+    { timeout: 30_000 }, async () => {
+      const f = await fixture(true, true);
+      const startedAt = new Date(f.canaryBase.getTime() + 10_000);
+      const started = await f.store.beginProvision({ orderId: f.orderId, userId: null,
+        providerKey: 'sidecar-v1', now: startedAt, nodeAcceleratorCountFallback: 8 });
+      if (!started.record) throw new Error('fulfillment missing');
+      const readyAt = new Date(startedAt.getTime() + 5_000);
+      const hardExpiresAt = new Date(readyAt.getTime() + 3_600_000);
+      await f.store.markReady({ fulfillmentId: started.record.id, providerLeaseId: 'canary-provider-lease',
+        connection: { protocol: 'ssh', host: 'h100.internal', port: 22,
+          hostKeyFingerprint: `SHA256:${'A'.repeat(43)}`,
+          knownHostsEntry: `[h100.internal]:22 ssh-ed25519 ${'A'.repeat(44)}`, displayName: 'H100 Canary' },
+        attestation: attestation(started.record.id, f.orderId, started.record.resourceId, readyAt, hardExpiresAt,
+          'heartbeat-canary'), hardExpiresAt, now: readyAt });
+      const runningAt = new Date(readyAt.getTime() + 1_000);
+      await f.store.recordAccess({ fulfillmentId: started.record.id, sessionId: randomUUID(),
+        ticketDigest: `sha512:${'t'.repeat(64)}`, expiresAt: new Date(runningAt.getTime() + 300_000), now: runningAt });
+      const stoppedAt = new Date(runningAt.getTime() + 60_000);
+      await f.store.beginStop({ buyerSubjectId: f.buyerSubjectId, orderId: f.orderId, now: stoppedAt });
+      await f.store.completeStop({ fulfillmentId: started.record.id, consumedCapacityMicros: 600_000n,
+        evidenceDigest: `sha256:${'e'.repeat(64)}`, stoppedAt, now: stoppedAt });
+      const acceptedAt = new Date(stoppedAt.getTime() + 1_000);
+      await f.store.accept({ buyerSubjectId: f.buyerSubjectId, userId: f.buyerUserId, actor: 'buyer',
+        orderId: f.orderId, now: acceptedAt });
+      const settledAt = new Date();
+      expect(await f.store.settleDue(settledAt, 20)).toBe(1);
+
+      const trace = await f.flywheel.trace(f.recommendationRunId!);
+      expect(trace.candidates).toHaveLength(2);
+      expect(trace.events.map((event) => event.event_name)).toEqual([
+        'selected', 'quote_created', 'quote_accepted', 'reservation_succeeded',
+        'provisioning_started', 'provisioning_succeeded', 'fulfillment_started',
+        'telemetry_observed', 'fulfillment_completed', 'settlement_completed',
+      ]);
+      expect(await f.flywheel.qualityIssues()).toEqual([]);
+      const exported = await f.flywheel.exportDataset({ from: new Date(f.canaryBase.getTime() - 86_400_000),
+        to: new Date(settledAt.getTime() + 86_400_000),
+        anonymizationKey: 'canary-export-anonymization-key-32-characters' });
+      expect(exported.rows).toHaveLength(2);
+      expect(exported.rows.some((row) => row.selected === false)).toBe(true);
+      expect(exported.rows.every((row) => !('request_id' in row) && !('supplier_id' in row))).toBe(true);
+      await f.database.close();
+    });
+
   it('settles a standard delivery through the locked fee schedule with one balanced three-leg ledger',
     { timeout: 30_000 }, async () => {
       const f = await fixture();
@@ -270,9 +400,8 @@ describe('compute fulfillment postgres lifecycle', () => {
 
   it('expires stalled provisioning and atomically returns the buyer cards and listing capacity',
     { timeout: 30_000 }, async () => {
-      const f = await fixture();
-      const now = new Date();
-      await f.database.query(`UPDATE compute_nodes SET last_heartbeat_at=$2 WHERE id=$1`, [f.nodeId, now]);
+      const f = await fixture(true, true);
+      const now = new Date(f.canaryBase.getTime() + 10_000);
       const started = await f.store.beginProvision({ orderId: f.orderId, userId: null,
         providerKey: 'sidecar-v1', now, nodeAcceleratorCountFallback: 8 });
       expect(started.status).toBe('started');
@@ -288,6 +417,14 @@ describe('compute fulfillment postgres lifecycle', () => {
       expect((await f.database.query<{ capacity_reserved: string }>(
         `SELECT capacity_reserved::text FROM credit_market_listings WHERE id=$1`, [f.listingId])).rows[0])
         .toEqual({ capacity_reserved: '0.000000' });
+      const events = (await f.flywheel.trace(f.recommendationRunId!)).events;
+      expect(events.map((event) => event.event_name)).toEqual(expect.arrayContaining([
+        'provisioning_failed', 'refund_requested', 'refunded',
+      ]));
+      expect(events.find((event) => event.event_name === 'refunded')).toMatchObject({
+        order_id: f.orderId, fulfillment_id: started.record.id,
+        payload: { reason: 'provisioning_failure', refundCreditMicros: '31140000', unit: 'KAI_CARD_HOUR' },
+      });
       await f.database.close();
     });
 
@@ -553,4 +690,5 @@ describe('compute fulfillment postgres lifecycle', () => {
         await f.database.close();
       }
     });
+
 });

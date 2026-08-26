@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-002",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T02:01:36Z",
+  "baseCommit": "ef17e934beba29b55f83fdd8fdca0e84224514e3",
+  "stagedDiffSha256": "cf673734a45a94aaae827e62f434c192c73e73393d9238d9e0319e678614b610",
+  "summary": "批准最终 KAI Compute Data Flywheel V1 暂存变更。0066 SQL SHA-256 保持 1abb5b75f37686daf4e98c7423633718edd6dc804fa5b63f3cf6b15f100050d1，仅新增4张 append-only 表、必要索引/不可变触发器和2个只读 view，没有新增脱离现有 PostgreSQL 的平台或改造既有业务 schema。推荐返回前，demand、parsed requirement、algorithm/policy/context、全部 eligible 与 rejected 候选、过滤原因、feature snapshot、component scores 和 rank 在一次事务中完整写入，写失败即不返回无法留痕的推荐。订单、provisioning、fulfillment、telemetry、settlement、failure/refund labels 均由服务端现有业务事实所在事务写入；最终补丁在开通失败释放预留、回退容量、订单置 refunded 和 fulfillment 置 failed 的同一事务内，按既有状态机补写 provisioning_failed、refund_requested 与 refunded，使用同一 domain event 派生的幂等来源标识，任一标签写入失败都会回滚业务事务。匿名导出只查询 request 与 candidate 同为 business 的行，实体 ID 使用字段域隔离 HMAC；原始自然语言不落飞轮，嵌套敏感字段和无效数据 fail closed，seed_reference、demo 与 synthetic 均不能进入 business export。独立复验开通失败退款 lineage 回归用例通过；结合 routing audit APPROVE、Backend 738通过/2跳过、Mobile 272通过/2跳过、两端 typecheck、contract 184/160、build、deployment 47/47 及 final release bundle c1ec34bd… 的提供证据，批准代码提交。当前 inquiry-only 不暴露推荐路由，尚未执行 production migration 或获准 canary；本批准不代表 0066 已在生产应用、生产数据已产生、canary/部署/发布/切流已获准或完成，亦不扩张任何生产权限。"
+}

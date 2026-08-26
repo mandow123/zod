@@ -49,7 +49,7 @@ Zod App 以公共 client `xUTgWjuzpAz-JT-wDbTJxh9xoh3ssU7K` 直接连接 `https:
 
 ConfigMap 中残留的算力 sidecar 非敏感字段仅用于保留未来 `full_commerce` 配置模板，在 inquiry-only profile 下不参与 readiness、服务实例化或 worker 启动，也不表示已有真实算力履约能力。
 
-容器入口会在 API 进程启动前执行 inquiry-only 生产配置门禁。专用 PostgreSQL、0065、账号安全、KAI paired 身份、公开 HTTPS、真实法务配置、对象存储、监控、备份恢复或正式供应商目录任一不完整时，容器或 readiness 失败关闭；支付、短信、推送、算力、Vast、节点、broker 与返佣不会被误列为依赖。
+容器入口会在 API 进程启动前执行 inquiry-only 生产配置门禁。专用 PostgreSQL、0066、账号安全、KAI paired 身份、公开 HTTPS、真实法务配置、对象存储、监控、备份恢复或正式供应商目录任一不完整时，容器或 readiness 失败关闭；支付、短信、推送、算力、Vast、节点、broker 与返佣不会被误列为依赖。
 
 ## 发布顺序
 
@@ -60,8 +60,8 @@ ConfigMap 中残留的算力 sidecar 非敏感字段仅用于保留未来 `full_
 3. 创建或更新后端 Secret 与 ConfigMap；首次部署仍保持 `ADMIN_AUTH_ENABLED=false`。
 4. 使用 `kubectl create -f migrate-job.yaml` 创建一次性迁移任务，并等待成功。
 5. 应用 `app.yaml`，只等待 Pod 进程通过 startup/liveness；此时 readiness 必须保持关闭，不能绕过。
-6. 应用 `backup-cronjob.yaml`，手动触发一次备份并确认对象键、大小、摘要和0065版本均完整。
-7. 使用同一份有效备份恢复到数据库指纹不同的隔离空库，确认0065及全部账本不变量为零。
+6. 应用 `backup-cronjob.yaml`，手动触发一次备份并确认对象键、大小、摘要和0066版本均完整。
+7. 使用同一份有效备份恢复到数据库指纹不同的隔离空库，确认0066及全部账本不变量为零。
 8. 通过临时 Secret 向同镜像的一次性受控 Job 注入 paired KAI 测试令牌，运行 `npm run production:readiness:record`。Job 的探针地址指向指定 API Pod 的私网地址；任务结束立即删除临时 Secret 与 Job，不把令牌写入清单、日志或长期环境。
 9. 确认对象存储 Put/Head/Get/Delete/删除确认、真实身份 `/me`→同意→主体选择→正式询期→取消以及交易账本零变化证据已写入，再等待三个副本全部 readiness 成功，最后开放 Ingress 流量。
 10. 应用 `admin-app.yaml`，等待两个 Web 副本通过 `/healthz` readiness，并核对两个管理员 Ingress 的 TLS host 与后端服务边界；管理员 API 仍保持关闭。

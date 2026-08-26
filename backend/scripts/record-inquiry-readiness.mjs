@@ -5,7 +5,7 @@ import { createDatabase } from '../dist/database.js';
 import { databaseFingerprint } from '../dist/backups/postgres.js';
 import { probeEvidenceDigest } from '../dist/operations/probe-evidence.js';
 
-const SCHEMA = '0065_credit_order_transition_closure.sql';
+const SCHEMA = '0066_compute_data_flywheel_v1.sql';
 const PRODUCER = 'record-inquiry-readiness.mjs@2';
 const HONGHUAN_RESOURCE_IDS = [
   'gpu-honghuan-a100-sxm4-80gb-1', 'gpu-honghuan-a100-sxm4-80gb-2',
@@ -114,7 +114,7 @@ export async function runInquiryReadinessProbe(input) {
   const authHeaders = { authorization: `Bearer ${accessToken}`, 'x-kai-id-token': idToken };
   try {
   const schema = await database.schemaReadiness();
-  if (!schema.ready || schema.applied !== SCHEMA || schema.expected !== SCHEMA) throw new Error('DATABASE_SCHEMA_0065_REQUIRED');
+  if (!schema.ready || schema.applied !== SCHEMA || schema.expected !== SCHEMA) throw new Error('DATABASE_SCHEMA_0066_REQUIRED');
 
   const before = await commerceSnapshot(database);
   await request('/mobile/v1/me', { headers: authHeaders });

@@ -273,35 +273,35 @@ describe('protected operational monitoring', () => {
     await database.query(`INSERT INTO backup_runs(id,status,artifact_name,object_key,encrypted_size_bytes,
       encrypted_sha256_digest,schema_version,started_at,completed_at)
       VALUES($1,'succeeded','cloudpay-postgres-invalid-target.kcpb','local://cloudpay-postgres-invalid-target.kcpb',2048,$2,
-      '0065_credit_order_transition_closure.sql',$3,$3)`, [randomUUID(), `sha256:${'e'.repeat(64)}`, completedAt]);
+      '0066_compute_data_flywheel_v1.sql',$3,$3)`, [randomUUID(), `sha256:${'e'.repeat(64)}`, completedAt]);
     await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
       verified_invariants,started_at,completed_at) VALUES($1,'cloudpay-postgres-invalid-target.kcpb',$2,'succeeded',
-      '0065_credit_order_transition_closure.sql',$3::jsonb,$4,$4)`,
+      '0066_compute_data_flywheel_v1.sql',$3::jsonb,$4,$4)`,
     [randomUUID(), databaseFingerprint(databaseUrl), JSON.stringify(restoreInvariants), completedAt]);
     expect((await service.inquiryReleaseReadiness()).restore.ready).toBe(false);
     const missingInvariant = { ...restoreInvariants };
     delete missingInvariant.kai_credit_transaction_unbalanced;
     await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
       verified_invariants,started_at,completed_at) VALUES($1,'cloudpay-postgres-invalid-target.kcpb','isolated-missing-invariant','succeeded',
-      '0065_credit_order_transition_closure.sql',$2::jsonb,$3,$3)`,
+      '0066_compute_data_flywheel_v1.sql',$2::jsonb,$3,$3)`,
     [randomUUID(), JSON.stringify(missingInvariant), completedAt]);
     expect((await service.inquiryReleaseReadiness()).restore.ready).toBe(false);
     const validBackupId=randomUUID(),validArtifact='cloudpay-postgres-20260821T020000Z-valid000.kcpb',validDigest=`sha256:${'b'.repeat(64)}`;
     await database.query(`INSERT INTO backup_runs(id,status,artifact_name,object_key,encrypted_size_bytes,
       encrypted_sha256_digest,schema_version,started_at,completed_at)
-      VALUES($1,'succeeded',$2,$3,2048,$4,'0065_credit_order_transition_closure.sql',$5,$5)`,
+      VALUES($1,'succeeded',$2,$3,2048,$4,'0066_compute_data_flywheel_v1.sql',$5,$5)`,
     [validBackupId,validArtifact,`local://${validArtifact}`,validDigest,completedAt]);
     await database.query(`INSERT INTO audit_events(id,actor_id,actor_kind,action,entity_type,entity_id,payload_digest,metadata,created_at)
       VALUES($1,NULL,'system','DATABASE_BACKUP_COMPLETED','BACKUP_RUN',$2,$3,$4::jsonb,$5)`,[randomUUID(),validBackupId,
       validDigest.slice(7),JSON.stringify({artifactName:validArtifact,objectKey:`local://${validArtifact}`,sizeBytes:2048,
-        schemaVersion:'0065_credit_order_transition_closure.sql',databaseFingerprint:databaseFingerprint(databaseUrl),
+        schemaVersion:'0066_compute_data_flywheel_v1.sql',databaseFingerprint:databaseFingerprint(databaseUrl),
         durability:'local_only',offsite:false}),completedAt]);
     await database.query(`INSERT INTO restore_drills(id,backup_artifact_name,target_fingerprint,status,schema_version,
       verified_invariants,started_at,completed_at) VALUES($1,$2,$3,'succeeded',
-      '0065_credit_order_transition_closure.sql',$4::jsonb,$5,$5)`,
+      '0066_compute_data_flywheel_v1.sql',$4::jsonb,$5,$5)`,
     [randomUUID(),validArtifact, `${databaseFingerprint(databaseUrl)}-isolated`, JSON.stringify(restoreInvariants), completedAt]);
     const common = { profile: 'inquiry_only', probeVersion: 1,
-      schemaVersion: '0065_credit_order_transition_closure.sql', databaseFingerprint: databaseFingerprint(databaseUrl) };
+      schemaVersion: '0066_compute_data_flywheel_v1.sql', databaseFingerprint: databaseFingerprint(databaseUrl) };
     const kaiMetadata = { ...common,producer:'record-inquiry-readiness.mjs@2',publicOrigin: 'https://cloudpay.kai.com',
       probeSubjectSha256:'f'.repeat(64),
         probeOrigin: 'https://cloudpay.kai.com', commerceStateDigest: `sha256:${'d'.repeat(64)}`, me: true,

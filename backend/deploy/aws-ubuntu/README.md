@@ -40,7 +40,7 @@
 - 生产配置固定为 `/etc/kai-cloudpay/backend.env`，归 `root:root` 且权限 `0600`。不得把它放进发布目录、压缩包、日志或命令行。
 - `backend.env` 必须设置 `NODE_ENV=production`、`MOBILE_API_PROFILE=inquiry_only`、`HONGHUAN_SUPPLIER_CATALOG_MODE=inquiry`、`HOST=127.0.0.1`、`PORT=4100`、`PUBLIC_ORIGIN=https://cloudpay.kai.com`、`BACKUP_LOCAL_DIRECTORY=/var/lib/kai-cloudpay-backup`，其余项目按 `.env.example` 和 readiness 补齐。
 - inquiry-only 不实例化算力、支付、短信、推送、Vast、节点、broker、上架、供应经营、运营或返佣服务与 worker；环境中即使残留这些变量，也不会开放对应路由。只有未来经独立审计显式切换 `full_commerce`，才重新执行完整商城门禁。
-- `cloudpay-mobile-backend.service` 启动前会运行 `scripts/verify-production-env.mjs`。它只输出缺少或不合规的配置项名称，不输出配置值；专用 PostgreSQL、账号安全、KAI paired 身份、对象存储、监控、备份配置、法务资料或公开 HTTPS 未就绪时直接拒绝。进程启动后，readiness 还必须验证 0065、有效加密备份、独立目标恢复演练、正式供应商目录、对象存储真实读写删除及 KAI paired 测试身份成功链的近期证据。
+- `cloudpay-mobile-backend.service` 启动前会运行 `scripts/verify-production-env.mjs`。它只输出缺少或不合规的配置项名称，不输出配置值；专用 PostgreSQL、账号安全、KAI paired 身份、对象存储、监控、备份配置、法务资料或公开 HTTPS 未就绪时直接拒绝。进程启动后，readiness 还必须验证 0066、有效加密备份、独立目标恢复演练、正式供应商目录、对象存储真实读写删除及 KAI paired 测试身份成功链的近期证据。
 
 后端与迁移已启动但尚未接入 ALB 时，先用临时环境变量运行受控就绪探针。令牌只能通过当前 shell 的临时环境或受控密钥注入，不能写入命令行、报告或 `backend.env`：
 
@@ -55,7 +55,7 @@ unset INQUIRY_READINESS_ACCESS_TOKEN INQUIRY_READINESS_ID_TOKEN INQUIRY_READINES
 该探针实际执行对象存储 Put/Head/Get/Delete/删除确认，并以真实测试身份完成 `/me`、法务版本、同意、主体读取与选择、正式询期和取消；它同时断言订单、预留、卡时及返佣账本均未变化。只有完整成功后才写入不可变审计证据，readiness 会在对象存储证据超过15分钟或 KAI 链证据超过30分钟后自动关闭。随后再运行 sidecar 与公网路由验证；未登录 `401` 只验证保护状态，不被当作统一身份可用证明。
 - 支付私钥或证书中的换行以字面量 `\\n` 保存；进程只在内存中还原 PEM。
 
-首次安装或发布新版本时，在新目录只运行 `npm run release:verify`。它会核对逐文件摘要、66 份迁移（含两个已发布分支各自的 0060 迁移，最新为 `0065_credit_order_transition_closure.sql`）、不含密钥文件、Node 版本，执行干净的生产依赖安装和编译入口加载，并验证 systemd/容器在缺配置时都能拒绝启动。全部通过后才能原子更新 `current` 软链接。安装本目录的三个 `.service`、两个 `.timer/.socket` 和防火墙单元后执行 `systemctl daemon-reload`。
+首次安装或发布新版本时，在新目录只运行 `npm run release:verify`。它会核对逐文件摘要、67 份迁移（含两个已发布分支各自的 0060 迁移，最新为 `0066_compute_data_flywheel_v1.sql`）、不含密钥文件、Node 版本，执行干净的生产依赖安装和编译入口加载，并验证 systemd/容器在缺配置时都能拒绝启动。全部通过后才能原子更新 `current` 软链接。安装本目录的三个 `.service`、两个 `.timer/.socket` 和防火墙单元后执行 `systemctl daemon-reload`。
 
 任何 CloudPay 单元启动前，以目标主机实际 VPC 私网地址和 24 小时内保存的旧站基线运行：
 
@@ -72,7 +72,7 @@ npm run production:aws-host:preflight -- \
 
 1. 保存旧站基线并运行目标主机预检；失败时不得启动迁移、后端或入口 socket。
 2. 在隔离的 PostgreSQL 15 实例创建 CloudPay 数据库与最小权限账户，注入生产 Secret。
-3. 启动 `cloudpay-mobile-migrate.service`，确认 66 条迁移均成功、两个 0060 分支迁移均已登记且最新为 `0065_credit_order_transition_closure.sql`；任何校验值不一致都会失败关闭。
+3. 启动 `cloudpay-mobile-migrate.service`，确认 67 条迁移均成功、两个 0060 分支迁移均已登记且最新为 `0066_compute_data_flywheel_v1.sql`；任何校验值不一致都会失败关闭。
 4. 启动 `cloudpay-mobile-backend.service`，保持 `127.0.0.1:4100`，先检查 health、readiness 和业务冒烟。
 5. 安装本目录的防火墙、socket 与 relay，目标安全组只允许 ALB 安全组访问 TCP `4154`。
 6. 手动运行一次 `cloudpay-mobile-backup.service`，确认加密对象、不可变保留期和审计记录，再启用 `cloudpay-mobile-backup.timer`。

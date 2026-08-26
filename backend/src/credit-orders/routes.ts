@@ -22,9 +22,12 @@ export async function registerCreditOrderRoutes(app: FastifyInstance, accounts: 
     assertDirectCommerceChannel(request);
     const body = parse(z.object({
       listingId: z.string().uuid(), quantity: z.string().trim().min(1).max(40),
+      recommendationRunId: z.string().uuid().optional(),
     }).strict(), request.body);
     const result = await orders.create(principal, {
-      ...body, idempotencyKey: String(request.headers['idempotency-key'] ?? ''),
+      listingId: body.listingId, quantity: body.quantity,
+      ...(body.recommendationRunId ? { recommendationRunId: body.recommendationRunId } : {}),
+      idempotencyKey: String(request.headers['idempotency-key'] ?? ''),
     }, context(request));
     return reply.status(result.replayed ? 200 : 201).send({ ok: true, ...result });
   });

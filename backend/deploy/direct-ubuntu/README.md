@@ -34,7 +34,7 @@ INTERNET_SERVICE_CLASSIFICATION_STATUS=not_assessed
 
 当前权威事实是 ICP 与 App 备案均尚未取得、互联网服务分类尚待合资格法务确认，因此对应编号与 evidence ref 必须留空。法务页面可正常公开并诚实显示“尚未取得”，但 public release 必须保留 `ICP_FILING_NOT_APPROVED`、`APP_FILING_NOT_APPROVED`、`INTERNET_SERVICE_CLASSIFICATION_REQUIRED` 三个 blocker；这三项未解决前禁止长期 Stage B。
 
-PostgreSQL 必须是该服务独立的本机回环数据库。先运行 host preflight，再迁移到 `0065`、启动后端、执行本地加密备份和隔离恢复演练。此时公网尚未接管手机版路径，真实公网 KAI/App 证据不可能存在，备案与互联网服务分类也未完成；Stage A 只允许 readiness 返回受审计的精确 blocker 集合：
+PostgreSQL 必须是该服务独立的本机回环数据库。先运行 host preflight，再迁移到 `0066`、启动后端、执行本地加密备份和隔离恢复演练。此时公网尚未接管手机版路径，真实公网 KAI/App 证据不可能存在，备案与互联网服务分类也未完成；Stage A 只允许 readiness 返回受审计的精确 blocker 集合：
 
 首次安装时由 root 运行 `npm run production:probe-static-credentials:provision`，为 paired probe 创建独立、最小权限 PostgreSQL 登录角色，并生成两份 host-key 加密 credential（回环数据库 DSN 与独立 audit pepper）。轮换由主机文件锁串行执行，先落两份候选密文和事务记录，再在单个数据库事务中更新密码/权限，最后原子提交两份密文；进程中断后再次执行会验证新旧数据库身份并完成或安全回退未提交事务。随后运行 `npm run production:probe-static-credentials:verify`，用探针自身身份验证只读表集合、审计插入回滚和禁止交易写权限，并写入绑定两份密文摘要的 24 小时验收证据；host preflight 会复核该证据。命令不会生成或接收 KAI refresh state；第三份 refresh credential 必须由专用测试账号完成真实授权后单独注入，禁止复用普通用户会话或伪造。
 
