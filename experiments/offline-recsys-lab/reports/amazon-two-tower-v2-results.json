@@ -1,0 +1,585 @@
+{
+  "claimableOnlinePerformance": false,
+  "comparison": {
+    "conclusion": "METADATA_TWO_TOWER_IMPROVED_FROZEN_V1_ON_TEST",
+    "contrast": "metadata_two_tower_v2_minus_frozen_id_two_tower_v1",
+    "delta": {
+      "100": {
+        "hitRate": 0.07843563066353425,
+        "mrr": 0.007576616449100254,
+        "ndcg": 0.019974062956711554,
+        "recall": 0.07843563066353425
+      },
+      "20": {
+        "hitRate": 0.026849347521370897,
+        "mrr": 0.006457898246355391,
+        "ndcg": 0.010814800096413581,
+        "recall": 0.026849347521370897
+      },
+      "50": {
+        "hitRate": 0.050526786830658275,
+        "mrr": 0.007184539052917721,
+        "ndcg": 0.015464788390204189,
+        "recall": 0.050526786830658275
+      }
+    },
+    "primaryMetricImproved": true
+  },
+  "dataOrigin": "public",
+  "devSelection": {
+    "candidates": [
+      {
+        "config": {
+          "batchSize": 512,
+          "embeddingDim": 32,
+          "epochs": 3,
+          "hiddenDim": 64,
+          "id": "metadata-d32-inbatch",
+          "learningRate": 0.001,
+          "maxHistory": 50,
+          "negativeSampling": "in_batch",
+          "outputDim": 32,
+          "temperature": 0.07
+        },
+        "devMetrics": {
+          "100": {
+            "hitRate": 0.04421467257508616,
+            "mrr": 0.0028787132954405056,
+            "ndcg": 0.009894365019705519,
+            "queryCount": 50775,
+            "recall": 0.04421467257508616
+          },
+          "20": {
+            "hitRate": 0.011521418020679469,
+            "mrr": 0.0022143442699140525,
+            "ndcg": 0.004182068340358518,
+            "queryCount": 50775,
+            "recall": 0.011521418020679469
+          },
+          "50": {
+            "hitRate": 0.024539635647464305,
+            "mrr": 0.002605636126643613,
+            "ndcg": 0.006723746541980782,
+            "queryCount": 50775,
+            "recall": 0.024539635647464305
+          }
+        },
+        "elapsedSeconds": 68.64138145800098,
+        "epochLosses": [
+          5.961584785966647,
+          5.767533866747745,
+          5.609215574205002
+        ],
+        "id": "metadata-d32-inbatch",
+        "selectionValue": 0.009894365019705519
+      },
+      {
+        "config": {
+          "batchSize": 512,
+          "embeddingDim": 64,
+          "epochs": 3,
+          "hiddenDim": 128,
+          "id": "metadata-d64-inbatch",
+          "learningRate": 0.001,
+          "maxHistory": 50,
+          "negativeSampling": "in_batch",
+          "outputDim": 64,
+          "temperature": 0.07
+        },
+        "devMetrics": {
+          "100": {
+            "hitRate": 0.05715411127523388,
+            "mrr": 0.0040609281319040616,
+            "ndcg": 0.01314461352866966,
+            "queryCount": 50775,
+            "recall": 0.05715411127523388
+          },
+          "20": {
+            "hitRate": 0.015992122107336287,
+            "mrr": 0.0032104864448659464,
+            "ndcg": 0.005925807683554508,
+            "queryCount": 50775,
+            "recall": 0.015992122107336287
+          },
+          "50": {
+            "hitRate": 0.032850812407680945,
+            "mrr": 0.003724190151222007,
+            "ndcg": 0.009230566263168706,
+            "queryCount": 50775,
+            "recall": 0.032850812407680945
+          }
+        },
+        "elapsedSeconds": 104.06051033400581,
+        "epochLosses": [
+          5.881298882301081,
+          5.596124083963228,
+          5.39788829840807
+        ],
+        "id": "metadata-d64-inbatch",
+        "selectionValue": 0.01314461352866966
+      },
+      {
+        "config": {
+          "batchSize": 512,
+          "embeddingDim": 64,
+          "epochs": 3,
+          "hiddenDim": 128,
+          "id": "metadata-d64-uniform",
+          "learningRate": 0.001,
+          "maxHistory": 50,
+          "negativeSampling": "uniform_unseen",
+          "outputDim": 64,
+          "temperature": 0.07
+        },
+        "devMetrics": {
+          "100": {
+            "hitRate": 0.09857213195470212,
+            "mrr": 0.009644735356623592,
+            "ndcg": 0.02523207351517539,
+            "queryCount": 50775,
+            "recall": 0.09857213195470212
+          },
+          "20": {
+            "hitRate": 0.03426883308714919,
+            "mrr": 0.008256682790292642,
+            "ndcg": 0.013827824170103508,
+            "queryCount": 50775,
+            "recall": 0.03426883308714919
+          },
+          "50": {
+            "hitRate": 0.06292466765140325,
+            "mrr": 0.009140636594373728,
+            "ndcg": 0.01946356207927882,
+            "queryCount": 50775,
+            "recall": 0.06292466765140325
+          }
+        },
+        "elapsedSeconds": 117.22709870900144,
+        "epochLosses": [
+          6.543817897093153,
+          6.24073076748655,
+          6.032932695447006
+        ],
+        "id": "metadata-d64-uniform",
+        "selectionValue": 0.02523207351517539
+      }
+    ],
+    "configCanonicalSha256": "992ecf9dd172ef2b1ae5ef504c87a01cd214309c11d15e60f2dd3c4ac1ef5449",
+    "experimentId": "amazon23-industrial-5core-two-tower-metadata-v2",
+    "metadata": {
+      "catalogItems": 25754,
+      "categoryPresent": 25754,
+      "featureSha256": "955341442a81d1dcef1b335127ed934c36d78b9d2fbe65f13587a11485bbb473",
+      "file": {
+        "bytes": 281523932,
+        "name": "meta_Industrial_and_Scientific.jsonl.gz",
+        "sha256": "0beb251cec166347a3ec3ef23e55ec89f7fb27a6e8e9a0737d6b34cdc184ebcb"
+      },
+      "malformedRows": 0,
+      "matchedCoverage": 1.0,
+      "matchedItems": 25754,
+      "metadataRows": 427564,
+      "titlePresent": 25753,
+      "vocabularySizeIncludingPadUnk": 20000
+    },
+    "schemaVersion": 1,
+    "selectedCandidateId": "metadata-d64-uniform",
+    "selectedConfig": {
+      "batchSize": 512,
+      "embeddingDim": 64,
+      "epochs": 3,
+      "hiddenDim": 128,
+      "id": "metadata-d64-uniform",
+      "learningRate": 0.001,
+      "maxHistory": 50,
+      "negativeSampling": "uniform_unseen",
+      "outputDim": 64,
+      "temperature": 0.07
+    },
+    "selectionMetric": "ndcg@100",
+    "selectionSeed": 3407,
+    "splitSha256": "0cc0485982d5974743150609976ca3606d84c688720ed773673f3e07a8ea996c",
+    "status": "DEV_SELECTION_COMPLETE_TEST_UNSEEN",
+    "testMetrics": null
+  },
+  "evidence": {
+    "configSha256": "edeb1a4e8cad9612ea2afa5e3ca1064f7733b64c5b8b4cbb173d876e07399bdc",
+    "configCanonicalSha256": "992ecf9dd172ef2b1ae5ef504c87a01cd214309c11d15e60f2dd3c4ac1ef5449",
+    "datasetFiles": [
+      {
+        "bytes": 7129893,
+        "name": "Industrial_and_Scientific.train.csv.gz",
+        "sha256": "132fea283cae097a9a4980ce6d4b44371f8b2bb38763c620dcb9458962347f0f",
+        "split": "train"
+      },
+      {
+        "bytes": 3473533,
+        "name": "Industrial_and_Scientific.valid.csv.gz",
+        "sha256": "41414bdd6308edd619989fc347864ac6c359e1de4868cb719dd13889ca105877",
+        "split": "dev"
+      },
+      {
+        "bytes": 3747446,
+        "name": "Industrial_and_Scientific.test.csv.gz",
+        "sha256": "4c5479c4340ea6aef9bc39fe9a54782cfa81046f10a844c4955df35678ebd340",
+        "split": "test"
+      }
+    ],
+    "metadata": {
+      "catalogItems": 25754,
+      "categoryPresent": 25754,
+      "featureSha256": "955341442a81d1dcef1b335127ed934c36d78b9d2fbe65f13587a11485bbb473",
+      "file": {
+        "bytes": 281523932,
+        "name": "meta_Industrial_and_Scientific.jsonl.gz",
+        "sha256": "0beb251cec166347a3ec3ef23e55ec89f7fb27a6e8e9a0737d6b34cdc184ebcb"
+      },
+      "malformedRows": 0,
+      "matchedCoverage": 1.0,
+      "matchedItems": 25754,
+      "metadataRows": 427564,
+      "titlePresent": 25753,
+      "vocabularySizeIncludingPadUnk": 20000
+    },
+    "selectionManifestSha256": "4bc1e2aa19c142dcd878a940f93c87f98e3cceeb43310ed10e9ad920fefdee30",
+    "splitSha256": "0cc0485982d5974743150609976ca3606d84c688720ed773673f3e07a8ea996c"
+  },
+  "experimentId": "amazon23-industrial-5core-two-tower-metadata-v2",
+  "frozenV1": {
+    "commit": "e1d91ab",
+    "exactSummary": {
+      "100": {
+        "hitRate": {
+          "mean": 0.004218243078725182,
+          "std": 0.00026207474057791724
+        },
+        "mrr": {
+          "mean": 0.00020883934724839738,
+          "std": 1.4749603161984141e-05
+        },
+        "ndcg": {
+          "mean": 0.0008785368479014164,
+          "std": 2.645331854516756e-05
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.004218243078725182,
+          "std": 0.00026207474057791724
+        }
+      },
+      "20": {
+        "hitRate": {
+          "mean": 0.0008883975282806548,
+          "std": 0.0001128358846760129
+        },
+        "mrr": {
+          "mean": 0.0001406389686970075,
+          "std": 2.200142977612856e-05
+        },
+        "ndcg": {
+          "mean": 0.0002962632868497395,
+          "std": 4.149065407729101e-05
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.0008883975282806548,
+          "std": 0.0001128358846760129
+        }
+      },
+      "50": {
+        "hitRate": {
+          "mean": 0.002224284181917491,
+          "std": 3.355523209281968e-05
+        },
+        "mrr": {
+          "mean": 0.00018170918627746034,
+          "std": 1.722141025678694e-05
+        },
+        "ndcg": {
+          "mean": 0.0005587182370756747,
+          "std": 1.2266194362547554e-05
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.002224284181917491,
+          "std": 3.355523209281968e-05
+        }
+      }
+    },
+    "resultFile": "amazon-retrieval-v1-results.json",
+    "resultSha256": "91d4abfe2beb33e413ccd326ed40820ce9a998312ff2f84d85ae61ad79ef9ab1",
+    "tag": "offline-recsys-lab-v1.0.0"
+  },
+  "limitations": [
+    "Amazon Reviews'23 interactions are public review/rating proxies, not impressions, clicks, orders, or KAI business data.",
+    "The provider has not assigned a dataset license; raw metadata and checkpoints remain local research artifacts and are not redistributed.",
+    "Only three preregistered CPU-sized configurations were compared, using one fixed dev selection seed.",
+    "The test set was evaluated once after selection; no post-test tuning is permitted.",
+    "Checkpoint and user-level traces are local ignored artifacts; the committed report contains only hashes and aggregate metrics.",
+    "This experiment does not add a model to production or change the frozen recommendation playground."
+  ],
+  "protocol": {
+    "catalogItems": 25754,
+    "counts": {
+      "devColdItems": 210,
+      "devColdUsers": 0,
+      "devEvaluationUsers": 50775,
+      "devExcludedTotal": 210,
+      "devRows": 50985,
+      "devTestEqualTimestampUsers": 1,
+      "testColdItems": 332,
+      "testColdUsers": 0,
+      "testEvaluationUsers": 50653,
+      "testExcludedTotal": 332,
+      "testRows": 50985,
+      "trainCatalogItems": 25754,
+      "trainDevEqualTimestampUsers": 0,
+      "trainRows": 310977,
+      "trainUsers": 50985
+    },
+    "excludeSeen": true,
+    "fullTrainCatalogEvaluation": true,
+    "ks": [
+      20,
+      50,
+      100
+    ],
+    "sampledNegativeEvaluation": false,
+    "seeds": [
+      3407,
+      6502,
+      9109
+    ],
+    "selectionMetric": "ndcg@100",
+    "selectionSeed": 3407,
+    "selectionSplit": "dev",
+    "testEvaluationUsers": 50653,
+    "testExecutionCount": 1,
+    "testOpenedAfterSelectionFrozen": true
+  },
+  "schemaVersion": 1,
+  "selectedCandidate": {
+    "batchSize": 512,
+    "embeddingDim": 64,
+    "epochs": 3,
+    "hiddenDim": 128,
+    "id": "metadata-d64-uniform",
+    "learningRate": 0.001,
+    "maxHistory": 50,
+    "negativeSampling": "uniform_unseen",
+    "outputDim": 64,
+    "temperature": 0.07
+  },
+  "source": {
+    "id": "mcauley-lab-amazon-reviews-2023",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "name": "Amazon Reviews'23",
+    "officialUrl": "https://amazon-reviews-2023.github.io/main.html",
+    "terms": "license not assigned by provider; isolated non-commercial research only; no raw-data redistribution"
+  },
+  "status": "COMPLETE",
+  "outcome": "POSITIVE_TEST_IMPROVEMENT",
+  "results": {
+    "comparisonConclusion": "METADATA_TWO_TOWER_IMPROVED_FROZEN_V1_ON_TEST",
+    "primaryMetric": "ndcg@100",
+    "primaryMetricMean": 0.02085259980461297,
+    "primaryMetricStd": 0.0002285255535171721,
+    "selectedCandidateId": "metadata-d64-uniform"
+  },
+  "test": {
+    "perSeed": {
+      "3407": {
+        "checkpoint": {
+          "bytes": 32486890,
+          "name": "metadata-d64-uniform-seed-3407.pt",
+          "roundTripLoaded": true,
+          "sha256": "e221fbe6be56c21c2444c555eccb4f7e924a66ee09e74459a1be1fb1e4fcf256"
+        },
+        "elapsedSeconds": 124.9802232090151,
+        "epochLosses": [
+          6.543817897093153,
+          6.24073076748655,
+          6.032932695447006
+        ],
+        "testMetrics": {
+          "100": {
+            "hitRate": 0.08366730499674255,
+            "mrr": 0.00778555272633465,
+            "ndcg": 0.02102618841605414,
+            "queryCount": 50653,
+            "recall": 0.08366730499674255
+          },
+          "20": {
+            "hitRate": 0.02819181489743944,
+            "mrr": 0.00658113429455079,
+            "ndcg": 0.011178374093433476,
+            "queryCount": 50653,
+            "recall": 0.02819181489743944
+          },
+          "50": {
+            "hitRate": 0.053284109529544155,
+            "mrr": 0.007360689592748734,
+            "ndcg": 0.016122255536340415,
+            "queryCount": 50653,
+            "recall": 0.053284109529544155
+          }
+        },
+        "userRecallTrace": {
+          "bytes": 41888080,
+          "name": "test-top100-seed-3407.jsonl.gz",
+          "rawIdentifiersIncluded": false,
+          "rows": 50653,
+          "sha256": "57747b2765f2e85bdd0ba7263b85d5626b4921978da873e1f65a95fe5c748763"
+        }
+      },
+      "6502": {
+        "checkpoint": {
+          "bytes": 32486890,
+          "name": "metadata-d64-uniform-seed-6502.pt",
+          "roundTripLoaded": true,
+          "sha256": "8de7aeb12b79c336b62a3ac432fc52fc8932110161bb1d2dcb4d61fd282f92fa"
+        },
+        "elapsedSeconds": 148.86082120801439,
+        "epochLosses": [
+          6.5570586685277545,
+          6.264691488541277,
+          6.043989750970165
+        ],
+        "testMetrics": {
+          "100": {
+            "hitRate": 0.08343039898920103,
+            "mrr": 0.007809001766065265,
+            "ndcg": 0.021001890522557465,
+            "queryCount": 50653,
+            "recall": 0.08343039898920103
+          },
+          "20": {
+            "hitRate": 0.027954908889897934,
+            "mrr": 0.006611680304003913,
+            "ndcg": 0.011163808115469522,
+            "queryCount": 50653,
+            "recall": 0.027954908889897934
+          },
+          "50": {
+            "hitRate": 0.053086687856592894,
+            "mrr": 0.007382850245422871,
+            "ndcg": 0.016099548988901445,
+            "queryCount": 50653,
+            "recall": 0.053086687856592894
+          }
+        },
+        "userRecallTrace": {
+          "bytes": 41883602,
+          "name": "test-top100-seed-6502.jsonl.gz",
+          "rawIdentifiersIncluded": false,
+          "rows": 50653,
+          "sha256": "8a20be6786a339858d5299dd877f1e177e88a146c8005419383d0290de1271f6"
+        }
+      },
+      "9109": {
+        "checkpoint": {
+          "bytes": 32486890,
+          "name": "metadata-d64-uniform-seed-9109.pt",
+          "roundTripLoaded": true,
+          "sha256": "c59676a4080058facf4c225d3f6e83ea654b8c47bdccdee7967c3e3c8a367103"
+        },
+        "elapsedSeconds": 170.57355112498044,
+        "epochLosses": [
+          6.556352806387552,
+          6.256288534307454,
+          6.039564969078663
+        ],
+        "testMetrics": {
+          "100": {
+            "hitRate": 0.08086391724083469,
+            "mrr": 0.007761812896646039,
+            "ndcg": 0.02052972047522731,
+            "queryCount": 50653,
+            "recall": 0.08086391724083469
+          },
+          "20": {
+            "hitRate": 0.02706651136161728,
+            "mrr": 0.006602797046602495,
+            "ndcg": 0.010991007940886966,
+            "queryCount": 50653,
+            "recall": 0.02706651136161728
+          },
+          "50": {
+            "hitRate": 0.051882415651590234,
+            "mrr": 0.007355204879413937,
+            "ndcg": 0.01584871535659773,
+            "queryCount": 50653,
+            "recall": 0.051882415651590234
+          }
+        },
+        "userRecallTrace": {
+          "bytes": 41961563,
+          "name": "test-top100-seed-9109.jsonl.gz",
+          "rawIdentifiersIncluded": false,
+          "rows": 50653,
+          "sha256": "82673a344776bcbc035d4e25ae7a3a39835dfdc628b82a05fa12ec5a121ff58f"
+        }
+      }
+    },
+    "summary": {
+      "100": {
+        "hitRate": {
+          "mean": 0.08265387374225942,
+          "std": 0.0012693802482174287
+        },
+        "mrr": {
+          "mean": 0.007785455796348651,
+          "std": 1.9264897193822562e-05
+        },
+        "ndcg": {
+          "mean": 0.02085259980461297,
+          "std": 0.0002285255535171721
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.08265387374225942,
+          "std": 0.0012693802482174287
+        }
+      },
+      "20": {
+        "hitRate": {
+          "mean": 0.02773774504965155,
+          "std": 0.0004843876629769329
+        },
+        "mrr": {
+          "mean": 0.0065985372150523984,
+          "std": 1.2828985332804482e-05
+        },
+        "ndcg": {
+          "mean": 0.011111063383263321,
+          "std": 8.510003471071893e-05
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.02773774504965155,
+          "std": 0.0004843876629769329
+        }
+      },
+      "50": {
+        "hitRate": {
+          "mean": 0.05275107101257576,
+          "std": 0.0006194973399805096
+        },
+        "mrr": {
+          "mean": 0.007366248239195181,
+          "std": 1.195102445202714e-05
+        },
+        "ndcg": {
+          "mean": 0.016023506627279863,
+          "std": 0.00012394323446415754
+        },
+        "queryCount": 50653,
+        "recall": {
+          "mean": 0.05275107101257576,
+          "std": 0.0006194973399805096
+        }
+      }
+    }
+  }
+}

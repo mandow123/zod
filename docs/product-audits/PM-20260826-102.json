@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-102",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-26T09:53:40Z",
+  "baseCommit": "a1caa05934bb86f09a842a8fe1ef5bf44609f383",
+  "stagedDiffSha256": "ffd7739061b6a1b7ebd551caa8e15e456f4b02b87c5c50473055118e172993fe",
+  "summary": "重新批准独立 Amazon Two-Tower V2 public offline 研究的线性重放提交。原批准的产品差异摘要保持 ffd77390 不变；本记录仅因 canonical main 前进和审计 ID 冲突而重新绑定新的线性 V1 基线 a1caa05，未修改 V2 代码、配置、test set、checkpoint/trace 摘要或任何指标。审计确认差异仅包含 experiments/offline-recsys-lab 下的元数据 Item Tower、三项预注册配置、dev-only 选型、一次 full-catalog test 门禁、checkpoint/脱敏用户级 Top-100 trace 契约、专用验证器、测试和结果报告；未修改 Production、0066、Data Flywheel、订单、支付、Playground 或业务 schema。Amazon metadata 的 25,754 个 catalog item 全部对齐，raw metadata、权重、逐用户 trace 和 artifacts 均由 Git 忽略；V2 test NDCG@100 0.02085259980461297 相对冻结 V1 0.0008785368479014164 的提升只代表 public review/rating proxy 离线结果。73 项测试、6 份 public report、V2 重算验证和防重放此前均通过；批准当前精确 base/diff 形成线性 V2 重放提交，不批准继续 test 调参、扩模型或生产效果声明。"
+}
