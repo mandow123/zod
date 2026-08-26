@@ -1,17 +1,18 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const secret=()=>randomBytes(32).toString('base64url');
-const env={...process.env,NODE_ENV:'test' as const,LOCAL_E2E:'true',PORT:'4197',STAGING_DATABASE_PATH:'memory://',
+const env={...process.env,NODE_ENV:'test' as const,LOCAL_E2E:'true',PORT:'0',STAGING_DATABASE_PATH:'memory://',
   STAGING_BUYER_TOKEN:secret(),STAGING_CREATOR_TOKEN:secret(),STAGING_OPERATOR_ACCESS_TOKEN:secret(),
   STAGING_SUPPLIER_TOKEN:secret(),STAGING_OPERATOR_CONTROL_TOKEN:secret()};
 let child:ChildProcess;
 let databaseRoot='';
-const base='http://127.0.0.1:4197';
+let base='';
 const headers=(token=env.STAGING_BUYER_TOKEN!)=>({'x-zod-client-environment':'staging','x-kai-e2e-session':token});
 const operatorHeaders=()=>({...headers(env.STAGING_OPERATOR_ACCESS_TOKEN!),'x-zod-staging-operator-token':env.STAGING_OPERATOR_CONTROL_TOKEN!});
 const sshString=(value:Buffer|string)=>{const bytes=Buffer.isBuffer(value)?value:Buffer.from(value);const length=Buffer.alloc(4);length.writeUInt32BE(bytes.length);return Buffer.concat([length,bytes]);};
@@ -21,9 +22,10 @@ const supplierDraft=(clientDraftId=randomUUID())=>({clientDraftId,resource:{name
 async function waitReady(){for(let attempt=0;attempt<300;attempt+=1){try{const response=await fetch(`${base}/mobile/v1/staging/health`,{headers:headers()});if(response.ok)return;}catch{}await new Promise(resolve=>setTimeout(resolve,50));}throw new Error('sandbox did not start');}
 async function startServer(){child=spawn(process.execPath,['--import','tsx','staging-sandbox/server.ts'],{cwd:new URL('..',import.meta.url),env,stdio:'ignore'});await waitReady();}
 async function stopServer(){if(child.exitCode!==null)return;child.kill('SIGTERM');await new Promise(resolve=>child.once('exit',resolve));}
+async function availablePort(){const server=createServer();await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});const address=server.address();if(!address||typeof address==='string')throw new Error('test port unavailable');await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));return address.port;}
 
 describe('staging sandbox HTTP isolation contract',()=>{
-  beforeAll(async()=>{databaseRoot=await mkdtemp(join(tmpdir(),'zod-staging-sandbox-http-'));env.STAGING_DATABASE_PATH=join(databaseRoot,'zod-staging-sandbox');await startServer();},30_000);
+  beforeAll(async()=>{databaseRoot=await mkdtemp(join(tmpdir(),'zod-staging-sandbox-http-'));env.STAGING_DATABASE_PATH=join(databaseRoot,'zod-staging-sandbox');env.PORT=String(await availablePort());base=`http://127.0.0.1:${env.PORT}`;await startServer();},30_000);
   afterAll(async()=>{await stopServer();await rm(databaseRoot,{recursive:true,force:true});});
 
   it('marks every response and rejects environment/auth scheme mismatches',async()=>{const response=await fetch(`${base}/mobile/v1/staging/balance`,{headers:headers()});expect(response.status).toBe(200);expect(response.headers.get('x-zod-environment')).toBe('staging');expect(response.headers.get('cache-control')).toBe('no-store');expect(await response.json()).toMatchObject({ok:true,environment:'staging',simulation:true,balance:{unit:'KAI_CARD_HOUR',precision:2,available:'100.00',reserved:'0.00',total:'100.00',version:1}});

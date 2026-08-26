@@ -22,6 +22,12 @@ function run(binary, args, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function output(binary, args) {
+  const result = spawnSync(binary, args, { cwd: backendRoot, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(result.stderr?.trim() || `${binary} ${args.join(' ')} failed`);
+  return result.stdout.trim();
+}
+
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function filesUnder(directory) {
@@ -36,6 +42,13 @@ async function filesUnder(directory) {
 }
 
 try {
+  const repositoryRoot = resolve(output('git', ['rev-parse', '--show-toplevel']));
+  if (repositoryRoot !== projectRoot) throw new Error(`Release repository mismatch: ${repositoryRoot}`);
+  const workingTreeStatus = output('git', ['status', '--porcelain']);
+  if (workingTreeStatus) throw new Error('Release requires a clean Git working tree.');
+  const sourceCommit = output('git', ['rev-parse', 'HEAD']);
+  const sourceTree = output('git', ['rev-parse', 'HEAD^{tree}']);
+
   run(process.execPath, ['../scripts/verify-mobile-backend-contract.mjs']);
   // Release verification is intentionally serial. The Postgres/PGlite integration
   // suites are comprehensive and can exceed their per-test budget when 49 files
@@ -96,6 +109,8 @@ try {
     package: packageJson.name,
     version: packageJson.version,
     node: packageJson.engines?.node,
+    sourceCommit,
+    sourceTree,
     migrationCount: migrations.length,
     latestMigration: migrations.at(-1),
     checks: {
@@ -106,6 +121,7 @@ try {
       isolatedCompiledEntrypoint: 'passed',
       incompleteContainerEnvironmentRejected: 'passed',
       deploymentConfigurationContract: 'passed',
+      cleanGitWorkingTree: 'passed',
       sidecarAndOriginPreflightIncluded: 'passed',
       privateSidecarVerificationIncluded: 'passed',
       secretsIncluded: false,
