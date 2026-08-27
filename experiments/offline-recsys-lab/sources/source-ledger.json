@@ -25,6 +25,16 @@
       "usageStatus": "research_only_cc_by_nc_sa_4_0"
     },
     {
+      "id": "criteo-attribution-modeling-bidding",
+      "origin": "public",
+      "officialUrl": "https://ailab.criteo.com/criteo-attribution-modeling-bidding-dataset/",
+      "publisherMirror": "https://huggingface.co/datasets/criteo/criteo-attribution-dataset",
+      "pinnedMirrorRevision": "904188a63cbad78bee43cd26ff5ee4ac77903986",
+      "tasks": ["impression_level_ctr", "ctcvr", "post_click_cvr", "esmm"],
+      "usageStatus": "research_only_cc_by_nc_sa_4_0_publisher_mirror",
+      "notes": "One row is one impression with click and conversion labels. The legacy go.criteo.net archive returned HTTP 404 during the 2026-08-27 audit, so acquisition is pinned to Criteo's verified Hugging Face organization and revision. Raw rows are not redistributed."
+    },
+    {
       "id": "ali-ccp",
       "origin": "public",
       "officialUrl": "https://tianchi.aliyun.com/dataset/408",

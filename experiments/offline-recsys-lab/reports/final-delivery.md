@@ -1,6 +1,6 @@
 # KAI Offline RecSys Lab — Integrated Public Benchmark Delivery
 
-Status: `COMPLETE_PUBLIC_OFFLINE_V1`
+Status: `COMPLETE_PUBLIC_OFFLINE_V3`
 
 Data boundary: `public` benchmark data plus `synthetic` code-path fixtures
 
@@ -63,6 +63,34 @@ Conclusion: `NO_STABLE_DIN_IMPROVEMENT_ON_FROZEN_PROTOCOL`. Recall@100 is
 0.066334 for both because neither reranker can recover a target missing from
 the frozen candidate set.
 
+## 2A. Unified retrieval-to-ranking V3
+
+V3 reuses the frozen metadata Two-Tower checkpoint and one Amazon data
+protocol through exact/HNSW Top-100 retrieval, negative generation,
+DIN/DCN-style reranking, train-only temperature calibration and frozen
+evaluation. Dev selection compared five candidates containing hard, uniform
+and in-batch negatives, both reranker families and both retrieval modes.
+
+| Frozen test evidence | Result |
+|---|---:|
+| Exact retrieval NDCG@100 | 0.021026 |
+| Selected reranker NDCG@100 | 0.023514 |
+| Paired user delta | +0.002488 |
+| 95% paired user bootstrap CI | [0.002283, 0.002680] |
+| Test users / bootstrap samples | 50,653 / 2,000 |
+
+`exact-din-uniform-64-32` won on dev. Hard negatives did not win and remain a
+reported negative result. The test bundle was opened exactly once after dev
+selection; the interval excludes zero within this offline protocol, but no
+online significance or business lift is claimed.
+
+The feature analysis removes metadata, ID, title and category inputs from the
+frozen selected checkpoint on one fixed dev candidate population. It is input
+zeroing, not per-variant retraining. The HNSW sweep records Recall@100 from
+0.8628 to 0.9965, p95 local-process latency and serialized index bytes across
+three settings. The frozen 5-core population has no real new-user, no-history
+or unseen-item support, so those cold-start results remain explicitly empty.
+
 ## 3. CTR prediction and calibration
 
 Criteo 1TB Click Logs fixed-subset V1 uses 42,000/9,000/9,000 source-order
@@ -107,18 +135,25 @@ not an examination propensity. The experiment supports action-selection OPE
 diagnostics under stated assumptions; it does not prove causal removal of
 latent position-examination bias.
 
-## 5. CVR / ESMM data validity gate
+## 5. CVR / ESMM impression-level experiment
 
-- Criteo Sponsored Search is rejected because the public source is clicked-row
-  conversion data, not a full impression/click/conversion funnel.
-- Criteo Attribution is schema-eligible because each impression row contains
-  click and conversion signals, but execution is intentionally
-  `DEFERRED_NOT_RUN` for the next frozen protocol.
-- Ali-CCP remains blocked until exact artifact identity and terms can be
-  verified.
+Criteo Sponsored Search remains rejected because it is clicked-row conversion
+data. V1 instead executes on the official Criteo Attribution dataset using one
+fixed first-200,000 timestamp-sorted impression population. Train/dev/test are
+140,000/30,000/30,000 rows. UID, labels, attribution and post-click fields are
+excluded from the feature allowlist; preprocessing is fitted on train only.
 
-No public CVR/ESMM metric is claimed. Synthetic examples test implementation
-paths only.
+| Model / task | AUC | LogLoss | Brier | ECE |
+|---|---:|---:|---:|---:|
+| Naive clicked-only CVR | 0.810773 | 0.327262 | 0.097532 | 0.024204 |
+| ESMM CTR | 0.736028 | 0.559379 | 0.188682 | 0.014789 |
+| ESMM CTCVR | 0.841541 | 0.151314 | 0.039463 | 0.003202 |
+| ESMM post-click CVR | 0.823026 | 0.314712 | 0.093289 | 0.012140 |
+
+Values are three-seed means. CTCVR is pre-registered as `click × raw 30-day
+impression conversion`; attribution is audit-only. Test was evaluated once
+after dev checkpoint selection. These are offline measurements, not causal
+conversion lift.
 
 ## 6. Claim boundary
 
@@ -138,27 +173,29 @@ isolated from Production and ignored by Git.
 
 - Retrieval: `reports/amazon-retrieval-v1.md` and
   `reports/amazon-retrieval-v1-results.json`
+- Unified V3: `reports/amazon-end-to-end-v3.md` and
+  `reports/amazon-end-to-end-v3-results.json`
 - Sequence: `reports/amazon-sequence-v1.md` and
   `reports/amazon-sequence-v1-results.json`
 - CTR: `reports/criteo-ctr-v1.md` and
   `reports/criteo-ctr-v1-results.json`
 - Position/OPE: `reports/position-bias-open-bandit-full-ope-v1.md` and
   `reports/position-bias-open-bandit-full-ope-v1.json`
-- CVR gate: `reports/cvr-esmm-data-gate.md`
+- CVR/ESMM: `reports/criteo-esmm-v1.md`,
+  `reports/criteo-esmm-v1-results.json` and `reports/cvr-esmm-data-gate.md`
 
 ## 8. Local recruitment playground
 
-`playground/` provides a Chinese-first, local-only explanation flow for
-retrieval, CTR calibration and position-bias diagnostics. Every displayed
+`playground/` provides a Chinese-first, local-only explanation flow for the
+unified Amazon chain, retrieval, CTR/CVR calibration and position-bias
+diagnostics. Every displayed
 number is loaded from the frozen public JSON reports or an explicitly derived,
 non-training demo fixture. Missing user-level BPR/Two-Tower traces remain
 unavailable rather than being fabricated.
 
 `make export-playground` creates an ignored, self-contained static directory
-and ZIP for controlled migration. The export does not establish permission to
-publish every derived fixture: public portfolio deployment still requires a
-separate attribution/license review, followed by personal-site build and
-browser QA.
+and ZIP for controlled migration. GitHub CI and a Pages deployment workflow are
+included. Pages is not configured or deployed yet, so no public URL is claimed.
 
 `make verify-public` validates source terms, raw file fingerprints, config and
 split fingerprints, counts, seeds and result structure. `make test` and

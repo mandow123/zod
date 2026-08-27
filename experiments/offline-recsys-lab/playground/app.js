@@ -1,7 +1,9 @@
 const state = {
   fixture: null,
   retrievalReport: null,
+  amazonV3Report: null,
   ctrReport: null,
+  esmmReport: null,
   positionReport: null,
   history: 0,
   retrievalModel: "itemKnn",
@@ -9,6 +11,17 @@ const state = {
   ctrModel: "deepfm",
   positionMethod: "naive_bts",
   clipping: "none",
+};
+
+const modelLabels = {
+  din_style: "DIN-style",
+  dcn_style: "DCN-style",
+};
+
+const negativeLabels = {
+  hard: "Hard",
+  uniform: "Uniform",
+  in_batch: "In-batch",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -203,11 +216,11 @@ function renderRetrieval(run = false) {
     const name = document.createElement("strong");
     name.textContent = item;
     const source = document.createElement("span");
-    source.textContent = "公开数据回放";
+    source.textContent = "合成 UI 样例";
     row.append(name, source);
     list.append(row);
   });
-  status("#retrieval-run-state", `完成：${labels[state.retrievalModel]} 已从公开训练目录回放前 10 个推荐。`, "complete");
+  status("#retrieval-run-state", `完成：${labels[state.retrievalModel]} 的合成列表已生成；上方聚合指标来自公开离线报告。`, "complete");
 }
 
 function calibrationBucket(model, seed) {
@@ -270,6 +283,108 @@ function renderCtr(run = false) {
       : "选择模型后查看公开离线结果。",
     run ? "complete" : "ready",
   );
+}
+
+function renderEsmm() {
+  const summary = state.esmmReport.results.summary;
+  const rows = [
+    ["Naive clicked-only CVR", summary.naivePostClickCvr],
+    ["ESMM CTR", summary.esmmCtr],
+    ["ESMM CTCVR", summary.esmmCtcvr],
+    ["ESMM post-click CVR", summary.esmmPostClickCvr],
+  ];
+  const root = $("#esmm-results");
+  root.replaceChildren();
+  rows.forEach(([name, metrics]) => {
+    const row = document.createElement("tr");
+    const label = document.createElement("th");
+    label.scope = "row";
+    label.textContent = name;
+    row.append(label);
+    ["auc", "logLoss", "brier", "ece"].forEach((metric) => {
+      const cell = document.createElement("td");
+      cell.textContent = number(metrics[metric].mean, 4);
+      cell.title = `3 seeds population std ${number(metrics[metric].populationStd, 6)}`;
+      row.append(cell);
+    });
+    root.append(row);
+  });
+  const split = state.esmmReport.split;
+  $("#esmm-split").textContent = `${integer(split.train.rows)} / ${integer(split.dev.rows)} / ${integer(split.test.rows)}`;
+  $("#esmm-test-gate").textContent = `${state.esmmReport.testOnceGate.accessCount} 次 · 未参与模型选择`;
+  $("#esmm-artifact").textContent = `${integer(state.esmmReport.artifact.bytes)} bytes · SHA-256 已固定`;
+}
+
+function renderAmazonV3() {
+  const report = state.amazonV3Report;
+  const exact = report.test.retrieval.exact["100"];
+  const reranked = report.test.rerankedSummary["100"];
+  const ci = report.results.confidenceInterval;
+  renderMetrics("#e2e-primary-metrics", [
+    { label: "Exact NDCG@100", value: exact.ndcg, digits: 6 },
+    { label: "重排 NDCG@100", value: reranked.ndcg.mean, digits: 6 },
+    { label: "成对用户增量", value: ci.mean_difference, digits: 6 },
+    { label: "Bootstrap 下界", value: ci.lower_bound, digits: 6 },
+  ]);
+  $("#e2e-selected").textContent = report.selectedCandidate.id;
+  $("#e2e-population").textContent = `${integer(ci.user_count)} 名用户 · ${integer(ci.bootstrap_samples)} 次 bootstrap`;
+  $("#e2e-ci").textContent = `[${number(ci.lower_bound, 6)}, ${number(ci.upper_bound, 6)}]`;
+
+  const candidateRoot = $("#e2e-candidates");
+  candidateRoot.replaceChildren();
+  report.devSelection.candidates.forEach((candidate) => {
+    const row = document.createElement("tr");
+    const config = candidate.config;
+    [
+      candidate.id,
+      modelLabels[config.modelType],
+      negativeLabels[config.negativeSampling],
+      config.retrievalMode.toUpperCase(),
+      number(candidate.devMetrics["100"].ndcg, 6),
+    ].forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      if (index === 0) cell.scope = "row";
+      cell.textContent = value;
+      row.append(cell);
+    });
+    if (candidate.id === report.selectedCandidate.id) row.dataset.selected = "true";
+    candidateRoot.append(row);
+  });
+
+  const ablationRoot = $("#e2e-ablations");
+  ablationRoot.replaceChildren();
+  const deltas = report.devSelection.metadataAblations.ndcgAt100DifferenceFromFull;
+  report.devSelection.metadataAblations.rows.forEach((variant) => {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    label.textContent = variant.variant;
+    const value = document.createElement("strong");
+    value.textContent = `${number(variant.metrics["100"].ndcg, 6)} · Δ ${number(deltas[variant.variant], 6)}`;
+    item.append(label, value);
+    ablationRoot.append(item);
+  });
+
+  const sweepRoot = $("#e2e-hnsw");
+  sweepRoot.replaceChildren();
+  report.devSelection.hnswSweep.points.forEach((point) => {
+    const row = document.createElement("tr");
+    [
+      `${point.m} / ${point.ef_search}`,
+      number(point.recall_at_k, 4),
+      `${number(point.p95_latency_ms, 3)} ms`,
+      `${number(point.index_size_bytes / 1_000_000, 2)} MB`,
+    ].forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      if (index === 0) cell.scope = "row";
+      cell.textContent = value;
+      row.append(cell);
+    });
+    sweepRoot.append(row);
+  });
+
+  const cohort = report.test.cohorts.selectedReranker;
+  $("#e2e-cohort").textContent = `${integer(cohort.queryCount)} 可分组 · ${integer(cohort.equalTimestampQueriesExcluded)} 条同时间戳排除`;
+  $("#e2e-cold-start").textContent = "新用户 0 · 无历史 0 · 未见商品 0";
 }
 
 function positionKey() {
@@ -341,17 +456,21 @@ async function initialize() {
     const responses = await Promise.all([
       fetch("./data/demo-fixtures.json"),
       fetch(`${reportBase}/amazon-retrieval-v1-results.json`),
+      fetch(`${reportBase}/amazon-end-to-end-v3-results.json`),
       fetch(`${reportBase}/criteo-ctr-v1-results.json`),
+      fetch(`${reportBase}/criteo-esmm-v1-results.json`),
       fetch(`${reportBase}/position-bias-open-bandit-full-ope-v1.json`),
     ]);
     if (!responses.every((response) => response.ok)) {
       throw new Error("one or more local artifacts could not be loaded");
     }
-    [state.fixture, state.retrievalReport, state.ctrReport, state.positionReport] = await Promise.all(
+    [state.fixture, state.retrievalReport, state.amazonV3Report, state.ctrReport, state.esmmReport, state.positionReport] = await Promise.all(
       responses.map((response) => response.json()),
     );
+    renderAmazonV3();
     renderRetrieval();
     renderCtr();
+    renderEsmm();
     renderPosition();
 
     $("#retrieval-run").addEventListener("click", () => renderRetrieval(true));

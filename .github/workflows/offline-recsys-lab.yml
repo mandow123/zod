@@ -1,0 +1,55 @@
+name: Offline RecSys Lab
+
+on:
+  pull_request:
+    paths:
+      - "experiments/offline-recsys-lab/**"
+      - ".github/workflows/offline-recsys-lab.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "experiments/offline-recsys-lab/**"
+      - ".github/workflows/offline-recsys-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-recsys-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Python 3.12 reproducibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: experiments/offline-recsys-lab
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: experiments/offline-recsys-lab/pyproject.toml
+
+      - name: Install pinned lab dependencies
+        run: python -m pip install -e .
+
+      - name: Run tests and truth-boundary checks
+        run: make PYTHON=python test
+
+      - name: Run deterministic small reproduction
+        run: make PYTHON=python reproduce-small
+
+      - name: Verify tracked public evidence
+        run: make PYTHON=python verify-public
+
+      - name: Verify local-only playground
+        run: make PYTHON=python verify-playground

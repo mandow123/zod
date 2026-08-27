@@ -1,0 +1,97 @@
+{
+  "experimentId": "criteo-attribution-impression-cvr-esmm-v1",
+  "protocolVersion": "criteo-esmm-v1",
+  "seeds": [3407, 6502, 9109],
+  "source": {
+    "id": "criteo-attribution-modeling-for-bidding",
+    "dataset": "Criteo Attribution Modeling for Bidding Dataset",
+    "publisher": "Criteo AI Lab",
+    "officialPage": "https://ailab.criteo.com/criteo-attribution-modeling-bidding-dataset/",
+    "officialRepository": "https://huggingface.co/datasets/criteo/criteo-attribution-dataset",
+    "officialRepositoryRevision": "904188a63cbad78bee43cd26ff5ee4ac77903986",
+    "downloadUrl": "https://huggingface.co/datasets/criteo/criteo-attribution-dataset/resolve/904188a63cbad78bee43cd26ff5ee4ac77903986/criteo_attribution_dataset.tsv.gz",
+    "legacyDownloadUrl": "http://go.criteo.net/criteo-research-attribution-dataset.zip",
+    "legacyDownloadAccessStatus": "HTTP_404_OBSERVED_2026_08_27",
+    "license": "CC-BY-NC-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "terms": "Criteo publishes this dataset under CC BY-NC-SA 4.0. Use here is limited to noncommercial offline research with attribution and ShareAlike obligations; the raw artifact is ignored and is not redistributed by this repository.",
+    "usage": "noncommercial_offline_research_only",
+    "officialDescription": "Each row is one timestamp-sorted impression with click, a conversion within 30 days after the impression, and attribution outcomes in the same population."
+  },
+  "dataset": {
+    "dataOrigin": "official_public",
+    "artifactPath": "data/raw/criteo-attribution/criteo_attribution_dataset.tsv.gz",
+    "expectedBytes": 653015824,
+    "expectedSha256": "94ac7a465564349bc7ba008602211d5990a3c53cc133abc0aadef61ea2391a98",
+    "identityEvidence": "Pinned Hugging Face revision response exposes X-Linked-Size 653015824 and X-Linked-ETag 94ac7a465564349bc7ba008602211d5990a3c53cc133abc0aadef61ea2391a98; the pipeline independently verifies local bytes and SHA-256 before parsing.",
+    "rowLimit": 200000,
+    "samplingRule": "first 200000 physical impression rows from the pinned gzip in publisher-declared timestamp order; no label-conditioned sampling"
+  },
+  "labels": {
+    "click": "official click field: 1 when the impression was clicked",
+    "rawConversion30d": "official conversion field: 1 when a conversion occurred within 30 days after the impression, independently of whether this impression was the last click",
+    "ctcvrDefinition": "click_x_raw_conversion_30d",
+    "postClickCvrEvaluation": "rawConversion30d evaluated only on clicked impressions",
+    "attribution": "audit-only official attribution field; excluded from features, training targets, model selection, and CVR/CTCVR metrics"
+  },
+  "features": {
+    "allowlist": [
+      "cost",
+      "campaign",
+      "cat1",
+      "cat2",
+      "cat3",
+      "cat4",
+      "cat5",
+      "cat6",
+      "cat7",
+      "cat8",
+      "cat9"
+    ],
+    "fitScope": "train_only",
+    "privacy": "uid is deliberately excluded",
+    "leakagePolicy": "all outcomes, identifiers tied to outcomes, and click-history fields are excluded"
+  },
+  "split": {
+    "trainFraction": 0.7,
+    "devFraction": 0.15,
+    "testFraction": 0.15,
+    "strategy": "fixed contiguous blocks over the publisher-declared timestamp-sorted first 200000 rows",
+    "selection": "train fits parameters; dev selects checkpoints; test is consumed once only after all checkpoints are frozen"
+  },
+  "preprocessing": {
+    "numeric": "log1p_nonnegative_then_train_zscore",
+    "categorical": "train_frequency_cap_then_oov",
+    "minCategoryCount": 2,
+    "maxCategoriesPerFeature": 10000,
+    "fitScope": "train_only"
+  },
+  "training": {
+    "device": "cpu",
+    "epochs": 3,
+    "batchSize": 2048,
+    "learningRate": 0.001,
+    "weightDecay": 0.00001,
+    "selection": "naive uses minimum clicked-dev CVR LogLoss; ESMM uses minimum dev CTR LogLoss plus dev CTCVR LogLoss; test cannot select any parameter"
+  },
+  "models": {
+    "embeddingDim": 8,
+    "hiddenDims": [64, 32],
+    "naiveClickedOnlyCvr": "one CVR tower optimized only on clicked train impressions",
+    "esmm": "shared impression features with separate CTR and conditional-CVR towers; P(CTCVR)=P(CTR)*P(CVR)"
+  },
+  "metrics": {
+    "names": ["AUC", "LogLoss", "Brier", "ECE"],
+    "eceBins": 10
+  },
+  "limitations": [
+    "This V1 uses a fixed 200000-row timestamp-ordered prefix, not all 16.5M impressions or the full 30-day span.",
+    "The official raw conversion label is impression-associated within 30 days and must not be described as last-click or causal post-click conversion; ESMM CTCVR is explicitly click multiplied by raw conversion.",
+    "Repeated users and conversion timelines may cross temporal boundaries; uid and conversion_id are excluded from features, but the fixed prefix is not a user- or conversion-group holdout.",
+    "Criteo anonymizes and subsamples the traffic, and contextual feature meanings are undisclosed.",
+    "Cost is transformed by the publisher and is not a real market price.",
+    "The publisher's legacy go.criteo.net archive link returned HTTP 404 on 2026-08-27; acquisition uses the same dataset in Criteo's official Hugging Face organization at a pinned revision.",
+    "Offline public-data metrics do not establish KAI production performance, online lift, or business impact.",
+    "CC BY-NC-SA 4.0 limits this use to noncommercial purposes under its attribution and ShareAlike terms."
+  ]
+}

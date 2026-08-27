@@ -13,7 +13,9 @@ ARCHIVE = ROOT / "dist" / "recommendation-systems-playground-portable.zip"
 
 REPORTS = (
     "amazon-retrieval-v1-results.json",
+    "amazon-end-to-end-v3-results.json",
     "criteo-ctr-v1-results.json",
+    "criteo-esmm-v1-results.json",
     "position-bias-open-bandit-full-ope-v1.json",
 )
 
@@ -40,7 +42,7 @@ def export() -> None:
         raise SystemExit("portable report-base marker was not found")
     (OUTPUT / "index.html").write_text(portable_index, encoding="utf-8")
 
-    for filename in ("styles.css", "app.js"):
+    for filename in ("styles.css", "app.js", "THIRD_PARTY_DATA.md"):
         shutil.copy2(SOURCE / filename, OUTPUT / filename)
     shutil.copy2(SOURCE / "PORTABLE-INTEGRATION.md", OUTPUT / "README.md")
     shutil.copy2(SOURCE / "data" / "demo-fixtures.json", data_output / "demo-fixtures.json")
