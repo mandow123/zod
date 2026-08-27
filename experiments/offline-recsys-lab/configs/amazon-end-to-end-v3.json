@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "experimentId": "amazon23-industrial-5core-end-to-end-v3",
+  "dataOrigin": "public",
+  "claimableOnlinePerformance": false,
+  "dataset": {
+    "name": "Amazon Reviews'23",
+    "category": "Industrial_and_Scientific",
+    "processing": "official 5-core de-duplicated leave-last-out with history",
+    "interactionMeaning": "review or rating interaction proxy; not impression or click",
+    "licenseStatus": "not_assigned_by_dataset_provider_research_only",
+    "rawDir": "data/raw/amazon-reviews-2023/Industrial_and_Scientific",
+    "files": {
+      "train": {
+        "name": "Industrial_and_Scientific.train.csv.gz",
+        "expectedBytes": 7129893,
+        "expectedSha256": "132fea283cae097a9a4980ce6d4b44371f8b2bb38763c620dcb9458962347f0f"
+      },
+      "dev": {
+        "name": "Industrial_and_Scientific.valid.csv.gz",
+        "expectedBytes": 3473533,
+        "expectedSha256": "41414bdd6308edd619989fc347864ac6c359e1de4868cb719dd13889ca105877"
+      },
+      "test": {
+        "name": "Industrial_and_Scientific.test.csv.gz",
+        "expectedBytes": 3747446,
+        "expectedSha256": "4c5479c4340ea6aef9bc39fe9a54782cfa81046f10a844c4955df35678ebd340"
+      }
+    }
+  },
+  "metadata": {
+    "file": "meta_Industrial_and_Scientific.jsonl.gz",
+    "expectedBytes": 281523932,
+    "expectedSha256": "0beb251cec166347a3ec3ef23e55ec89f7fb27a6e8e9a0737d6b34cdc184ebcb",
+    "fields": ["title", "main_category", "categories"],
+    "maxVocabulary": 20000,
+    "maxTitleTokens": 24,
+    "maxCategoryTokens": 12
+  },
+  "frozenV2": {
+    "config": "configs/amazon-two-tower-v2.json",
+    "configSha256": "edeb1a4e8cad9612ea2afa5e3ca1064f7733b64c5b8b4cbb173d876e07399bdc",
+    "result": "reports/amazon-two-tower-v2-results.json",
+    "resultSha256": "8e448313717a1309f4d33b35d3a92c899455f0d6af2ce86a6f9fd93f845b821f",
+    "checkpoint": "artifacts/amazon-two-tower-v2/checkpoints/metadata-d64-uniform-seed-3407.pt",
+    "checkpointSha256": "e221fbe6be56c21c2444c555eccb4f7e924a66ee09e74459a1be1fb1e4fcf256",
+    "checkpointSeed": 3407,
+    "selectedCandidateId": "metadata-d64-uniform",
+    "splitSha256": "0cc0485982d5974743150609976ca3606d84c688720ed773673f3e07a8ea996c",
+    "metadataFeatureSha256": "955341442a81d1dcef1b335127ed934c36d78b9d2fbe65f13587a11485bbb473"
+  },
+  "protocol": {
+    "selectionSplit": "dev",
+    "selectionSeed": 3407,
+    "selectionMetric": "ndcg@100",
+    "seeds": [3407, 6502, 9109],
+    "ks": [20, 50, 100],
+    "testTuningForbidden": true,
+    "testExecutionLimit": 1,
+    "calibrationSplit": "train_only",
+    "pairedEvaluation": true
+  },
+  "retrieval": {
+    "candidateK": 100,
+    "exactBatchSize": 128,
+    "hnsw": {
+      "efConstruction": 200,
+      "m": 16,
+      "efSearch": 400,
+      "seed": 3407
+    }
+  },
+  "training": {
+    "maxQueries": 20000,
+    "hardNegatives": 10,
+    "maxHistory": 50,
+    "calibrationFraction": 0.2,
+    "temperatureGrid": [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
+    "scoreBatchSize": 4096,
+    "scoreQueryBatch": 256,
+    "ablationQueryLimit": 5000
+  },
+  "candidateConfigs": [
+    {
+      "id": "exact-din-hard-64-32",
+      "modelType": "din_style",
+      "retrievalMode": "exact",
+      "negativeSampling": "hard",
+      "hiddenDims": [64, 32],
+      "dropout": 0.1,
+      "epochs": 2,
+      "batchSize": 4096,
+      "learningRate": 0.001,
+      "weightDecay": 0.00001
+    },
+    {
+      "id": "exact-dcn-hard-64-32",
+      "modelType": "dcn_style",
+      "retrievalMode": "exact",
+      "negativeSampling": "hard",
+      "hiddenDims": [64, 32],
+      "crossLayers": 2,
+      "dropout": 0.1,
+      "epochs": 2,
+      "batchSize": 4096,
+      "learningRate": 0.001,
+      "weightDecay": 0.00001
+    },
+    {
+      "id": "exact-din-uniform-64-32",
+      "modelType": "din_style",
+      "retrievalMode": "exact",
+      "negativeSampling": "uniform",
+      "hiddenDims": [64, 32],
+      "dropout": 0.1,
+      "epochs": 2,
+      "batchSize": 4096,
+      "learningRate": 0.001,
+      "weightDecay": 0.00001
+    },
+    {
+      "id": "exact-din-inbatch-64-32",
+      "modelType": "din_style",
+      "retrievalMode": "exact",
+      "negativeSampling": "in_batch",
+      "hiddenDims": [64, 32],
+      "dropout": 0.1,
+      "epochs": 2,
+      "batchSize": 4096,
+      "learningRate": 0.001,
+      "weightDecay": 0.00001
+    },
+    {
+      "id": "hnsw-din-hard-64-32",
+      "modelType": "din_style",
+      "retrievalMode": "hnsw",
+      "negativeSampling": "hard",
+      "hiddenDims": [64, 32],
+      "dropout": 0.1,
+      "epochs": 2,
+      "batchSize": 4096,
+      "learningRate": 0.001,
+      "weightDecay": 0.00001
+    }
+  ],
+  "hnswSweep": {
+    "queryLimit": 300,
+    "k": 100,
+    "warmupQueries": 5,
+    "seed": 3407,
+    "configs": [
+      {"efConstruction": 100, "m": 8, "efSearch": 100},
+      {"efConstruction": 200, "m": 16, "efSearch": 200},
+      {"efConstruction": 200, "m": 16, "efSearch": 400}
+    ]
+  },
+  "statistics": {
+    "confidenceLevel": 0.95,
+    "bootstrapSamples": 2000,
+    "bootstrapSeed": 20260827
+  },
+  "artifactsDir": "artifacts/amazon-end-to-end-v3",
+  "output": "reports/amazon-end-to-end-v3-results.json"
+}

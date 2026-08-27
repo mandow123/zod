@@ -16,12 +16,15 @@ def main() -> None:
     index = (ROOT / "playground" / "index.html").read_text(encoding="utf-8")
     app = (ROOT / "playground" / "app.js").read_text(encoding="utf-8")
     styles = (ROOT / "playground" / "styles.css").read_text(encoding="utf-8")
+    notices = (ROOT / "playground" / "THIRD_PARTY_DATA.md").read_text(encoding="utf-8")
     combined = "\n".join((index, app, styles))
     if re.search(r"https?://", combined, flags=re.IGNORECASE):
         raise SystemExit("playground source must not request external HTTP resources")
     required_fetches = {
         "amazon-retrieval-v1-results.json",
+        "amazon-end-to-end-v3-results.json",
         "criteo-ctr-v1-results.json",
+        "criteo-esmm-v1-results.json",
         "position-bias-open-bandit-full-ope-v1.json",
         "./data/demo-fixtures.json",
     }
@@ -29,12 +32,17 @@ def main() -> None:
     if absent:
         raise SystemExit(f"playground is missing local artifact fetches: {absent}")
     required_interface_copy = {
-        "推荐系统是怎样工作的",
-        "公开离线数据 · 本地演示",
-        "开始 60 秒演示",
+        "一条链路，解释推荐结果",
+        "公开离线指标 · 合成交互演示",
+        "开始 3 分钟演示",
         "几万个商品不可能全部精排",
         "排第一的商品天然更容易被点击",
         'id="pipeline-catalog"',
+        "Hard Negative",
+        "用户级 bootstrap CI",
+        "CVR / ESMM 不再是 synthetic smoke",
+        "先看证据，再看演示",
+        "Hard negative 没有获胜",
     }
     absent_copy = sorted(value for value in required_interface_copy if value not in index)
     if absent_copy:
@@ -43,6 +51,9 @@ def main() -> None:
         raise SystemExit("catalog size must be read from the frozen artifact, not hard-coded")
     if 'data-report-base="../reports"' not in index:
         raise SystemExit("playground must declare its report base for portable export")
+    for required_notice in ("CC BY-NC-SA 4.0", "CC BY 4.0", "not assigned a dataset license"):
+        if required_notice not in notices:
+            raise SystemExit(f"third-party data notice is incomplete: {required_notice}")
     forbidden_prominent_english = {
         "How Recommendation Systems Work",
         "Recommendation Algorithm Playground",
@@ -59,6 +70,10 @@ def main() -> None:
     fixture = read_json("playground/data/demo-fixtures.json")
     if fixture.get("generatedWithoutTraining") is not True or fixture.get("productionClaim") is not False:
         raise SystemExit("demo fixture truth boundary is invalid")
+    if fixture.get("redistributable") is not True or fixture.get("dataBoundary") != "synthetic-ui-fixture-with-public-aggregate-reports":
+        raise SystemExit("playground fixture must be redistributable synthetic UI data")
+    if fixture["amazon"].get("origin") != "synthetic" or fixture["criteo"].get("origin") != "synthetic":
+        raise SystemExit("playground interaction rows must not redistribute third-party records")
     histories = fixture["amazon"]["histories"]
     if len(histories) < 3:
         raise SystemExit("at least three anonymized histories are required")
@@ -73,12 +88,28 @@ def main() -> None:
             raise SystemExit("Amazon histories must use anonymized item aliases")
     if fixture["criteo"].get("individualPredictionPersisted") is not False:
         raise SystemExit("CTR row-level prediction boundary must remain false")
+    if fixture["criteo"].get("rowAlias") != "SYNTHETIC-IMPRESSION-001":
+        raise SystemExit("CTR UI example must remain explicitly synthetic")
 
     retrieval = read_json("reports/amazon-retrieval-v1-results.json")
     ctr = read_json("reports/criteo-ctr-v1-results.json")
     position = read_json("reports/position-bias-open-bandit-full-ope-v1.json")
+    esmm = read_json("reports/criteo-esmm-v1-results.json")
+    amazon_v3 = read_json("reports/amazon-end-to-end-v3-results.json")
     if retrieval.get("dataOrigin") != "public" or ctr.get("dataOrigin") != "public" or position.get("dataOrigin") != "public":
         raise SystemExit("all displayed benchmark reports must be public")
+    if esmm.get("status") != "COMPLETE" or esmm.get("dataOrigin") != "official_public":
+        raise SystemExit("displayed ESMM report must be a complete official-public run")
+    if amazon_v3.get("status") != "COMPLETE" or amazon_v3.get("claimableOnlinePerformance") is not False:
+        raise SystemExit("displayed Amazon V3 report must preserve its complete offline boundary")
+    if amazon_v3.get("protocol", {}).get("testExecutionCount") != 1:
+        raise SystemExit("displayed Amazon V3 report must preserve the test-once gate")
+    if esmm.get("testOnceGate") != {
+        "accessCount": 1,
+        "policy": "one bundled evaluation after all checkpoints are frozen",
+        "usedForSelection": False,
+    }:
+        raise SystemExit("displayed ESMM report must preserve the test-once gate")
     for threshold in position["protocol"]["clippingThresholds"]:
         encoded = str(threshold).replace(".", "p")
         if f"snips_clipped_{encoded}" not in position["results"]["policyValueEstimates"]:

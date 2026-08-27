@@ -1,0 +1,57 @@
+name: Offline RecSys Playground Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "experiments/offline-recsys-lab/playground/**"
+      - "experiments/offline-recsys-lab/reports/**"
+      - "experiments/offline-recsys-lab/scripts/export_playground.py"
+      - "experiments/offline-recsys-lab/scripts/verify_playground.py"
+      - ".github/workflows/offline-recsys-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: offline-recsys-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: experiments/offline-recsys-lab
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify and export self-contained playground
+        run: |
+          python scripts/verify_playground.py
+          python scripts/export_playground.py
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload playground artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: experiments/offline-recsys-lab/dist/recommendation-systems-playground-portable
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

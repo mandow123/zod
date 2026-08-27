@@ -13,51 +13,58 @@
     <header class="hero">
       <div class="topbar">
         <strong>推荐算法互动实验室</strong>
-        <span class="boundary-tag">公开离线数据 · 本地演示</span>
+        <span class="boundary-tag">公开离线指标 · 合成交互演示</span>
       </div>
 
       <div class="hero-copy">
-        <p class="eyebrow">60 秒看懂推荐系统</p>
-        <h1>推荐系统是怎样工作的</h1>
-        <p class="hero-subtitle">从几万商品中找到你最可能喜欢的东西</p>
-        <p class="hero-intro">推荐系统不是直接给所有商品打分。它先缩小范围，再判断点击可能性，最后校正展示位置带来的误差。</p>
+        <p class="eyebrow">端到端推荐算法实验室</p>
+        <h1>一条链路，解释推荐结果</h1>
+        <p class="hero-subtitle">从召回候选到重排、校准与可信离线评估</p>
+        <p class="hero-intro">同一份用户、商品、历史和 metadata 协议贯穿召回与排序；广告 CVR 和 OPE 保持为独立数据任务，不拼接不存在的业务漏斗。</p>
       </div>
 
-      <div class="system-flow" aria-label="推荐系统五阶段流程">
+      <div class="system-flow" aria-label="端到端推荐系统六阶段流程">
         <div class="flow-node flow-source">
-          <span>全部商品</span>
+          <span>统一数据协议</span>
           <strong id="pipeline-catalog">读取中…</strong>
-          <small>公开训练目录</small>
+          <small>用户 / 商品 / 历史 / metadata</small>
         </div>
         <span class="flow-arrow" aria-hidden="true">→</span>
         <div class="flow-node">
-          <span>候选召回</span>
-          <strong>先找一批可能喜欢的</strong>
-          <small>双塔召回 / 近似检索</small>
+          <span>Two-Tower</span>
+          <strong>学习检索向量</strong>
+          <small>冻结查询与商品 embedding</small>
         </div>
         <span class="flow-arrow" aria-hidden="true">→</span>
         <div class="flow-node">
-          <span>点击预测</span>
-          <strong>判断更可能点哪个</strong>
-          <small>逻辑回归 / 深度模型</small>
+          <span>HNSW Top-K</span>
+          <strong>近似召回候选</strong>
+          <small>对照 exact retrieval</small>
         </div>
         <span class="flow-arrow" aria-hidden="true">→</span>
         <div class="flow-node flow-accent">
-          <span>偏差校正</span>
-          <strong>校正位置带来的错觉</strong>
-          <small>逆倾向加权 / 归一化加权</small>
+          <span>Hard Negative</span>
+          <strong>学习最接近的错误</strong>
+          <small>对比 uniform / in-batch</small>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node">
+          <span>DIN / DCN</span>
+          <strong>候选重排</strong>
+          <small>特征消融与冷启动分组</small>
         </div>
         <span class="flow-arrow" aria-hidden="true">→</span>
         <div class="flow-node flow-final">
-          <span>最终推荐</span>
-          <strong>精选结果</strong>
-          <small>最终推荐</small>
+          <span>Calibration + Eval</span>
+          <strong>校准并成对评估</strong>
+          <small>用户级 bootstrap CI</small>
         </div>
       </div>
 
       <div class="hero-actions">
-        <a class="primary-action" id="demo-start" href="#retrieval">开始 60 秒演示</a>
-        <nav class="quick-nav" aria-label="三个演示入口">
+        <a class="primary-action" id="demo-start" href="#retrieval">开始 3 分钟演示</a>
+        <nav class="quick-nav" aria-label="四个演示入口">
+          <a href="#e2e-evidence">结果</a>
           <a href="#retrieval">找商品</a>
           <a href="#ctr">预测点击</a>
           <a href="#position-bias">校正偏差</a>
@@ -65,12 +72,68 @@
       </div>
 
       <div class="demo-route" aria-label="招聘会演示顺序">
-        <span>选用户</span><b aria-hidden="true">→</b><span>召回商品</span><b aria-hidden="true">→</b><span>看点击预测</span><b aria-hidden="true">→</b><span>理解位置偏差</span><b aria-hidden="true">→</b><span>打开技术细节</span>
+        <span>统一链路</span><b aria-hidden="true">→</b><span>召回与 ANN</span><b aria-hidden="true">→</b><span>点击 / 转化</span><b aria-hidden="true">→</b><span>理解 OPE</span><b aria-hidden="true">→</b><span>检查证据边界</span>
       </div>
     </header>
 
     <main id="main" tabindex="-1">
       <div id="load-error" class="load-error" role="alert" hidden>无法读取本地数据。请用 README 中的命令从 localhost 启动。</div>
+
+      <section class="e2e-evidence" id="e2e-evidence" aria-labelledby="e2e-title">
+        <header class="e2e-heading">
+          <div>
+            <p class="step-label">FROZEN TEST · 端到端结果</p>
+            <h2 id="e2e-title">先看证据，再看演示</h2>
+          </div>
+          <p>统一 Amazon 协议贯穿召回与重排。下面全部来自冻结的公开离线聚合报告，不是合成指标，也不是线上 lift。</p>
+        </header>
+
+        <div class="e2e-summary">
+          <div class="metric-grid" id="e2e-primary-metrics"></div>
+          <dl class="evidence-list">
+            <div><dt>Dev 选中配置</dt><dd id="e2e-selected">读取中…</dd></div>
+            <div><dt>成对评估人口</dt><dd id="e2e-population">读取中…</dd></div>
+            <div><dt>95% 用户级 CI</dt><dd id="e2e-ci">读取中…</dd></div>
+          </dl>
+          <p class="panel-footnote">区间在冻结离线协议下不跨 0；这不是在线显著性或业务收益声明。Test 在 dev 选择和 train-only calibration 冻结后只打开一次。</p>
+        </div>
+
+        <div class="e2e-analysis-grid">
+          <article class="analysis-card analysis-wide">
+            <div class="analysis-title"><span>01</span><div><h3>模型与负采样</h3><p>同一 dev 人口 · NDCG@100</p></div></div>
+            <div class="table-scroll" tabindex="0" aria-label="DIN DCN 与负采样对比">
+              <table class="evidence-table compact-table">
+                <thead><tr><th>候选</th><th>重排</th><th>负样本</th><th>召回</th><th>NDCG</th></tr></thead>
+                <tbody id="e2e-candidates"></tbody>
+              </table>
+            </div>
+            <p class="analysis-note">Hard negative 没有获胜；Uniform 在冻结 dev 上胜出。失败结果保留，不为叙事换模型。</p>
+          </article>
+
+          <article class="analysis-card">
+            <div class="analysis-title"><span>02</span><div><h3>Feature 消融</h3><p>冻结 checkpoint 输入置零</p></div></div>
+            <ul class="analysis-list" id="e2e-ablations"></ul>
+            <p class="analysis-note">不是逐变体重训，因此只能解释冻结模型的特征依赖。</p>
+          </article>
+
+          <article class="analysis-card">
+            <div class="analysis-title"><span>03</span><div><h3>HNSW 权衡</h3><p>Recall–latency–size</p></div></div>
+            <div class="table-scroll" tabindex="0" aria-label="HNSW 召回延迟索引体积曲线">
+              <table class="evidence-table compact-table">
+                <thead><tr><th>M / efS</th><th>Recall</th><th>p95</th><th>索引</th></tr></thead>
+                <tbody id="e2e-hnsw"></tbody>
+              </table>
+            </div>
+            <p class="analysis-note">本机进程计时，不是生产 SLA。</p>
+          </article>
+
+          <article class="analysis-card analysis-wide cohort-card">
+            <div class="analysis-title"><span>04</span><div><h3>冷启动与数据边界</h3><p>只用严格早于评估事件的特征</p></div></div>
+            <div class="cohort-facts"><strong id="e2e-cohort">读取中…</strong><strong id="e2e-cold-start">读取中…</strong></div>
+            <p class="analysis-note">5-core 切分没有真实冷启动 support，因此不伪造冷启动效果；同时间戳样本只从 cohort 分析排除，主测试人口保持完整。</p>
+          </article>
+        </div>
+      </section>
 
       <section class="lesson" id="retrieval" aria-labelledby="retrieval-title">
         <header class="lesson-heading">
@@ -82,8 +145,8 @@
         <div class="demo-surface">
           <div class="demo-control-row">
             <div>
-              <p class="control-label">选择一位脱敏用户</p>
-              <div class="segmented" id="retrieval-histories" aria-label="选择脱敏用户历史"></div>
+              <p class="control-label">选择一位合成演示用户</p>
+              <div class="segmented" id="retrieval-histories" aria-label="选择合成用户历史"></div>
             </div>
             <button class="run-button" id="retrieval-run" type="button">给这个用户推荐</button>
           </div>
@@ -94,7 +157,7 @@
               <div class="token-list" id="retrieval-history"></div>
             </div>
             <div class="next-item-wrap">
-              <span class="plain-label">公开测试集中的下一件商品</span>
+              <span class="plain-label">合成样例中的下一件商品</span>
               <strong class="next-item" id="retrieval-target"></strong>
             </div>
           </div>
@@ -150,7 +213,7 @@
 
           <div class="ctr-main-result">
             <div>
-              <p class="result-kicker">公开测试数据中的相似样本</p>
+              <p class="result-kicker">合成交互样例 · 聚合指标来自公开实验</p>
               <h3>模型给出的平均预测概率</h3>
               <p>数值来自真实概率校准分组，不是这个人的单样本预测，也不是真实线上点击率。</p>
             </div>
@@ -167,7 +230,7 @@
               <div class="metric-grid five" id="ctr-metrics"></div>
               <div class="ctr-workbench">
                 <div>
-                  <div class="results-header"><span>脱敏公开测试样本</span><span id="ctr-row-alias"></span></div>
+                  <div class="results-header"><span>合成展示样本</span><span id="ctr-row-alias"></span></div>
                   <dl class="feature-grid" id="ctr-features"></dl>
                 </div>
                 <dl class="evidence-list">
@@ -179,6 +242,28 @@
               <p class="panel-footnote">冻结实验记录没有保存逐行预测。Criteo 对正负样本采用不同比例下采样，因此这里的概率不能直接解释为总体点击率。</p>
             </div>
           </details>
+
+          <section class="conversion-evidence" aria-labelledby="esmm-title">
+            <div class="conversion-heading">
+              <div>
+                <p class="result-kicker">已执行 · 官方 Criteo impression 数据</p>
+                <h3 id="esmm-title">CVR / ESMM 不再是 synthetic smoke</h3>
+              </div>
+              <span class="evidence-state">COMPLETE · OFFLINE</span>
+            </div>
+            <div class="table-scroll" tabindex="0" aria-label="CVR 与 ESMM 三种任务离线指标">
+              <table class="evidence-table">
+                <thead><tr><th>模型 / 任务</th><th>AUC ↑</th><th>LogLoss ↓</th><th>Brier ↓</th><th>ECE ↓</th></tr></thead>
+                <tbody id="esmm-results"></tbody>
+              </table>
+            </div>
+            <dl class="evidence-list">
+              <div><dt>固定切分</dt><dd id="esmm-split">读取中…</dd></div>
+              <div><dt>Test-once gate</dt><dd id="esmm-test-gate">读取中…</dd></div>
+              <div><dt>Artifact</dt><dd id="esmm-artifact">读取中…</dd></div>
+            </dl>
+            <p class="panel-footnote">固定前 200,000 条 timestamp-sorted impressions；同一 population 同时含 click 与 conversion 标签。UID、标签、attribution 和点击后字段均未作为 feature。结果是三 seed 的公开离线测量，不代表在线 lift。</p>
+          </section>
 
           <a class="next-step" href="#position-bias">下一步：看看“排第一”为什么会骗人 <span aria-hidden="true">↓</span></a>
         </div>
@@ -239,10 +324,11 @@
     </main>
 
     <footer class="site-footer">
-      <span class="boundary-tag">公开离线数据 · 本地演示</span>
+      <span class="boundary-tag">公开离线指标 · 合成交互演示</span>
       <details class="project-boundary">
         <summary>项目边界</summary>
-        <p>页面只读取本地公开基准实验记录与脱敏派生样例；不连接生产环境，不代表线上点击率、业务收益或生产推荐效果。无登录、无密钥、无外部服务。</p>
+        <p>页面只读取公开基准聚合报告与明确标记的合成 UI fixture；不包含第三方原始记录，不连接生产环境，不代表线上点击率、业务收益或生产推荐效果。无登录、无密钥、无外部服务。</p>
+        <p><a href="./THIRD_PARTY_DATA.md">第三方数据来源、许可与非商业使用说明</a></p>
       </details>
     </footer>
 

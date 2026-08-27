@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260827-001",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-27T03:16:31Z",
+  "baseCommit": "37304854730ae64c5f8b58cf22a4624f87d2cd1e",
+  "stagedDiffSha256": "d819e6189ae2f7444fe5badeceeb9f888cea0dfea35c2a88e8d1eef474e50698",
+  "summary": "批准 Offline RecSys Lab 端到端推荐 V3、公开数据 CVR/ESMM 实验、分析模块、测试、文档、CI 与静态 Playground/Pages workflow。批准不包含 0066、Compute benchmark、生产接线、业务数据、线上实验、支付、模型上线或在线效果声明。"
+}

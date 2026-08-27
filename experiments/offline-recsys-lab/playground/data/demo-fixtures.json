@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 2,
+  "dataBoundary": "synthetic-ui-fixture-with-public-aggregate-reports",
+  "productionClaim": false,
+  "generatedWithoutTraining": true,
+  "redistributable": true,
+  "amazon": {
+    "origin": "synthetic",
+    "dataset": "Deterministic synthetic UI fixture",
+    "derivation": "Hand-authored aliases; no Amazon row, user, item ID, or text is included.",
+    "limitations": "Lists demonstrate interaction only; all displayed aggregate metrics come from separately labeled public reports.",
+    "histories": [
+      {
+        "id": "synthetic-history-a",
+        "userAlias": "SYNTHETIC-USER-A",
+        "history": [
+          "ITEM-SYN-001",
+          "ITEM-SYN-004",
+          "ITEM-SYN-007",
+          "ITEM-SYN-011",
+          "ITEM-SYN-013"
+        ],
+        "actualNextItem": "ITEM-SYN-021",
+        "recommendations": {
+          "popularity": [
+            "ITEM-SYN-031",
+            "ITEM-SYN-025",
+            "ITEM-SYN-018",
+            "ITEM-SYN-007",
+            "ITEM-SYN-002",
+            "ITEM-SYN-009",
+            "ITEM-SYN-015",
+            "ITEM-SYN-022",
+            "ITEM-SYN-028",
+            "ITEM-SYN-006"
+          ],
+          "itemKnn": [
+            "ITEM-SYN-021",
+            "ITEM-SYN-014",
+            "ITEM-SYN-019",
+            "ITEM-SYN-005",
+            "ITEM-SYN-027",
+            "ITEM-SYN-008",
+            "ITEM-SYN-017",
+            "ITEM-SYN-003",
+            "ITEM-SYN-023",
+            "ITEM-SYN-012"
+          ],
+          "bprMf": null,
+          "twoTower": null
+        }
+      },
+      {
+        "id": "synthetic-history-b",
+        "userAlias": "SYNTHETIC-USER-B",
+        "history": [
+          "ITEM-SYN-002",
+          "ITEM-SYN-005",
+          "ITEM-SYN-008",
+          "ITEM-SYN-012",
+          "ITEM-SYN-016",
+          "ITEM-SYN-020",
+          "ITEM-SYN-024",
+          "ITEM-SYN-029"
+        ],
+        "actualNextItem": "ITEM-SYN-017",
+        "recommendations": {
+          "popularity": [
+            "ITEM-SYN-031",
+            "ITEM-SYN-025",
+            "ITEM-SYN-018",
+            "ITEM-SYN-007",
+            "ITEM-SYN-002",
+            "ITEM-SYN-009",
+            "ITEM-SYN-015",
+            "ITEM-SYN-022",
+            "ITEM-SYN-028",
+            "ITEM-SYN-006"
+          ],
+          "itemKnn": [
+            "ITEM-SYN-017",
+            "ITEM-SYN-026",
+            "ITEM-SYN-010",
+            "ITEM-SYN-030",
+            "ITEM-SYN-003",
+            "ITEM-SYN-013",
+            "ITEM-SYN-021",
+            "ITEM-SYN-006",
+            "ITEM-SYN-019",
+            "ITEM-SYN-027"
+          ],
+          "bprMf": null,
+          "twoTower": null
+        }
+      },
+      {
+        "id": "synthetic-history-c",
+        "userAlias": "SYNTHETIC-USER-C",
+        "history": [
+          "ITEM-SYN-003",
+          "ITEM-SYN-006",
+          "ITEM-SYN-009",
+          "ITEM-SYN-010",
+          "ITEM-SYN-014",
+          "ITEM-SYN-018",
+          "ITEM-SYN-022",
+          "ITEM-SYN-023",
+          "ITEM-SYN-025",
+          "ITEM-SYN-027",
+          "ITEM-SYN-030",
+          "ITEM-SYN-032"
+        ],
+        "actualNextItem": "ITEM-SYN-028",
+        "recommendations": {
+          "popularity": [
+            "ITEM-SYN-031",
+            "ITEM-SYN-025",
+            "ITEM-SYN-018",
+            "ITEM-SYN-007",
+            "ITEM-SYN-002",
+            "ITEM-SYN-009",
+            "ITEM-SYN-015",
+            "ITEM-SYN-022",
+            "ITEM-SYN-028",
+            "ITEM-SYN-006"
+          ],
+          "itemKnn": [
+            "ITEM-SYN-028",
+            "ITEM-SYN-011",
+            "ITEM-SYN-016",
+            "ITEM-SYN-020",
+            "ITEM-SYN-004",
+            "ITEM-SYN-024",
+            "ITEM-SYN-029",
+            "ITEM-SYN-001",
+            "ITEM-SYN-017",
+            "ITEM-SYN-026"
+          ],
+          "bprMf": null,
+          "twoTower": null
+        }
+      }
+    ]
+  },
+  "criteo": {
+    "origin": "synthetic",
+    "dataset": "Deterministic synthetic UI fixture",
+    "split": "not_applicable",
+    "rowAlias": "SYNTHETIC-IMPRESSION-001",
+    "features": [
+      {
+        "name": "I1",
+        "value": "4"
+      },
+      {
+        "name": "I2",
+        "value": "missing"
+      },
+      {
+        "name": "I3",
+        "value": "12"
+      },
+      {
+        "name": "C1",
+        "value": "HASH-SYN-01"
+      },
+      {
+        "name": "C2",
+        "value": "HASH-SYN-02"
+      },
+      {
+        "name": "C3",
+        "value": "missing"
+      }
+    ],
+    "individualPredictionPersisted": false,
+    "limitation": "This row is synthetic and has no individual prediction; the UI displays only tracked aggregate public metrics."
+  }
+}

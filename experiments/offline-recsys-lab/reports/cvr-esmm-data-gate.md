@@ -1,79 +1,61 @@
 # CVR / ESMM public-data gate
 
-Status: `DEFERRED_NOT_RUN`
+Status: `RESOLVED_COMPLETE_OFFLINE`
 
-This is a data-validity decision, not a model result. No public CVR/ESMM
-training or scoring was run in this phase.
+The earlier `DEFERRED_NOT_RUN` decision was correct: clicked-only Sponsored
+Search rows cannot identify CTR or CTCVR in impression space. The gate is now
+resolved with the Criteo Attribution Modeling for Bidding dataset, whose same
+impression rows contain click and conversion labels. This does not join the
+unrelated Criteo CTR and conversion datasets.
 
-## Gate requirements
+## Frozen source and terms
 
-An ESMM experiment must expose, for the same impression population:
+- Official source page: <https://ailab.criteo.com/criteo-attribution-modeling-bidding-dataset/>
+- Publisher mirror: <https://huggingface.co/datasets/criteo/criteo-attribution-dataset>
+- Pinned mirror revision: `904188a63cbad78bee43cd26ff5ee4ac77903986`
+- License: CC BY-NC-SA 4.0; noncommercial offline research with attribution and
+  ShareAlike obligations.
+- Artifact: 653,015,824 bytes; SHA-256
+  `94ac7a465564349bc7ba008602211d5990a3c53cc133abc0aadef61ea2391a98`.
+- The legacy `go.criteo.net` download returned HTTP 404 on 2026-08-27. It was
+  not used; the acquisition came from Criteo's own Hugging Face organization.
 
-- an impression row;
-- a click indicator;
-- a conversion indicator with a documented attribution window;
-- features available at impression time;
-- terms that permit this non-commercial offline research use.
+Raw rows and checkpoints remain ignored and are not redistributed.
 
-Clicked-only conversion logs fail the gate because they cannot identify CTR or
-CTCVR in impression space. Joining unrelated Criteo CTR and conversion datasets
-would also fail: the rows, populations and feature semantics are not linkable.
+## Executed protocol
 
-## Audited candidates
+- Fixed first 200,000 physical impressions in publisher-declared timestamp
+  order; no label-conditioned sampling.
+- Train/dev/test: 140,000 / 30,000 / 30,000 contiguous rows.
+- Three seeds: 3407, 6502, 9109.
+- Train-only preprocessing and feature allowlist: `cost`, `campaign`,
+  `cat1..cat9`.
+- `uid`, timestamp, click/conversion/attribution fields, conversion identifiers,
+  CPO, click position/count, and time-since-click are excluded from features.
+- Naive CVR is trained only on clicked training impressions. ESMM jointly
+  learns CTR and CTCVR on all training impressions.
+- CTCVR is explicitly `click × raw_conversion_30d`; `attribution` is audit-only.
+- Test was consumed exactly once after dev checkpoint selection.
 
-### Criteo Sponsored Search Conversion Logs — rejected for ESMM
+## Frozen public test summary
 
-- Official page: <https://ailab.criteo.com/criteo-sponsored-search-conversion-log-dataset/>
-- Terms: CC BY-NC-SA 4.0 on the official page.
-- Official schema: sale/conversion, revenue and conversion delay, plus product,
-  user and click-time features.
-- Fatal limitation: Criteo states each row is an action, specifically a click.
-  Non-clicked impressions are absent.
-- Allowed future use: post-click CVR only. It must not be reported as
-  impression-space CTR, CTCVR or ESMM.
+Mean across three seeds; population standard deviations are in the JSON report.
 
-### Criteo Attribution Modeling for Bidding — schema-eligible, deferred
+| Evaluation | AUC | LogLoss | Brier | ECE |
+|---|---:|---:|---:|---:|
+| Naive clicked-only CVR | 0.810773 | 0.327262 | 0.097532 | 0.024204 |
+| ESMM CTR | 0.736028 | 0.559379 | 0.188682 | 0.014789 |
+| ESMM CTCVR | 0.841541 | 0.151314 | 0.039463 | 0.003202 |
+| ESMM post-click CVR | 0.823026 | 0.314712 | 0.093289 | 0.012140 |
 
-- Official page: <https://ailab.criteo.com/criteo-attribution-modeling-bidding-dataset/>
-- Official description: 16.5M impression rows over 30 days, with `click`,
-  `conversion`, timestamps, campaign/context features, cost and attribution.
-- Terms: the Criteo dataset terms presented by the publisher are
-  CC BY-NC-SA 4.0; use is non-commercial and requires attribution/share-alike
-  compliance.
-- Schema decision: eligible for a future controlled ESMM experiment because
-  the same impression records contain click and conversion outcomes.
-- Label caveat: `conversion` means a conversion within 30 days after the
-  impression, independently of whether that impression was the last click.
-  The protocol must pre-register whether CTCVR is `click * conversion` and must
-  not silently treat view-through conversion as post-click conversion.
-- Current decision: deferred until Retrieval, CTR and sequence baselines are
-  stable, as required by the staged research plan. The 623 MB archive was not
-  downloaded in this phase.
+Exact evidence, per-seed metrics, calibration bins, split counts, source terms,
+and limitations are in `criteo-esmm-v1-results.json`.
 
-### Ali-CCP — blocked pending exact terms/download evidence
+## Remaining truth boundary
 
-- Dataset page: <https://tianchi.aliyun.com/dataset/408>
-- Tianchi identifies it as Ali-CCP, but the unauthenticated page exposed here
-  did not provide a verifiable per-dataset license or downloadable artifact.
-- Tianchi's platform guidance says use must follow each dataset's license.
-- Current decision: do not download, train or report metrics until the exact
-  Ali-CCP license/terms and artifact identity are captured through an
-  authorized Tianchi session.
-
-## Future frozen comparison
-
-When the eligible dataset is deliberately activated, the minimum comparison is:
-
-1. naive post-click CVR trained only on clicked samples;
-2. ESMM trained on all impressions with CTR and CTCVR objectives.
-
-Both must use one train/dev/test split and train-fitted preprocessing. Report
-CTR AUC/LogLoss/calibration, CTCVR AUC/LogLoss/calibration, and post-click CVR
-AUC/LogLoss/calibration. Metrics must include row counts and positive counts;
-test data cannot select features, epochs, calibration or hyperparameters.
-
-## Truth boundary
-
-`DEFERRED_NOT_RUN` means no conclusion about ESMM superiority or
-sample-selection-bias correction has been measured. Existing synthetic smoke
-tests only verify code paths and are not public-data evidence.
+This is a descriptive public-data offline result on a 200,000-row prefix, not
+the full 16.5M impressions. It does not establish causal attribution, online
+CVR lift, revenue lift, advertising deployment, or KAI production performance.
+The first prefix contains no view-through conversion rows after applying the
+registered CTCVR definition; the loader's separation of raw conversion from
+CTCVR is covered by synthetic contract tests, not claimed as a measured cohort.

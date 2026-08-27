@@ -1,115 +1,90 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
-
-from kai_recsys_lab.pipelines.amazon_retrieval import (
-    itemknn_topk,
-    load_config,
-    popularity_topk,
-    prepare_amazon_data,
-)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "playground" / "data" / "demo-fixtures.json"
 
 
-def alias(prefix: str, value: str) -> str:
-    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:8].upper()
-    return f"{prefix}-{digest}"
-
-
-def amazon_fixtures() -> dict[str, object]:
-    config = load_config(ROOT / "configs" / "amazon-retrieval-v1.json")
-    data = prepare_amazon_data(
-        ROOT / "data" / "raw" / "amazon-reviews-2023" / "Industrial_and_Scientific",
-        config,
-    )
-    popularity = popularity_topk(data, k=10, split="test")
-    itemknn = itemknn_topk(data, k=10, split="test")
-    desired_lengths = (5, 8, 12)
-    selected: list[int] = []
-    for desired in desired_lengths:
-        candidates = [
-            row
-            for row, history in enumerate(data.test_histories)
-            if row not in selected and len(history) >= desired
-        ]
-        selected.append(candidates[0])
-
-    rows: list[dict[str, object]] = []
-    for display_index, row in enumerate(selected, start=1):
-        user_index = int(data.test_query_users[row])
-        history = data.test_histories[row]
-        rows.append(
-            {
-                "id": f"public-history-{display_index}",
-                "userAlias": alias("USER", data.users[user_index]),
-                "history": [alias("ITEM", data.catalog[int(item)]) for item in history[-8:]],
-                "actualNextItem": alias("ITEM", data.catalog[int(data.test_targets[row])]),
-                "recommendations": {
-                    "popularity": [alias("ITEM", data.catalog[int(item)]) for item in popularity[row]],
-                    "itemKnn": [alias("ITEM", data.catalog[int(item)]) for item in itemknn[row]],
-                    "bprMf": None,
-                    "twoTower": None,
-                },
-            }
-        )
-    return {
-        "origin": "public",
-        "dataset": "Amazon Reviews'23 Industrial_and_Scientific 5-core",
-        "derivation": "Inference-only replay from the frozen public split; no model training.",
-        "limitations": (
-            "BPR and Two-Tower per-user traces are unavailable because the frozen run did not persist "
-            "their checkpoints or user vectors."
-        ),
-        "histories": rows,
-    }
-
-
-def criteo_fixture() -> dict[str, object]:
-    path = ROOT / "data" / "processed" / "criteo-ctr" / "day-2015-02-15-part-00079-first-60000.tsv"
-    with path.open("r", encoding="utf-8") as handle:
-        for row_number, line in enumerate(handle):
-            if row_number == 51_000:
-                values = line.rstrip("\n").split("\t")
-                break
-        else:
-            raise ValueError("Criteo fixed subset does not contain the first test row")
-    if len(values) != 40:
-        raise ValueError(f"expected 40 Criteo columns, received {len(values)}")
-    numeric = values[1:14]
-    categorical = values[14:40]
-    return {
-        "origin": "public",
-        "dataset": "Criteo 1TB Click Logs fixed-subset V1",
-        "split": "test",
-        "rowAlias": "TEST-ROW-00001",
-        "features": [
-            *[{"name": f"I{index + 1}", "value": value or "missing"} for index, value in enumerate(numeric[:6])],
-            *[
-                {"name": f"C{index + 1}", "value": alias("HASH", value) if value else "missing"}
-                for index, value in enumerate(categorical[:6])
-            ],
-        ],
-        "individualPredictionPersisted": False,
-        "limitation": (
-            "This frozen artifact did not persist row-level predictions or checkpoints. "
-            "The UI therefore shows real aggregate metrics and calibration-bin means only."
-        ),
-    }
-
-
 def main() -> None:
+    """Build redistributable UI fixtures without copying third-party records."""
+
+    histories = [
+        {
+            "id": "synthetic-history-a",
+            "userAlias": "SYNTHETIC-USER-A",
+            "history": ["ITEM-SYN-001", "ITEM-SYN-004", "ITEM-SYN-007", "ITEM-SYN-011", "ITEM-SYN-013"],
+            "actualNextItem": "ITEM-SYN-021",
+            "recommendations": {
+                "popularity": [f"ITEM-SYN-{value:03d}" for value in (31, 25, 18, 7, 2, 9, 15, 22, 28, 6)],
+                "itemKnn": [f"ITEM-SYN-{value:03d}" for value in (21, 14, 19, 5, 27, 8, 17, 3, 23, 12)],
+                "bprMf": None,
+                "twoTower": None,
+            },
+        },
+        {
+            "id": "synthetic-history-b",
+            "userAlias": "SYNTHETIC-USER-B",
+            "history": [
+                "ITEM-SYN-002", "ITEM-SYN-005", "ITEM-SYN-008", "ITEM-SYN-012",
+                "ITEM-SYN-016", "ITEM-SYN-020", "ITEM-SYN-024", "ITEM-SYN-029",
+            ],
+            "actualNextItem": "ITEM-SYN-017",
+            "recommendations": {
+                "popularity": [f"ITEM-SYN-{value:03d}" for value in (31, 25, 18, 7, 2, 9, 15, 22, 28, 6)],
+                "itemKnn": [f"ITEM-SYN-{value:03d}" for value in (17, 26, 10, 30, 3, 13, 21, 6, 19, 27)],
+                "bprMf": None,
+                "twoTower": None,
+            },
+        },
+        {
+            "id": "synthetic-history-c",
+            "userAlias": "SYNTHETIC-USER-C",
+            "history": [
+                "ITEM-SYN-003", "ITEM-SYN-006", "ITEM-SYN-009", "ITEM-SYN-010",
+                "ITEM-SYN-014", "ITEM-SYN-018", "ITEM-SYN-022", "ITEM-SYN-023",
+                "ITEM-SYN-025", "ITEM-SYN-027", "ITEM-SYN-030", "ITEM-SYN-032",
+            ],
+            "actualNextItem": "ITEM-SYN-028",
+            "recommendations": {
+                "popularity": [f"ITEM-SYN-{value:03d}" for value in (31, 25, 18, 7, 2, 9, 15, 22, 28, 6)],
+                "itemKnn": [f"ITEM-SYN-{value:03d}" for value in (28, 11, 16, 20, 4, 24, 29, 1, 17, 26)],
+                "bprMf": None,
+                "twoTower": None,
+            },
+        },
+    ]
     payload = {
-        "schemaVersion": 1,
-        "dataBoundary": "public-offline-demo-fixture",
+        "schemaVersion": 2,
+        "dataBoundary": "synthetic-ui-fixture-with-public-aggregate-reports",
         "productionClaim": False,
         "generatedWithoutTraining": True,
-        "amazon": amazon_fixtures(),
-        "criteo": criteo_fixture(),
+        "redistributable": True,
+        "amazon": {
+            "origin": "synthetic",
+            "dataset": "Deterministic synthetic UI fixture",
+            "derivation": "Hand-authored aliases; no Amazon row, user, item ID, or text is included.",
+            "limitations": "Lists demonstrate interaction only; all displayed aggregate metrics come from separately labeled public reports.",
+            "histories": histories,
+        },
+        "criteo": {
+            "origin": "synthetic",
+            "dataset": "Deterministic synthetic UI fixture",
+            "split": "not_applicable",
+            "rowAlias": "SYNTHETIC-IMPRESSION-001",
+            "features": [
+                {"name": "I1", "value": "4"},
+                {"name": "I2", "value": "missing"},
+                {"name": "I3", "value": "12"},
+                {"name": "C1", "value": "HASH-SYN-01"},
+                {"name": "C2", "value": "HASH-SYN-02"},
+                {"name": "C3", "value": "missing"},
+            ],
+            "individualPredictionPersisted": False,
+            "limitation": "This row is synthetic and has no individual prediction; the UI displays only tracked aggregate public metrics.",
+        },
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
