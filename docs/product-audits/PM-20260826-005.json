@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "auditId": "PM-20260826-005",
+  "auditor": "App product manager",
+  "decision": "APPROVED",
+  "auditedAt": "2026-08-27T00:55:23Z",
+  "baseCommit": "37304854730ae64c5f8b58cf22a4624f87d2cd1e",
+  "stagedDiffSha256": "e3da0dd8d3fc02a5518d044de2e65ba989e0ca44f9e1504ca061626c9e5b9a0f",
+  "summary": "批准将 PM-20260826-004 对应的相同 urllib 4.9.1 安全补丁重建为当前 canonical main 的单一子提交，并仅以 force-with-lease 更新 feature branch 与 PR #15。不修改 offline-recsys-lab、benchmark、0066 SQL 或其他业务代码；不包含 production migration、真实 canary、full_commerce、支付执行或安全风险豁免。"
+}
