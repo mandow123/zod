@@ -207,7 +207,8 @@ test('all account entry copy says login happens in the system browser', async ()
   assert.match(authSheet, /使用 KAI 账号登录/u);
   assert.match(authSheet, /KAI_CLOUD_UNIFIED_IDENTITY_V1/u);
   assert.doesNotMatch(profile, /在 App 内登录/u);
-  assert.match(profile, /登录 Zod/u);
+  assert.match(profile, /登录 KAI CloudPay/u);
+  assert.doesNotMatch(profile, /登录 Zod/u);
   assert.match(profile, /本机已退出/u);
   assert.match(profile, /本机安全、通知与账户状态/u);
   assert.match(accountSecurity, /REMOTE_ACCOUNT_SESSIONS_AVAILABLE \? listAccountSessions\(\) : Promise\.resolve\(\[\]\)/u);

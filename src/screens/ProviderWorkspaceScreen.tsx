@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { CloudPayOrder, CloudPaySnapshot, DeviceOrder } from '../api';
+import { TopVideoHero, topVideoColors } from '../components/TopVideoHero';
 import { creditAmount } from '../format';
 import { Card } from '../components';
 import { OrderCard } from '../OrderCard';
@@ -37,8 +37,9 @@ export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNex
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={topVideoColors.primary} />}
       >
+        <TopVideoHero eyebrow="提供算力" title="把可用算力带上市场" detail="登录后查看上架审核、资源节点与交付状态。" />
         {!snapshot.authenticated ? (
           <Card style={styles.loginCard}>
             <View style={styles.loginIcon}><Ionicons name="server-outline" size={35} color={colors.primary} /></View>
@@ -62,7 +63,7 @@ export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNex
                 <Text style={styles.syncNoticeText}>当前显示{cachedTime(snapshot.providerWorkspaceCachedAt)}保存的上架状态。</Text>
               </View>
             </Card> : null}
-            <LinearGradient colors={['#E8F2FF', '#F8FBFF']} style={styles.hero}>
+            <Card style={styles.workspaceCard}>
               <View style={styles.heroTop}>
                 <View style={styles.modePill}><View style={styles.modeDot} /><Text style={styles.modeText}>提供工作台</Text></View>
                 <Text style={styles.subjectRole}>{roleLabel[workspace.subject.role]}</Text>
@@ -78,7 +79,7 @@ export function ProviderWorkspaceScreen({ snapshot, refreshing, onRefresh, onNex
                 <Text style={styles.heroActionText}>{staleWorkspace ? '同步后继续' : workspace.nextAction.label}</Text>
                 <Ionicons name={staleWorkspace ? 'refresh' : 'arrow-forward'} size={18} color={colors.surface} />
               </Pressable>
-            </LinearGradient>
+            </Card>
 
             <View style={styles.metrics}>
               <Card style={styles.metric}><Text style={styles.metricValue}>{metrics.resourceTotal}</Text><Text style={styles.metricLabel}>资源总数</Text></Card>
@@ -176,17 +177,17 @@ const roleLabel: Record<NonNullable<CloudPaySnapshot['providerWorkspace']>['subj
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.canvas }, content: { padding: 16, paddingBottom: 38 },
-  hero: { minHeight: 248, padding: 21, borderRadius: 26, borderWidth: 1, borderColor: '#D5E5FA', overflow: 'hidden' },
+  root: { flex: 1, backgroundColor: topVideoColors.canvas }, content: { padding: 16, paddingBottom: 38 },
+  workspaceCard: { minHeight: 238, marginTop: 13, padding: 17, borderRadius: 22, borderColor: topVideoColors.line, backgroundColor: topVideoColors.surface },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modePill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.88)' },
-  modeDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6, backgroundColor: colors.primary },
+  modeDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6, backgroundColor: topVideoColors.primary },
   modeText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' }, subjectRole: { color: colors.muted, fontSize: 11, fontWeight: '800' },
-  heroEyebrow: { color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 1.2, marginTop: 32 },
-  heroTitle: { color: colors.ink, fontSize: 29, lineHeight: 37, fontWeight: '900', letterSpacing: -0.7, marginTop: 8 },
+  heroEyebrow: { color: colors.primary, fontSize: 11, fontWeight: '900', letterSpacing: 1.2, marginTop: 26 },
+  heroTitle: { color: colors.ink, fontSize: 27, lineHeight: 35, fontWeight: '900', letterSpacing: -0.7, marginTop: 8 },
   heroCaption: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8, maxWidth: '92%' },
-  heroAction: { alignSelf: 'flex-start', minHeight: 48, marginTop: 18, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: colors.primary },
-  heroActionStale: { backgroundColor: colors.amber },
+  heroAction: { alignSelf: 'flex-start', minHeight: 44, marginTop: 13, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: topVideoColors.primary },
+  heroActionStale: { backgroundColor: topVideoColors.focus },
   heroActionText: { color: colors.surface, fontSize: 14, fontWeight: '900' },
   metrics: { flexDirection: 'row', gap: 9, marginVertical: 18 }, metric: { flex: 1, minHeight: 100, padding: 13, justifyContent: 'space-between' },
   syncNotice: { marginBottom: 12, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, borderColor: '#C9DCF6', backgroundColor: '#F8FBFF' },

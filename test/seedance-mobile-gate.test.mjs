@@ -24,5 +24,5 @@ test('future video route type remains internal but does not create a default ent
   const home = await source('src/screens/HomeScreen.tsx');
   assert.match(navigation, /\| 'video'/u);
   assert.match(navigation, /video:\s*'home'/u);
-  assert.doesNotMatch(home, /video|Seedance|Motion Lab/iu);
+  assert.doesNotMatch(home, /onNavigate\(\s*['"]video['"]\s*\)|Seedance|Motion Lab/iu);
 });

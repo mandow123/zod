@@ -5,7 +5,7 @@ import { SessionLogoutError, logoutCloudPay, type CloudPaySnapshot, type Trading
 import { AccountSecuritySheet } from '../AccountSecuritySheet';
 import { creditAmount } from '../format';
 import { useStagingProfileToolsSlot } from '../StagingProfileToolsSlot';
-import { brand, colors } from '../theme';
+import { colors } from '../theme';
 import { kaiAuthLastAttemptLabel, kaiAuthProgressMessage, type KaiAuthProgress } from '../kai-auth';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -90,7 +90,7 @@ export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSe
       <View style={styles.walletDivider} />
       <View style={styles.walletFooter}><Text style={styles.walletFact}>订单预留  {snapshot.authenticated && snapshot.creditBalance ? creditAmount(snapshot.creditBalance.reserved) : '—'}</Text><Text style={styles.walletRail}>七相支付 · 支付宝</Text></View>
     </Pressable>
-    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'ZD'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? (accountPending ? pendingAccountName : '访客模式')}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? (accountPending ? '业务会话尚未建立' : '登录后查看账号资产')}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : accountPending ? '继续' : '登录 Zod'}</Text></Pressable></View>
+    <View style={styles.accountCard}><View style={styles.avatar}><Text style={styles.avatarText}>{snapshot.user?.displayName.trim().slice(0, 2).toUpperCase() || 'KC'}</Text></View><View style={styles.accountCopy}><Text style={styles.accountName}>{snapshot.user?.displayName ?? (accountPending ? pendingAccountName : '访客模式')}</Text><Text style={styles.accountMeta}>{snapshot.user?.phone ?? snapshot.user?.email ?? (accountPending ? '业务会话尚未建立' : '登录后查看账号资产')}</Text></View><Pressable accessibilityRole="button" onPress={accountAction}><Text style={styles.textAction}>{snapshot.authenticated ? '退出' : accountPending ? '继续' : '登录 KAI CloudPay'}</Text></Pressable></View>
 
     {accountPending ? <Pressable accessibilityRole="button" onPress={onLogin} style={styles.authProgressCard}>
       <Ionicons name={kaiAuthProgress.kind === 'identity_pending' ? 'time-outline' : 'shield-checkmark-outline'} size={18} color={colors.primary} />
@@ -125,7 +125,7 @@ export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSe
     </MenuGroup>
 
     <MenuGroup title="服务与安全" caption="账号、主体与隐私" icon="shield-checkmark-outline">
-      <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta={`通过消息联系 ${brand.name}`} onPress={onOpenMessages} />
+      <Menu icon="chatbubble-ellipses-outline" label="客服与帮助" meta="通过消息联系 KAI CloudPay" onPress={onOpenMessages} />
       <Menu icon="business-outline" label="主体与认证" meta={currentSubject ? `${currentSubject.displayName} · ${subjectStatusLabel[currentSubject.status]}` : '查看真实主体状态'} onPress={openSubjects} />
       <Menu icon="settings-outline" label="账号设置" meta="本机安全、通知与账户状态" onPress={() => snapshot.authenticated ? setSecurityVisible(true) : onLogin()} />
       {stagingTools.sshEntry ? <Menu icon="key-outline" label={stagingTools.sshEntry.label} meta={stagingTools.sshEntry.meta}
@@ -134,7 +134,7 @@ export function ProfileScreen({ snapshot, kaiAuthProgress, onSelectSubject, onSe
         meta={stagingTools.connectionEntry.meta} onPress={stagingTools.connectionEntry.onPress} /> : null}
       <Menu icon="document-text-outline" label="隐私与数据" meta="数据使用与履约边界" onPress={() => setPrivacyVisible(true)} last />
     </MenuGroup>
-    <Text style={styles.version}>{brand.name} · 1.0.0</Text>
+    <Text style={styles.version}>KAI CloudPay · 1.0.0</Text>
   </ScrollView>
   <SubjectSheet visible={subjectsVisible} subjects={snapshot.subjects} currentSubjectId={snapshot.currentSubjectId} onSelect={onSelectSubject} onClose={() => setSubjectsVisible(false)} />
   <PrivacySheet visible={privacyVisible} onClose={() => setPrivacyVisible(false)} />
